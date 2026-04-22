@@ -1,0 +1,76 @@
+package com.cnstn.reservation.controller;
+
+import com.cnstn.reservation.dto.ConflictCheckResponse;
+import com.cnstn.reservation.dto.PageResponse;
+import com.cnstn.reservation.dto.ReservationCreateRequest;
+import com.cnstn.reservation.dto.ReservationResponse;
+import com.cnstn.reservation.dto.SecurityValidationRequest;
+import com.cnstn.reservation.service.ReservationService;
+import jakarta.validation.Valid;
+import java.security.Principal;
+import java.time.Instant;
+import java.util.UUID;
+import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/v1/reservations")
+public class ReservationController {
+
+    private final ReservationService reservationService;
+
+    public ReservationController(ReservationService reservationService) {
+        this.reservationService = reservationService;
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
+    public PageResponse<ReservationResponse> list(Pageable pageable) {
+        return reservationService.list(pageable);
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
+    public ReservationResponse getById(@PathVariable UUID id) {
+        return reservationService.getById(id);
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_QUALITE')")
+    public ReservationResponse create(@Valid @RequestBody ReservationCreateRequest request, Principal principal) {
+        return reservationService.create(request, principal.getName());
+    }
+
+    @GetMapping("/conflicts")
+    @PreAuthorize("hasRole('RESPONSABLE_SECURITE')")
+    public ConflictCheckResponse conflicts(
+            @RequestParam(required = false) UUID roomId,
+            @RequestParam(required = false) UUID equipmentId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startAt,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endAt
+    ) {
+        return reservationService.checkConflict(roomId, equipmentId, startAt, endAt);
+    }
+
+    @PutMapping("/{id}/security-validation")
+    @PreAuthorize("hasRole('RESPONSABLE_SECURITE')")
+    public ReservationResponse securityValidation(
+            @PathVariable UUID id,
+            @Valid @RequestBody SecurityValidationRequest request,
+            Principal principal
+    ) {
+        return reservationService.securityValidation(id, request.approved(), principal.getName());
+    }
+}

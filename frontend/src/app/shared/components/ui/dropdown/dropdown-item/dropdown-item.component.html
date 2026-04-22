@@ -1,0 +1,6 @@
+@if (dividerBefore) {
+<div class="my-1 border-t border-gray-200 dark:border-gray-700"></div>
+}
+<button type="button" [ngClass]="combinedClasses" (click)="handleClick($event)">
+  <ng-content></ng-content>
+</button>

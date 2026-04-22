@@ -1,0 +1,263 @@
+{
+  "generated_at": "2026-04-21T19:20:29.3416777+01:00",
+  "gateway_url": "http://localhost:8088",
+  "keycloak_url": "http://localhost:8090",
+  "realm": "cnstn-intranet",
+  "backlog_total": 28,
+  "backlog_passed": 28,
+  "backlog_failed": 0,
+  "results": [
+    {
+      "id": 1,
+      "actor": "Tous",
+      "feature": "Authentification",
+      "expected": "Tous les tokens Keycloak sont generes",
+      "actual": "tokens_ok=True",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 2,
+      "actor": "Tous",
+      "feature": "Deconnexion",
+      "expected": "Sans token, acces refuse",
+      "actual": "status=401",
+      "pass": true,
+      "note": "Verification backend de session non authentifiee"
+    },
+    {
+      "id": 3,
+      "actor": "Administrateur",
+      "feature": "Ajouter utilisateur",
+      "expected": "201 + id user",
+      "actual": "status=201",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 4,
+      "actor": "Administrateur",
+      "feature": "Modifier utilisateur",
+      "expected": "200",
+      "actual": "status=200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 5,
+      "actor": "Administrateur",
+      "feature": "Supprimer utilisateur",
+      "expected": "204",
+      "actual": "status=204",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 6,
+      "actor": "Administrateur",
+      "feature": "Attribuer roles",
+      "expected": "200",
+      "actual": "status=200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 7,
+      "actor": "Administrateur",
+      "feature": "Ajouter service",
+      "expected": "201 + id departement",
+      "actual": "status=201",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 8,
+      "actor": "Administrateur",
+      "feature": "Modifier service",
+      "expected": "200",
+      "actual": "status=200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 9,
+      "actor": "Administrateur",
+      "feature": "Supprimer service",
+      "expected": "204",
+      "actual": "status=204",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 10,
+      "actor": "Employe, Chef hierarchique",
+      "feature": "Modifier profil",
+      "expected": "200",
+      "actual": "status=200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 11,
+      "actor": "Employe",
+      "feature": "Organiser evenement",
+      "expected": "201 + id event",
+      "actual": "status=201",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 12,
+      "actor": "Employe",
+      "feature": "Reserver salle",
+      "expected": "201 + id reservation",
+      "actual": "status=201",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 13,
+      "actor": "Employe",
+      "feature": "Reserver equipement",
+      "expected": "201 + id reservation",
+      "actual": "status=201",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 14,
+      "actor": "Employe",
+      "feature": "Demander intervention",
+      "expected": "201 + id intervention",
+      "actual": "status=201",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 15,
+      "actor": "Employe",
+      "feature": "Consulter document",
+      "expected": "200",
+      "actual": "status=200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 16,
+      "actor": "Employe",
+      "feature": "Ajouter partenaire",
+      "expected": "201",
+      "actual": "status=201",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 17,
+      "actor": "Responsable salle",
+      "feature": "Gerer salle (ajouter/modifier/supprimer)",
+      "expected": "201/200/204",
+      "actual": "create_main=201,create_delete=201,update=200,delete=204",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 18,
+      "actor": "Responsable salle",
+      "feature": "Gerer equipement (ajouter/modifier/supprimer)",
+      "expected": "201/200/204",
+      "actual": "create_main=201,create_delete=201,update=200,delete=204",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 19,
+      "actor": "Responsable salle",
+      "feature": "Gerer intervention",
+      "expected": "200 status + 200 validate",
+      "actual": "status_update=200,validate=200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 20,
+      "actor": "Chef hierarchique",
+      "feature": "Valider demande evenement",
+      "expected": "200",
+      "actual": "status=200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 21,
+      "actor": "Chef hierarchique",
+      "feature": "Refuser demande evenement",
+      "expected": "200",
+      "actual": "status=200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 22,
+      "actor": "Responsable securite",
+      "feature": "Gerer demande reservation",
+      "expected": "200 conflict + 200 validation",
+      "actual": "conflict=200,validation=200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 23,
+      "actor": "Directeur DSN",
+      "feature": "Verifier acces partenaire",
+      "expected": "200",
+      "actual": "status=200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 24,
+      "actor": "Directeur DSN",
+      "feature": "Consulter tableau de bord",
+      "expected": "200",
+      "actual": "status=200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 25,
+      "actor": "Responsable qualite",
+      "feature": "Gerer workflow GED",
+      "expected": "200 submit + 200 approve",
+      "actual": "submit=200,approve=200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 26,
+      "actor": "Responsable qualite",
+      "feature": "Publier document",
+      "expected": "200",
+      "actual": "status=200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 27,
+      "actor": "Responsable qualite",
+      "feature": "Approuver document",
+      "expected": "200",
+      "actual": "status=200",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "id": 28,
+      "actor": "Employe",
+      "feature": "Rejoindre evenement en ligne (Zoom SDK)",
+      "expected": "200 ou 400 (endpoint Zoom actif)",
+      "actual": "create_status=201,signature_status=400",
+      "pass": true,
+      "note": ""
+    }
+  ]
+}

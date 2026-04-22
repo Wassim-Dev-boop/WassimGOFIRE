@@ -1,0 +1,3458 @@
+{
+  "collection": {
+    "_": {
+      "postman_id": "c2d5f8f0-85b4-4d55-a6d3-1fd8f84d9410"
+    },
+    "item": [
+      {
+        "id": "52ec159e-47de-4281-bce2-41baab84ad91",
+        "name": "00 - Auth (Keycloak Tokens)",
+        "item": [
+          {
+            "id": "bce7653a-7491-4d04-9c6d-46acd68fb285",
+            "name": "Get ADMIN Token",
+            "request": {
+              "url": {
+                "path": [
+                  "realms",
+                  "{{realm}}",
+                  "protocol",
+                  "openid-connect",
+                  "token"
+                ],
+                "host": [
+                  "{{keycloakUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/x-www-form-urlencoded"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "urlencoded",
+                "urlencoded": [
+                  {
+                    "key": "grant_type",
+                    "value": "password"
+                  },
+                  {
+                    "key": "client_id",
+                    "value": "{{postmanClientId}}"
+                  },
+                  {
+                    "key": "username",
+                    "value": "{{adminUsername}}"
+                  },
+                  {
+                    "key": "password",
+                    "value": "{{adminPassword}}"
+                  }
+                ]
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "4b9e1b49-7c93-49ac-99cc-4ea5a365b624",
+                  "type": "text/javascript",
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.environment.set('adminToken', json.access_token);",
+                    "pm.test('ADMIN token reçu', () => pm.expect(json.access_token).to.be.a('string'));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "94a24351-8a78-4891-a6e2-b55e5766f62b",
+            "name": "Get EMPLOYE Token",
+            "request": {
+              "url": {
+                "path": [
+                  "realms",
+                  "{{realm}}",
+                  "protocol",
+                  "openid-connect",
+                  "token"
+                ],
+                "host": [
+                  "{{keycloakUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/x-www-form-urlencoded"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "urlencoded",
+                "urlencoded": [
+                  {
+                    "key": "grant_type",
+                    "value": "password"
+                  },
+                  {
+                    "key": "client_id",
+                    "value": "{{postmanClientId}}"
+                  },
+                  {
+                    "key": "username",
+                    "value": "{{employeeUsername}}"
+                  },
+                  {
+                    "key": "password",
+                    "value": "{{employeePassword}}"
+                  }
+                ]
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "0161b61c-88d6-4568-a46f-04222a512ffd",
+                  "type": "text/javascript",
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.environment.set('employeeToken', json.access_token);",
+                    "pm.test('EMPLOYE token reçu', () => pm.expect(json.access_token).to.be.a('string'));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "6678d551-6386-463a-8389-06a5f7ee8c11",
+            "name": "Get CHEF_HIERARCHIQUE Token",
+            "request": {
+              "url": {
+                "path": [
+                  "realms",
+                  "{{realm}}",
+                  "protocol",
+                  "openid-connect",
+                  "token"
+                ],
+                "host": [
+                  "{{keycloakUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/x-www-form-urlencoded"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "urlencoded",
+                "urlencoded": [
+                  {
+                    "key": "grant_type",
+                    "value": "password"
+                  },
+                  {
+                    "key": "client_id",
+                    "value": "{{postmanClientId}}"
+                  },
+                  {
+                    "key": "username",
+                    "value": "{{chefUsername}}"
+                  },
+                  {
+                    "key": "password",
+                    "value": "{{chefPassword}}"
+                  }
+                ]
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "09909d6a-ae4a-4862-821a-ffc98059f15f",
+                  "type": "text/javascript",
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.environment.set('chefToken', json.access_token);",
+                    "pm.test('CHEF token reçu', () => pm.expect(json.access_token).to.be.a('string'));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "34cfa4c9-9999-413c-aeef-01acdbc2db27",
+            "name": "Get RESPONSABLE_SALLE Token",
+            "request": {
+              "url": {
+                "path": [
+                  "realms",
+                  "{{realm}}",
+                  "protocol",
+                  "openid-connect",
+                  "token"
+                ],
+                "host": [
+                  "{{keycloakUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/x-www-form-urlencoded"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "urlencoded",
+                "urlencoded": [
+                  {
+                    "key": "grant_type",
+                    "value": "password"
+                  },
+                  {
+                    "key": "client_id",
+                    "value": "{{postmanClientId}}"
+                  },
+                  {
+                    "key": "username",
+                    "value": "{{roomManagerUsername}}"
+                  },
+                  {
+                    "key": "password",
+                    "value": "{{roomManagerPassword}}"
+                  }
+                ]
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "bd590a74-c3cb-45e4-bfe9-db6aabe67c16",
+                  "type": "text/javascript",
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.environment.set('roomManagerToken', json.access_token);",
+                    "pm.test('RESPONSABLE_SALLE token reçu', () => pm.expect(json.access_token).to.be.a('string'));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "63069061-2cda-4375-b27c-4a7c1dc259ac",
+            "name": "Get RESPONSABLE_SECURITE Token",
+            "request": {
+              "url": {
+                "path": [
+                  "realms",
+                  "{{realm}}",
+                  "protocol",
+                  "openid-connect",
+                  "token"
+                ],
+                "host": [
+                  "{{keycloakUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/x-www-form-urlencoded"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "urlencoded",
+                "urlencoded": [
+                  {
+                    "key": "grant_type",
+                    "value": "password"
+                  },
+                  {
+                    "key": "client_id",
+                    "value": "{{postmanClientId}}"
+                  },
+                  {
+                    "key": "username",
+                    "value": "{{securityManagerUsername}}"
+                  },
+                  {
+                    "key": "password",
+                    "value": "{{securityManagerPassword}}"
+                  }
+                ]
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "6b8c6f66-30c2-48a1-9ca8-aef55b8ebeac",
+                  "type": "text/javascript",
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.environment.set('securityManagerToken', json.access_token);",
+                    "pm.test('RESPONSABLE_SECURITE token reçu', () => pm.expect(json.access_token).to.be.a('string'));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "63c74249-c092-4830-815a-113f87eb582b",
+            "name": "Get DIRECTEUR_DSN Token",
+            "request": {
+              "url": {
+                "path": [
+                  "realms",
+                  "{{realm}}",
+                  "protocol",
+                  "openid-connect",
+                  "token"
+                ],
+                "host": [
+                  "{{keycloakUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/x-www-form-urlencoded"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "urlencoded",
+                "urlencoded": [
+                  {
+                    "key": "grant_type",
+                    "value": "password"
+                  },
+                  {
+                    "key": "client_id",
+                    "value": "{{postmanClientId}}"
+                  },
+                  {
+                    "key": "username",
+                    "value": "{{directorUsername}}"
+                  },
+                  {
+                    "key": "password",
+                    "value": "{{directorPassword}}"
+                  }
+                ]
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "d520cad1-b07e-4b08-af95-b7bc3d167001",
+                  "type": "text/javascript",
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.environment.set('directorToken', json.access_token);",
+                    "pm.test('DIRECTEUR_DSN token reçu', () => pm.expect(json.access_token).to.be.a('string'));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "b420bc00-c38e-4c67-92bb-3ab96e384ec2",
+            "name": "Get RESPONSABLE_QUALITE Token",
+            "request": {
+              "url": {
+                "path": [
+                  "realms",
+                  "{{realm}}",
+                  "protocol",
+                  "openid-connect",
+                  "token"
+                ],
+                "host": [
+                  "{{keycloakUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/x-www-form-urlencoded"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "urlencoded",
+                "urlencoded": [
+                  {
+                    "key": "grant_type",
+                    "value": "password"
+                  },
+                  {
+                    "key": "client_id",
+                    "value": "{{postmanClientId}}"
+                  },
+                  {
+                    "key": "username",
+                    "value": "{{qualityManagerUsername}}"
+                  },
+                  {
+                    "key": "password",
+                    "value": "{{qualityManagerPassword}}"
+                  }
+                ]
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "60bbd181-ab98-4a24-8744-a0a6b79e8e08",
+                  "type": "text/javascript",
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.environment.set('qualityManagerToken', json.access_token);",
+                    "pm.test('RESPONSABLE_QUALITE token reçu', () => pm.expect(json.access_token).to.be.a('string'));"
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "0aca773d-3f77-45a8-b7c8-d94fc489d10b",
+        "name": "01 - Auth User Service (ADMIN)",
+        "item": [
+          {
+            "id": "7b60afc9-f769-4550-a1df-e8f4e29e626b",
+            "name": "Create Department",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "admin",
+                  "departments"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{adminToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"code\": \"DSI\",\n  \"name\": \"Direction des Systèmes d'Information\",\n  \"description\": \"Département DSI\",\n  \"active\": true\n}"
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "ad2f7b5c-75c0-47be-a4c0-50bba1148446",
+                  "type": "text/javascript",
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.environment.set('departmentId', json.id);",
+                    "pm.test('Department créé', () => pm.expect(json.id).to.exist);"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "e30e6979-adc9-469a-88aa-e73a6c5509ed",
+            "name": "List Departments",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "admin",
+                  "departments"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [
+                  {
+                    "key": "page",
+                    "value": "0"
+                  },
+                  {
+                    "key": "size",
+                    "value": "20"
+                  }
+                ],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{adminToken}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": []
+          },
+          {
+            "id": "2a9428ac-6d36-4b9f-b422-e1ee487881e8",
+            "name": "Create User EMPLOYE",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "admin",
+                  "users"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{adminToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"username\": \"agent.local\",\n  \"email\": \"agent.local@cnstn.tn\",\n  \"firstName\": \"Agent\",\n  \"lastName\": \"Local\",\n  \"phone\": \"+21620000001\",\n  \"departmentId\": \"{{departmentId}}\",\n  \"roles\": [\"EMPLOYE\"],\n  \"enabled\": true,\n  \"initialPassword\": \"User@12345\"\n}"
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "d3861364-0e25-4e85-8cde-a627a775ebcd",
+                  "type": "text/javascript",
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.environment.set('employeeUserId', json.id);",
+                    "pm.test('User créé', () => pm.expect(json.id).to.exist);"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "293004e0-6a8e-47d7-a5bf-6a8bf18e9927",
+            "name": "List Users",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "admin",
+                  "users"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [
+                  {
+                    "key": "page",
+                    "value": "0"
+                  },
+                  {
+                    "key": "size",
+                    "value": "20"
+                  }
+                ],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{adminToken}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": []
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "eac97212-cfcf-49c1-bd7d-1e944f0c4cba",
+        "name": "02 - Event Service",
+        "item": [
+          {
+            "id": "71e74ce9-a356-4c9d-bbb4-048c4df60159",
+            "name": "Create Event (EMPLOYE)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "events"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{employeeToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"title\": \"Réunion Intranet\",\n  \"description\": \"Point d'avancement plateforme\",\n  \"startAt\": \"{{eventStartAt}}\",\n  \"endAt\": \"{{eventEndAt}}\",\n  \"location\": \"Salle A\"\n}"
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "e21190c9-6441-4661-8285-5968b016f69f",
+                  "type": "text/javascript",
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.environment.set('eventId', json.id);",
+                    "pm.test('Event créé', () => pm.expect(json.id).to.exist);"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "e111a143-8564-4c3e-9339-90005660ea8d",
+            "name": "Decision Event (CHEF_HIERARCHIQUE)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "events",
+                  "{{eventId}}",
+                  "decision"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{chefToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"approved\": true,\n  \"decisionComment\": \"Validé pour lancement\"\n}"
+              }
+            },
+            "response": [],
+            "event": []
+          },
+          {
+            "id": "488700da-4e1d-42fd-b0b4-ca4e482c4389",
+            "name": "Invite Partner",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "events",
+                  "{{eventId}}",
+                  "partners"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{chefToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"partnerName\": \"Tech Partner\",\n  \"partnerEmail\": \"partner@example.com\"\n}"
+              }
+            },
+            "response": [],
+            "event": []
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "892cc2b8-f30b-4b0c-9fe1-f3bb0cf0eb6d",
+        "name": "03 - Reservation Service",
+        "item": [
+          {
+            "id": "9149c269-8dbb-4073-8e2a-66cefd4944f4",
+            "name": "Create Room (RESPONSABLE_SALLE)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "rooms"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{roomManagerToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"name\": \"Salle B\",\n  \"location\": \"Bloc 1\",\n  \"capacity\": 20,\n  \"active\": true\n}"
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "bce960fd-cf17-498d-acef-1fb26430b294",
+                  "type": "text/javascript",
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.environment.set('roomId', json.id);"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "3c1790f7-b7a6-49fc-8a1b-0f168152faa2",
+            "name": "Create Equipment (RESPONSABLE_SALLE)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "equipments"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{roomManagerToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"name\": \"Projecteur X\",\n  \"serialNumber\": \"PRJ-0001\",\n  \"description\": \"Projecteur salle réunion\",\n  \"active\": true\n}"
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "24b32135-d9e6-4510-a32a-c7c1ba5e5a18",
+                  "type": "text/javascript",
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.environment.set('equipmentId', json.id);"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "5af49f84-883c-45a4-99dd-d4ffb88d36d5",
+            "name": "Create Reservation Room (EMPLOYE)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "reservations"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{employeeToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"roomId\": \"{{roomId}}\",\n  \"startAt\": \"{{reservationStartAt}}\",\n  \"endAt\": \"{{reservationEndAt}}\",\n  \"purpose\": \"Réunion projet\"\n}"
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "b1535740-e048-4e72-be58-c82faf9622b7",
+                  "type": "text/javascript",
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.environment.set('reservationId', json.id);"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "afe1d392-febc-4986-970f-6406167a30d2",
+            "name": "Check Conflicts (RESPONSABLE_SECURITE)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "reservations",
+                  "conflicts"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [
+                  {
+                    "key": "roomId",
+                    "value": "{{roomId}}"
+                  },
+                  {
+                    "key": "startAt",
+                    "value": "{{reservationStartAt}}"
+                  },
+                  {
+                    "key": "endAt",
+                    "value": "{{reservationEndAt}}"
+                  }
+                ],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{securityManagerToken}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": []
+          },
+          {
+            "id": "18b51d3e-1ebd-47ed-b5c2-a6d81910a935",
+            "name": "Security Validation (RESPONSABLE_SECURITE)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "reservations",
+                  "{{reservationId}}",
+                  "security-validation"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{securityManagerToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"approved\": true\n}"
+              }
+            },
+            "response": [],
+            "event": []
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "7c233e46-ec69-406d-a40c-76d335f9f1b7",
+        "name": "04 - Intervention Service",
+        "item": [
+          {
+            "id": "94537035-3ebf-499a-9bb5-bd6e0fc1436c",
+            "name": "Create Intervention (EMPLOYE)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "interventions"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{employeeToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"title\": \"Panne réseau\",\n  \"description\": \"Connexion instable au 2ème étage\"\n}"
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "fbf056b7-1c4b-49d2-9a93-bb543a70efbd",
+                  "type": "text/javascript",
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.environment.set('interventionId', json.id);"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "72391c6c-0f69-4542-96a9-4651dcc87ca1",
+            "name": "Update Intervention Status (RESPONSABLE_SALLE)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "interventions",
+                  "{{interventionId}}",
+                  "status"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{roomManagerToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"status\": \"IN_PROGRESS\",\n  \"assignedTo\": \"tech.team\"\n}"
+              }
+            },
+            "response": [],
+            "event": []
+          },
+          {
+            "id": "7c4bc3e5-a0b3-4fbf-8d32-a07e05149ba4",
+            "name": "Validate Intervention (RESPONSABLE_SALLE)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "interventions",
+                  "{{interventionId}}",
+                  "validate"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{roomManagerToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"approved\": true,\n  \"note\": \"Intervention réalisée\"\n}"
+              }
+            },
+            "response": [],
+            "event": []
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "13d80445-f68d-49a3-a590-14b286f90fa7",
+        "name": "05 - GED Service",
+        "item": [
+          {
+            "id": "e4c24000-7e82-414e-bd9a-50d4dc243208",
+            "name": "Create Document (EMPLOYE)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "documents"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{employeeToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"title\": \"Procédure sécurité\",\n  \"category\": \"SECURITE\",\n  \"content\": \"Contenu initial du document GED\"\n}"
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "36b96ece-fc50-44df-967c-64c13a9aafa1",
+                  "type": "text/javascript",
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.environment.set('documentId', json.id);"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "efd58041-8fb8-48aa-8a70-c4fcba689a38",
+            "name": "Submit Document Workflow",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "documents",
+                  "{{documentId}}",
+                  "submit"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{employeeToken}}"
+                }
+              ],
+              "method": "PUT"
+            },
+            "response": [],
+            "event": []
+          },
+          {
+            "id": "2b8019dd-9a16-4e3e-93ef-d25cb504c11f",
+            "name": "Approve Document (RESPONSABLE_QUALITE)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "documents",
+                  "{{documentId}}",
+                  "approve"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{qualityManagerToken}}"
+                }
+              ],
+              "method": "PUT"
+            },
+            "response": [],
+            "event": []
+          },
+          {
+            "id": "87e99a2f-fc7d-4edc-80f4-1cd24e5d7fec",
+            "name": "Publish Document (RESPONSABLE_QUALITE)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "documents",
+                  "{{documentId}}",
+                  "publish"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{qualityManagerToken}}"
+                }
+              ],
+              "method": "PUT"
+            },
+            "response": [],
+            "event": []
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "e42b3e6b-94f3-44b7-b6ad-606ef8d35c01",
+        "name": "06 - Notification Service",
+        "item": [
+          {
+            "id": "a68fd8e3-3336-4199-a808-9e58855597c9",
+            "name": "Create Notification (ADMIN)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "notifications"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{adminToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"recipientUsername\": \"{{employeeUsername}}\",\n  \"title\": \"Info système\",\n  \"message\": \"Maintenance planifiée ce soir\"\n}"
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "64b6b9e1-f10b-4b21-9592-b655d10e86e1",
+                  "type": "text/javascript",
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.environment.set('notificationId', json.id);"
+                  ],
+                  "_lastExecutionId": "d118d0a0-70c5-4a38-a623-0ca046e6dedf"
+                }
+              }
+            ]
+          },
+          {
+            "id": "207ab321-20c0-447b-bf35-ba17c4e0bb7a",
+            "name": "List My Notifications (EMPLOYE)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "notifications"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{employeeToken}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": []
+          },
+          {
+            "id": "f55e9cbb-ff1e-43dc-bbf0-0dc69ff9a764",
+            "name": "Mark Notification Read (EMPLOYE)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "notifications",
+                  "{{notificationId}}",
+                  "read"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{employeeToken}}"
+                }
+              ],
+              "method": "PUT"
+            },
+            "response": [],
+            "event": []
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "99e04722-b879-4d24-b686-b1160be81bc3",
+        "name": "07 - Reporting Service",
+        "item": [
+          {
+            "id": "0790624e-3679-4f5a-9900-8e14d6c97280",
+            "name": "Dashboard KPI (DIRECTEUR_DSN)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "v1",
+                  "kpis",
+                  "dashboard"
+                ],
+                "host": [
+                  "{{gatewayUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{directorToken}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": []
+          }
+        ],
+        "event": []
+      }
+    ],
+    "event": [],
+    "variable": [
+      {
+        "type": "any",
+        "value": "http://localhost:8080",
+        "key": "gatewayUrl"
+      },
+      {
+        "type": "any",
+        "value": "http://localhost:8090",
+        "key": "keycloakUrl"
+      },
+      {
+        "type": "any",
+        "value": "cnstn-intranet",
+        "key": "realm"
+      }
+    ],
+    "info": {
+      "_postman_id": "c2d5f8f0-85b4-4d55-a6d3-1fd8f84d9410",
+      "name": "CNSTN Intranet - Full API",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+      "description": {
+        "content": "Collection de test CNSTN Intranet (Spring Cloud + Keycloak). Les tokens sont récupérés par rôle puis réutilisés sur les endpoints métier.",
+        "type": "text/plain"
+      }
+    }
+  },
+  "environment": {
+    "_": {
+      "postman_variable_scope": "environment",
+      "postman_exported_at": "2026-04-19T14:13:44.193Z",
+      "postman_exported_using": "Newman/6.2.2"
+    },
+    "id": "fbc2d9e8-1f4e-4ab4-8d84-e51625c15763",
+    "name": "CNSTN Intranet Local",
+    "values": [
+      {
+        "type": "any",
+        "value": "http://localhost:8080",
+        "key": "gatewayUrl"
+      },
+      {
+        "type": "any",
+        "value": "http://localhost:8090",
+        "key": "keycloakUrl"
+      },
+      {
+        "type": "any",
+        "value": "cnstn-intranet",
+        "key": "realm"
+      },
+      {
+        "type": "any",
+        "value": "cnstn-postman",
+        "key": "postmanClientId"
+      },
+      {
+        "type": "any",
+        "value": "admin.cnstn",
+        "key": "adminUsername"
+      },
+      {
+        "type": "any",
+        "value": "Admin@12345",
+        "key": "adminPassword"
+      },
+      {
+        "type": "any",
+        "value": "employe.cnstn",
+        "key": "employeeUsername"
+      },
+      {
+        "type": "any",
+        "value": "User@12345",
+        "key": "employeePassword"
+      },
+      {
+        "type": "any",
+        "value": "chef.cnstn",
+        "key": "chefUsername"
+      },
+      {
+        "type": "any",
+        "value": "User@12345",
+        "key": "chefPassword"
+      },
+      {
+        "type": "any",
+        "value": "salle.cnstn",
+        "key": "roomManagerUsername"
+      },
+      {
+        "type": "any",
+        "value": "User@12345",
+        "key": "roomManagerPassword"
+      },
+      {
+        "type": "any",
+        "value": "securite.cnstn",
+        "key": "securityManagerUsername"
+      },
+      {
+        "type": "any",
+        "value": "User@12345",
+        "key": "securityManagerPassword"
+      },
+      {
+        "type": "any",
+        "value": "directeur.cnstn",
+        "key": "directorUsername"
+      },
+      {
+        "type": "any",
+        "value": "User@12345",
+        "key": "directorPassword"
+      },
+      {
+        "type": "any",
+        "value": "qualite.cnstn",
+        "key": "qualityManagerUsername"
+      },
+      {
+        "type": "any",
+        "value": "User@12345",
+        "key": "qualityManagerPassword"
+      },
+      {
+        "type": "any",
+        "value": "2030-01-10T09:00:00Z",
+        "key": "eventStartAt"
+      },
+      {
+        "type": "any",
+        "value": "2030-01-10T11:00:00Z",
+        "key": "eventEndAt"
+      },
+      {
+        "type": "any",
+        "value": "2030-01-12T08:00:00Z",
+        "key": "reservationStartAt"
+      },
+      {
+        "type": "any",
+        "value": "2030-01-12T10:00:00Z",
+        "key": "reservationEndAt"
+      },
+      {
+        "type": "any",
+        "value": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJpOGtJU001NGlGa3MtaWU5RFBBanVYSEdtYzZLajVLdC1EdFdqaU1fbzBvIn0.eyJleHAiOjE3NzY2MDgzMjAsImlhdCI6MTc3NjYwODAyMCwianRpIjoiMzQ1Y2IxNzctZmVmMi00ODUzLTk3ZWEtODQwNTQ0OGNlNGQzIiwiaXNzIjoiaHR0cDovL2hvc3QuZG9ja2VyLmludGVybmFsOjgwOTAvcmVhbG1zL2Nuc3RuLWludHJhbmV0Iiwic3ViIjoiYTMyNzhmMmYtNTA3Ni00OTg0LWJjYWMtYjdhMWJiNjc5MTBjIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiY25zdG4tcG9zdG1hbiIsInNlc3Npb25fc3RhdGUiOiJkZjAxMjUzNy1mMjUyLTQ2MjAtODE5MS0yOTY2NzJhMGRlOTQiLCJhY3IiOiIxIiwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIkFETUlOIl19LCJzY29wZSI6InByb2ZpbGUgZW1haWwiLCJzaWQiOiJkZjAxMjUzNy1mMjUyLTQ2MjAtODE5MS0yOTY2NzJhMGRlOTQiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsIm5hbWUiOiJBZG1pbiBDTlNUTiIsInByZWZlcnJlZF91c2VybmFtZSI6ImFkbWluLmNuc3RuIiwiZ2l2ZW5fbmFtZSI6IkFkbWluIiwiZmFtaWx5X25hbWUiOiJDTlNUTiIsImVtYWlsIjoiYWRtaW5AY25zdG4udG4ifQ.TuXcf1xOTA_xwmxOnTUDpsm9osSMZKEgT8Qqgx0Fq-C8m92iicFfg4tO-q77HB45MEBM6C3MT6iBJxqwf-huw2icGtRDg_aZABth-uK4coTWotl9qrkCQc_CrdeSgwtF9M6Ht7LIOho8wyMZvKXwKhX4ZFCGrvWxnlKd8OrXd2xgcwTEDlV-uN89KxiflyxBZvCGFTvuCGYB7_GGqyj-JpNLqSwKcT4AypT1LQBCXLgnscDz6zVkzWIgmGC45d6o2F0_TYuSMPw_un_xJCJ7RKDvvsYpGG6sKsetSr7cjGcwzvDAoNmH6ICMGlqm02ByG_P2cHrqExbrgGll09II2g",
+        "key": "adminToken"
+      },
+      {
+        "type": "any",
+        "value": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJpOGtJU001NGlGa3MtaWU5RFBBanVYSEdtYzZLajVLdC1EdFdqaU1fbzBvIn0.eyJleHAiOjE3NzY2MDgzMjAsImlhdCI6MTc3NjYwODAyMCwianRpIjoiMzY4NzFjZGYtNzA5MC00NGM4LThmZjAtYjU2ZDAzNmM4MDA4IiwiaXNzIjoiaHR0cDovL2hvc3QuZG9ja2VyLmludGVybmFsOjgwOTAvcmVhbG1zL2Nuc3RuLWludHJhbmV0Iiwic3ViIjoiMjg3ZTkyMjgtYjQ0Yi00MmMyLTkwODktZDgwYzY0ODg2NDE2IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiY25zdG4tcG9zdG1hbiIsInNlc3Npb25fc3RhdGUiOiIxZGM4MTNlMi04OGJjLTRjZDctOWJkMS04MjVlYzhiZjdkNDQiLCJhY3IiOiIxIiwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIkVNUExPWUUiXX0sInNjb3BlIjoicHJvZmlsZSBlbWFpbCIsInNpZCI6IjFkYzgxM2UyLTg4YmMtNGNkNy05YmQxLTgyNWVjOGJmN2Q0NCIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwibmFtZSI6IkVtcGxveWUgQ05TVE4iLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJlbXBsb3llLmNuc3RuIiwiZ2l2ZW5fbmFtZSI6IkVtcGxveWUiLCJmYW1pbHlfbmFtZSI6IkNOU1ROIiwiZW1haWwiOiJlbXBsb3llQGNuc3RuLnRuIn0.vAC2yv0Jrj_EtE4MCslOVQ3NBHUxMM8dn4I2G7LNqKz1_s-N1coun4EZ2-vcL5aoJ_KboWURC6I8qAskZzJSR8pmZvmT-NNipfJCM_E3CVdaH-G-BkOd283uczxOe5loBp_kzO9XrIwGLdx_Z1ZbQ6xhSlQ58n07ITJlHv1eBC2Xoyjz05KQ-SNGj-K8x087OxkdhDMnRRMNKc4HBmeTCSrUtptGNDVApLxFomXwMJcEjKZqKwl8JaGqOwX4Ripqs9qyzZHV2ze0FYjIHTmVMLDJypu3auwv_DH7e6FJNhvlBtiLLirI6HO2m2UzMNjS3SzZ_54BSYPUQmXdvaVUfw",
+        "key": "employeeToken"
+      },
+      {
+        "type": "any",
+        "value": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJpOGtJU001NGlGa3MtaWU5RFBBanVYSEdtYzZLajVLdC1EdFdqaU1fbzBvIn0.eyJleHAiOjE3NzY2MDgzMjEsImlhdCI6MTc3NjYwODAyMSwianRpIjoiMTNiYzY2NWUtYzkxOC00ZGQzLTgzNmItMTQ4N2EyMzQ2Y2U2IiwiaXNzIjoiaHR0cDovL2hvc3QuZG9ja2VyLmludGVybmFsOjgwOTAvcmVhbG1zL2Nuc3RuLWludHJhbmV0Iiwic3ViIjoiMzc2NTViZjAtNTYzMC00OTFlLWEzOWQtMDQ3YjUwYTA3NjQ3IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiY25zdG4tcG9zdG1hbiIsInNlc3Npb25fc3RhdGUiOiIwNTc1NjQ0Ny0zN2YyLTQzYTQtODAxYy1hNTY0YzdhNmQxY2IiLCJhY3IiOiIxIiwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIkNIRUZfSElFUkFSQ0hJUVVFIl19LCJzY29wZSI6InByb2ZpbGUgZW1haWwiLCJzaWQiOiIwNTc1NjQ0Ny0zN2YyLTQzYTQtODAxYy1hNTY0YzdhNmQxY2IiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsIm5hbWUiOiJDaGVmIEhpZXJhcmNoaXF1ZSIsInByZWZlcnJlZF91c2VybmFtZSI6ImNoZWYuY25zdG4iLCJnaXZlbl9uYW1lIjoiQ2hlZiIsImZhbWlseV9uYW1lIjoiSGllcmFyY2hpcXVlIiwiZW1haWwiOiJjaGVmQGNuc3RuLnRuIn0.YK9XxfJ14s2xGta-Ev2-VFxN26IVd9Pw0EA9DHwiMYEEzZ6h9i4DcFtnKYrvBtfEOmmcXzV816nYvgjWPaddDAEwm9FHkDWFs0T3WIC3uwnAooNXXCrTGcPCXoVxl5Z2jth2cKYFeFc9zrOr587qgXbedX6TTmtnRdar9eHY0GrOMrJNQGxz0mFkE47u4QxaHYMDqsBUEBPrzfDswOFIaKCpzEsLWXLu-rMrhCZAEduXN047AFC91PqUzZky-XFtvv9kscXRWa1guJx7mjo3Ap0PwBjCJ6tPygbbCMQDvOzEo5N2_NW99DFRaUjn5_t1fKr_V3-H5mcRjErWWa0-fQ",
+        "key": "chefToken"
+      },
+      {
+        "type": "any",
+        "value": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJpOGtJU001NGlGa3MtaWU5RFBBanVYSEdtYzZLajVLdC1EdFdqaU1fbzBvIn0.eyJleHAiOjE3NzY2MDgzMjEsImlhdCI6MTc3NjYwODAyMSwianRpIjoiOGYyMjY4Y2ItNjg3MC00MzY5LTk0OWUtOGNmYzkyMjU1Yzc1IiwiaXNzIjoiaHR0cDovL2hvc3QuZG9ja2VyLmludGVybmFsOjgwOTAvcmVhbG1zL2Nuc3RuLWludHJhbmV0Iiwic3ViIjoiMWM1YzhkNjgtZWUyNS00OTMyLWIzMmEtYWYxZTBlZWEwYzcwIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiY25zdG4tcG9zdG1hbiIsInNlc3Npb25fc3RhdGUiOiJkZTY5NzIyYy1iZjZiLTRiNGYtYTRlZC1mMDc1ZDViNTQ4ZTMiLCJhY3IiOiIxIiwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIlJFU1BPTlNBQkxFX1NBTExFIl19LCJzY29wZSI6InByb2ZpbGUgZW1haWwiLCJzaWQiOiJkZTY5NzIyYy1iZjZiLTRiNGYtYTRlZC1mMDc1ZDViNTQ4ZTMiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsIm5hbWUiOiJSZXNwb25zYWJsZSBTYWxsZSIsInByZWZlcnJlZF91c2VybmFtZSI6InNhbGxlLmNuc3RuIiwiZ2l2ZW5fbmFtZSI6IlJlc3BvbnNhYmxlIiwiZmFtaWx5X25hbWUiOiJTYWxsZSIsImVtYWlsIjoic2FsbGVAY25zdG4udG4ifQ.xlozUa7qkH1oa1w2u1RaXni9u_FfhZu0GZERJs6AgaEfL5DS5h5k9bL6-1HprAq9Tvmugy4XDGzlWxXjEdiLe9eBiIIPt0Se5tzsh-FwE8ZMMmOzs4tU33RYjjbo9ZFbIulp8YVBI4AV5dbVHq2rHsBwAnb3japdmk_S6Wi4iQEHG8s2p3QjPlmKyo3qd-460h5OXBQYuXU4V6dNNN4kBlolzwwKrrhpO8FHh4roeUZsB26xBWs0UMgDGykv6Td1oRejgykO7vo0-u8LFV3pzZaUGHMY_cm64ytj08TUlMqO4liE1j5AuwrFZTQyi5WbwS_PHKmNEJJihU93o_su3w",
+        "key": "roomManagerToken"
+      },
+      {
+        "type": "any",
+        "value": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJpOGtJU001NGlGa3MtaWU5RFBBanVYSEdtYzZLajVLdC1EdFdqaU1fbzBvIn0.eyJleHAiOjE3NzY2MDgzMjIsImlhdCI6MTc3NjYwODAyMiwianRpIjoiZjY5ZmFlNDEtMWVhYy00ZGJiLTk0YTItN2JkMTg5OWQ5NzhmIiwiaXNzIjoiaHR0cDovL2hvc3QuZG9ja2VyLmludGVybmFsOjgwOTAvcmVhbG1zL2Nuc3RuLWludHJhbmV0Iiwic3ViIjoiNzBhNTYwZDUtN2M4Ny00ZGE1LTlhYmMtYjU4MjMyNTc5NzEyIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiY25zdG4tcG9zdG1hbiIsInNlc3Npb25fc3RhdGUiOiI5ZGYxYWQ3Yy0yYzg4LTQ3N2MtOGFhNS0xMTYyY2UwZDc5NDgiLCJhY3IiOiIxIiwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIlJFU1BPTlNBQkxFX1NFQ1VSSVRFIl19LCJzY29wZSI6InByb2ZpbGUgZW1haWwiLCJzaWQiOiI5ZGYxYWQ3Yy0yYzg4LTQ3N2MtOGFhNS0xMTYyY2UwZDc5NDgiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsIm5hbWUiOiJSZXNwb25zYWJsZSBTZWN1cml0ZSIsInByZWZlcnJlZF91c2VybmFtZSI6InNlY3VyaXRlLmNuc3RuIiwiZ2l2ZW5fbmFtZSI6IlJlc3BvbnNhYmxlIiwiZmFtaWx5X25hbWUiOiJTZWN1cml0ZSIsImVtYWlsIjoic2VjdXJpdGVAY25zdG4udG4ifQ.KlS6x8nqclt-4x8zzVCRzEZmX-Oj7nDzMClHqzPlYw59K82g5ULVGfoZWfAXTYxbhQVkoZtlHb1zv-hh6dodJ2DzLSSn8uSS1njnobPCEH2ayf9t8hPMu-sP36Y3UHje-JXmTg4k8wPz1LQKrNtb5J2oZVsxL1-UMzsal1v-lemVS5EG7pzrFg6P0wk8-0Z0r2AkI55s9SQmHPQ4frhcs_MSBPOXBjIIp4A094pBvBVoA5nippR3dYdogvWHk75E3__H0ywRDvNdRF1YcMZS7V1qcT2g9PNEb-Tist0z9sSCXznG9XdmmJpX8GH3wFjhVaDsK5E4BicIsdKyLSoxeQ",
+        "key": "securityManagerToken"
+      },
+      {
+        "type": "any",
+        "value": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJpOGtJU001NGlGa3MtaWU5RFBBanVYSEdtYzZLajVLdC1EdFdqaU1fbzBvIn0.eyJleHAiOjE3NzY2MDgzMjIsImlhdCI6MTc3NjYwODAyMiwianRpIjoiMTM3NmVhNWYtNWE5Yi00NjRlLThkYjItMWVkNDU5YmNlMzg1IiwiaXNzIjoiaHR0cDovL2hvc3QuZG9ja2VyLmludGVybmFsOjgwOTAvcmVhbG1zL2Nuc3RuLWludHJhbmV0Iiwic3ViIjoiY2QwN2RiZGEtYWFmZi00ZGVmLWEyODgtYzk3MTZlYTkyYmJjIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiY25zdG4tcG9zdG1hbiIsInNlc3Npb25fc3RhdGUiOiI2ZWE2ZDkxOS1jNDc5LTRlMmQtYjI0OS01YjcwNzQ2OWNmZGIiLCJhY3IiOiIxIiwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIkRJUkVDVEVVUl9EU04iXX0sInNjb3BlIjoicHJvZmlsZSBlbWFpbCIsInNpZCI6IjZlYTZkOTE5LWM0NzktNGUyZC1iMjQ5LTViNzA3NDY5Y2ZkYiIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwibmFtZSI6IkRpcmVjdGV1ciBEU04iLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJkaXJlY3RldXIuY25zdG4iLCJnaXZlbl9uYW1lIjoiRGlyZWN0ZXVyIiwiZmFtaWx5X25hbWUiOiJEU04iLCJlbWFpbCI6ImRpcmVjdGV1ckBjbnN0bi50biJ9.5kahCgADwMQdRUujRAJ412wR7phLYaMu24hjivKvW8wKjq2MKm-6gH-OMr6aZVkdjTz6Z2CYu8jEjbr1j9H8iU6qMrCIwwgNAdnUuQbzZe6DwPmD9cKOjAeMk-S7a-iUCwKeRY-oqHRwHEE1zaJci8QZdAhi_n3lz6isq5I-mV8QEKMUpcUkdU35UGfCJ0Fguc2Kf2J4votO1eLDtvNlfKLUQBQoqs_9JGdTRhJ6qjwuysQydiBq0BnsufjGicUAHtfptBQN26t0V6Ac3GtK0sMUMz1UWbbhRtPEcQwokE38_nroTHW2QwECRzun9zL3iM8SxxYWdEviL-QDjb8u7A",
+        "key": "directorToken"
+      },
+      {
+        "type": "any",
+        "value": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJpOGtJU001NGlGa3MtaWU5RFBBanVYSEdtYzZLajVLdC1EdFdqaU1fbzBvIn0.eyJleHAiOjE3NzY2MDgzMjMsImlhdCI6MTc3NjYwODAyMywianRpIjoiNjI5YzM4N2ItMTQzMC00NGFjLWJhMzctOGU1NmNhMjc3OGRmIiwiaXNzIjoiaHR0cDovL2hvc3QuZG9ja2VyLmludGVybmFsOjgwOTAvcmVhbG1zL2Nuc3RuLWludHJhbmV0Iiwic3ViIjoiZDk4OGJmNzAtNWQ4Ni00ZTQyLTg3NDUtMTY4NjhhZGYyOWZmIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiY25zdG4tcG9zdG1hbiIsInNlc3Npb25fc3RhdGUiOiI2YTM0MTI0ZS1iZjZiLTRmNWYtODBiOS01OTU3YTcxNTdiNjgiLCJhY3IiOiIxIiwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIlJFU1BPTlNBQkxFX1FVQUxJVEUiXX0sInNjb3BlIjoicHJvZmlsZSBlbWFpbCIsInNpZCI6IjZhMzQxMjRlLWJmNmItNGY1Zi04MGI5LTU5NTdhNzE1N2I2OCIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwibmFtZSI6IlJlc3BvbnNhYmxlIFF1YWxpdGUiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJxdWFsaXRlLmNuc3RuIiwiZ2l2ZW5fbmFtZSI6IlJlc3BvbnNhYmxlIiwiZmFtaWx5X25hbWUiOiJRdWFsaXRlIiwiZW1haWwiOiJxdWFsaXRlQGNuc3RuLnRuIn0.PpnARWJBPAewcRFiySEsQrJWKGV4fxf_MZo-pIfJO9zMX70fYsbJBLrf_vbRpHU3euPBFFCcn652QXvvhBk3l-XsVJsAro9Dsuih8jOw7E7LCm8rJrzd1Oc4lzDa5bH-joNysbHGKLx6VMNS4J1vQT-q5uO5NwjfIY4fC7B5F6fn-68SnkUhlPhZIF1hWY2X4yTF8Pf6CP7RtwWDiDhCuLizhvabGIY1942gkza3GBEDdDTju7_hW-rQsXt1BdlV_HVlh8uV74BEwlcYnCPeJI0c-0G9BtJ9gtYjmf_qhAmla0apucXFUuE9esVVAy3NQgpqHFeEOezrRQ0FT4hAQw",
+        "key": "qualityManagerToken"
+      },
+      {
+        "type": "any",
+        "value": "",
+        "key": "departmentId"
+      },
+      {
+        "type": "any",
+        "value": "",
+        "key": "employeeUserId"
+      },
+      {
+        "type": "any",
+        "value": "",
+        "key": "eventId"
+      },
+      {
+        "type": "any",
+        "value": "",
+        "key": "roomId"
+      },
+      {
+        "type": "any",
+        "value": "",
+        "key": "equipmentId"
+      },
+      {
+        "type": "any",
+        "value": "",
+        "key": "reservationId"
+      },
+      {
+        "type": "any",
+        "value": "",
+        "key": "interventionId"
+      },
+      {
+        "type": "any",
+        "value": "2c98bf1c-83b8-4a99-a00f-fe324f87495d",
+        "key": "documentId"
+      },
+      {
+        "type": "any",
+        "value": "898d73f1-eee0-4650-b16a-74ec96c3a1e3",
+        "key": "notificationId"
+      }
+    ]
+  },
+  "globals": {
+    "id": "ffd5ec9f-5548-4835-adee-dc3788aad37c",
+    "values": []
+  },
+  "run": {
+    "stats": {
+      "iterations": {
+        "total": 1,
+        "pending": 0,
+        "failed": 0
+      },
+      "items": {
+        "total": 3,
+        "pending": 0,
+        "failed": 0
+      },
+      "scripts": {
+        "total": 1,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequests": {
+        "total": 3,
+        "pending": 0,
+        "failed": 0
+      },
+      "requests": {
+        "total": 3,
+        "pending": 0,
+        "failed": 0
+      },
+      "tests": {
+        "total": 3,
+        "pending": 0,
+        "failed": 0
+      },
+      "assertions": {
+        "total": 0,
+        "pending": 0,
+        "failed": 0
+      },
+      "testScripts": {
+        "total": 1,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequestScripts": {
+        "total": 0,
+        "pending": 0,
+        "failed": 0
+      }
+    },
+    "timings": {
+      "responseAverage": 84.33333333333333,
+      "responseMin": 40,
+      "responseMax": 140,
+      "responseSd": 41.60395280365664,
+      "dnsAverage": 0,
+      "dnsMin": 0,
+      "dnsMax": 0,
+      "dnsSd": 0,
+      "firstByteAverage": 0,
+      "firstByteMin": 0,
+      "firstByteMax": 0,
+      "firstByteSd": 0,
+      "started": 1776608026221,
+      "completed": 1776608026714
+    },
+    "executions": [
+      {
+        "cursor": {
+          "position": 0,
+          "iteration": 0,
+          "length": 3,
+          "cycles": 1,
+          "empty": false,
+          "eof": false,
+          "bof": true,
+          "cr": false,
+          "ref": "ff24a418-d144-41e4-933e-b1f5f7d94ea7",
+          "httpRequestId": "3c921328-9518-4559-8821-2430553ace22"
+        },
+        "item": {
+          "id": "a68fd8e3-3336-4199-a808-9e58855597c9",
+          "name": "Create Notification (ADMIN)",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ],
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientUsername\": \"{{employeeUsername}}\",\n  \"title\": \"Info système\",\n  \"message\": \"Maintenance planifiée ce soir\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "64b6b9e1-f10b-4b21-9592-b655d10e86e1",
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('notificationId', json.id);"
+                ],
+                "_lastExecutionId": "d118d0a0-70c5-4a38-a623-0ca046e6dedf"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "api",
+              "v1",
+              "notifications"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Authorization",
+              "value": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJpOGtJU001NGlGa3MtaWU5RFBBanVYSEdtYzZLajVLdC1EdFdqaU1fbzBvIn0.eyJleHAiOjE3NzY2MDgzMjAsImlhdCI6MTc3NjYwODAyMCwianRpIjoiMzQ1Y2IxNzctZmVmMi00ODUzLTk3ZWEtODQwNTQ0OGNlNGQzIiwiaXNzIjoiaHR0cDovL2hvc3QuZG9ja2VyLmludGVybmFsOjgwOTAvcmVhbG1zL2Nuc3RuLWludHJhbmV0Iiwic3ViIjoiYTMyNzhmMmYtNTA3Ni00OTg0LWJjYWMtYjdhMWJiNjc5MTBjIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiY25zdG4tcG9zdG1hbiIsInNlc3Npb25fc3RhdGUiOiJkZjAxMjUzNy1mMjUyLTQ2MjAtODE5MS0yOTY2NzJhMGRlOTQiLCJhY3IiOiIxIiwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIkFETUlOIl19LCJzY29wZSI6InByb2ZpbGUgZW1haWwiLCJzaWQiOiJkZjAxMjUzNy1mMjUyLTQ2MjAtODE5MS0yOTY2NzJhMGRlOTQiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsIm5hbWUiOiJBZG1pbiBDTlNUTiIsInByZWZlcnJlZF91c2VybmFtZSI6ImFkbWluLmNuc3RuIiwiZ2l2ZW5fbmFtZSI6IkFkbWluIiwiZmFtaWx5X25hbWUiOiJDTlNUTiIsImVtYWlsIjoiYWRtaW5AY25zdG4udG4ifQ.TuXcf1xOTA_xwmxOnTUDpsm9osSMZKEgT8Qqgx0Fq-C8m92iicFfg4tO-q77HB45MEBM6C3MT6iBJxqwf-huw2icGtRDg_aZABth-uK4coTWotl9qrkCQc_CrdeSgwtF9M6Ht7LIOho8wyMZvKXwKhX4ZFCGrvWxnlKd8OrXd2xgcwTEDlV-uN89KxiflyxBZvCGFTvuCGYB7_GGqyj-JpNLqSwKcT4AypT1LQBCXLgnscDz6zVkzWIgmGC45d6o2F0_TYuSMPw_un_xJCJ7RKDvvsYpGG6sKsetSr7cjGcwzvDAoNmH6ICMGlqm02ByG_P2cHrqExbrgGll09II2g"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "d27e83e0-6f29-4de9-a628-c60ae38a73e7",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "117",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"recipientUsername\": \"employe.cnstn\",\n  \"title\": \"Info système\",\n  \"message\": \"Maintenance planifiée ce soir\"\n}"
+          }
+        },
+        "response": {
+          "id": "dda329ae-5446-4e7e-88a1-705723f58b1a",
+          "status": "Created",
+          "code": 201,
+          "header": [
+            {
+              "key": "transfer-encoding",
+              "value": "chunked"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Vary",
+              "value": "Access-Control-Request-Method"
+            },
+            {
+              "key": "Vary",
+              "value": "Access-Control-Request-Headers"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Vary",
+              "value": "Access-Control-Request-Method"
+            },
+            {
+              "key": "Vary",
+              "value": "Access-Control-Request-Headers"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-XSS-Protection",
+              "value": "0"
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, max-age=0, must-revalidate"
+            },
+            {
+              "key": "Pragma",
+              "value": "no-cache"
+            },
+            {
+              "key": "Expires",
+              "value": "0"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "DENY"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Date",
+              "value": "Sun, 19 Apr 2026 14:13:46 GMT"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "no-referrer"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              105,
+              100,
+              34,
+              58,
+              34,
+              56,
+              57,
+              56,
+              100,
+              55,
+              51,
+              102,
+              49,
+              45,
+              101,
+              101,
+              101,
+              48,
+              45,
+              52,
+              54,
+              53,
+              48,
+              45,
+              98,
+              49,
+              54,
+              97,
+              45,
+              55,
+              52,
+              101,
+              99,
+              57,
+              54,
+              99,
+              51,
+              97,
+              49,
+              101,
+              51,
+              34,
+              44,
+              34,
+              114,
+              101,
+              99,
+              105,
+              112,
+              105,
+              101,
+              110,
+              116,
+              85,
+              115,
+              101,
+              114,
+              110,
+              97,
+              109,
+              101,
+              34,
+              58,
+              34,
+              101,
+              109,
+              112,
+              108,
+              111,
+              121,
+              101,
+              46,
+              99,
+              110,
+              115,
+              116,
+              110,
+              34,
+              44,
+              34,
+              116,
+              105,
+              116,
+              108,
+              101,
+              34,
+              58,
+              34,
+              73,
+              110,
+              102,
+              111,
+              32,
+              115,
+              121,
+              115,
+              116,
+              195,
+              168,
+              109,
+              101,
+              34,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              77,
+              97,
+              105,
+              110,
+              116,
+              101,
+              110,
+              97,
+              110,
+              99,
+              101,
+              32,
+              112,
+              108,
+              97,
+              110,
+              105,
+              102,
+              105,
+              195,
+              169,
+              101,
+              32,
+              99,
+              101,
+              32,
+              115,
+              111,
+              105,
+              114,
+              34,
+              44,
+              34,
+              114,
+              101,
+              97,
+              100,
+              34,
+              58,
+              102,
+              97,
+              108,
+              115,
+              101,
+              44,
+              34,
+              99,
+              114,
+              101,
+              97,
+              116,
+              101,
+              100,
+              65,
+              116,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              44,
+              34,
+              117,
+              112,
+              100,
+              97,
+              116,
+              101,
+              100,
+              65,
+              116,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 140,
+          "responseSize": 195
+        },
+        "id": "a68fd8e3-3336-4199-a808-9e58855597c9"
+      },
+      {
+        "cursor": {
+          "ref": "744a5484-6345-424c-9e4c-90ecf4692ac5",
+          "length": 3,
+          "cycles": 1,
+          "position": 1,
+          "iteration": 0,
+          "httpRequestId": "9f4eba1a-1db9-40e0-aa3f-53697e3d7dc4"
+        },
+        "item": {
+          "id": "207ab321-20c0-447b-bf35-ba17c4e0bb7a",
+          "name": "List My Notifications (EMPLOYE)",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ],
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employeeToken}}"
+              }
+            ],
+            "method": "GET"
+          },
+          "response": [],
+          "event": []
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "api",
+              "v1",
+              "notifications"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Authorization",
+              "value": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJpOGtJU001NGlGa3MtaWU5RFBBanVYSEdtYzZLajVLdC1EdFdqaU1fbzBvIn0.eyJleHAiOjE3NzY2MDgzMjAsImlhdCI6MTc3NjYwODAyMCwianRpIjoiMzY4NzFjZGYtNzA5MC00NGM4LThmZjAtYjU2ZDAzNmM4MDA4IiwiaXNzIjoiaHR0cDovL2hvc3QuZG9ja2VyLmludGVybmFsOjgwOTAvcmVhbG1zL2Nuc3RuLWludHJhbmV0Iiwic3ViIjoiMjg3ZTkyMjgtYjQ0Yi00MmMyLTkwODktZDgwYzY0ODg2NDE2IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiY25zdG4tcG9zdG1hbiIsInNlc3Npb25fc3RhdGUiOiIxZGM4MTNlMi04OGJjLTRjZDctOWJkMS04MjVlYzhiZjdkNDQiLCJhY3IiOiIxIiwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIkVNUExPWUUiXX0sInNjb3BlIjoicHJvZmlsZSBlbWFpbCIsInNpZCI6IjFkYzgxM2UyLTg4YmMtNGNkNy05YmQxLTgyNWVjOGJmN2Q0NCIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwibmFtZSI6IkVtcGxveWUgQ05TVE4iLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJlbXBsb3llLmNuc3RuIiwiZ2l2ZW5fbmFtZSI6IkVtcGxveWUiLCJmYW1pbHlfbmFtZSI6IkNOU1ROIiwiZW1haWwiOiJlbXBsb3llQGNuc3RuLnRuIn0.vAC2yv0Jrj_EtE4MCslOVQ3NBHUxMM8dn4I2G7LNqKz1_s-N1coun4EZ2-vcL5aoJ_KboWURC6I8qAskZzJSR8pmZvmT-NNipfJCM_E3CVdaH-G-BkOd283uczxOe5loBp_kzO9XrIwGLdx_Z1ZbQ6xhSlQ58n07ITJlHv1eBC2Xoyjz05KQ-SNGj-K8x087OxkdhDMnRRMNKc4HBmeTCSrUtptGNDVApLxFomXwMJcEjKZqKwl8JaGqOwX4Ripqs9qyzZHV2ze0FYjIHTmVMLDJypu3auwv_DH7e6FJNhvlBtiLLirI6HO2m2UzMNjS3SzZ_54BSYPUQmXdvaVUfw"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "eed4d4cf-d516-480e-a98d-b5b988000da1",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "response": {
+          "id": "c0a324db-8c6a-419b-9a78-290db19dbb90",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "transfer-encoding",
+              "value": "chunked"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Vary",
+              "value": "Access-Control-Request-Method"
+            },
+            {
+              "key": "Vary",
+              "value": "Access-Control-Request-Headers"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Vary",
+              "value": "Access-Control-Request-Method"
+            },
+            {
+              "key": "Vary",
+              "value": "Access-Control-Request-Headers"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-XSS-Protection",
+              "value": "0"
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, max-age=0, must-revalidate"
+            },
+            {
+              "key": "Pragma",
+              "value": "no-cache"
+            },
+            {
+              "key": "Expires",
+              "value": "0"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "DENY"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Date",
+              "value": "Sun, 19 Apr 2026 14:13:46 GMT"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "no-referrer"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              91,
+              123,
+              34,
+              105,
+              100,
+              34,
+              58,
+              34,
+              56,
+              57,
+              56,
+              100,
+              55,
+              51,
+              102,
+              49,
+              45,
+              101,
+              101,
+              101,
+              48,
+              45,
+              52,
+              54,
+              53,
+              48,
+              45,
+              98,
+              49,
+              54,
+              97,
+              45,
+              55,
+              52,
+              101,
+              99,
+              57,
+              54,
+              99,
+              51,
+              97,
+              49,
+              101,
+              51,
+              34,
+              44,
+              34,
+              114,
+              101,
+              99,
+              105,
+              112,
+              105,
+              101,
+              110,
+              116,
+              85,
+              115,
+              101,
+              114,
+              110,
+              97,
+              109,
+              101,
+              34,
+              58,
+              34,
+              101,
+              109,
+              112,
+              108,
+              111,
+              121,
+              101,
+              46,
+              99,
+              110,
+              115,
+              116,
+              110,
+              34,
+              44,
+              34,
+              116,
+              105,
+              116,
+              108,
+              101,
+              34,
+              58,
+              34,
+              73,
+              110,
+              102,
+              111,
+              32,
+              115,
+              121,
+              115,
+              116,
+              195,
+              168,
+              109,
+              101,
+              34,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              77,
+              97,
+              105,
+              110,
+              116,
+              101,
+              110,
+              97,
+              110,
+              99,
+              101,
+              32,
+              112,
+              108,
+              97,
+              110,
+              105,
+              102,
+              105,
+              195,
+              169,
+              101,
+              32,
+              99,
+              101,
+              32,
+              115,
+              111,
+              105,
+              114,
+              34,
+              44,
+              34,
+              114,
+              101,
+              97,
+              100,
+              34,
+              58,
+              102,
+              97,
+              108,
+              115,
+              101,
+              44,
+              34,
+              99,
+              114,
+              101,
+              97,
+              116,
+              101,
+              100,
+              65,
+              116,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              48,
+              52,
+              45,
+              49,
+              57,
+              84,
+              49,
+              52,
+              58,
+              49,
+              51,
+              58,
+              52,
+              54,
+              46,
+              51,
+              49,
+              48,
+              54,
+              53,
+              55,
+              90,
+              34,
+              44,
+              34,
+              117,
+              112,
+              100,
+              97,
+              116,
+              101,
+              100,
+              65,
+              116,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              48,
+              52,
+              45,
+              49,
+              57,
+              84,
+              49,
+              52,
+              58,
+              49,
+              51,
+              58,
+              52,
+              54,
+              46,
+              51,
+              49,
+              48,
+              54,
+              55,
+              57,
+              90,
+              34,
+              125,
+              44,
+              123,
+              34,
+              105,
+              100,
+              34,
+              58,
+              34,
+              56,
+              55,
+              52,
+              49,
+              51,
+              56,
+              56,
+              49,
+              45,
+              54,
+              53,
+              54,
+              49,
+              45,
+              52,
+              48,
+              53,
+              49,
+              45,
+              57,
+              57,
+              100,
+              48,
+              45,
+              49,
+              49,
+              99,
+              57,
+              50,
+              52,
+              51,
+              53,
+              56,
+              97,
+              50,
+              100,
+              34,
+              44,
+              34,
+              114,
+              101,
+              99,
+              105,
+              112,
+              105,
+              101,
+              110,
+              116,
+              85,
+              115,
+              101,
+              114,
+              110,
+              97,
+              109,
+              101,
+              34,
+              58,
+              34,
+              101,
+              109,
+              112,
+              108,
+              111,
+              121,
+              101,
+              46,
+              99,
+              110,
+              115,
+              116,
+              110,
+              34,
+              44,
+              34,
+              116,
+              105,
+              116,
+              108,
+              101,
+              34,
+              58,
+              34,
+              73,
+              110,
+              102,
+              111,
+              32,
+              115,
+              121,
+              115,
+              116,
+              195,
+              168,
+              109,
+              101,
+              34,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              77,
+              97,
+              105,
+              110,
+              116,
+              101,
+              110,
+              97,
+              110,
+              99,
+              101,
+              32,
+              112,
+              108,
+              97,
+              110,
+              105,
+              102,
+              105,
+              195,
+              169,
+              101,
+              32,
+              99,
+              101,
+              32,
+              115,
+              111,
+              105,
+              114,
+              34,
+              44,
+              34,
+              114,
+              101,
+              97,
+              100,
+              34,
+              58,
+              116,
+              114,
+              117,
+              101,
+              44,
+              34,
+              99,
+              114,
+              101,
+              97,
+              116,
+              101,
+              100,
+              65,
+              116,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              48,
+              52,
+              45,
+              49,
+              57,
+              84,
+              49,
+              52,
+              58,
+              49,
+              51,
+              58,
+              48,
+              48,
+              46,
+              49,
+              57,
+              53,
+              51,
+              50,
+              48,
+              90,
+              34,
+              44,
+              34,
+              117,
+              112,
+              100,
+              97,
+              116,
+              101,
+              100,
+              65,
+              116,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              48,
+              52,
+              45,
+              49,
+              57,
+              84,
+              49,
+              52,
+              58,
+              49,
+              51,
+              58,
+              48,
+              48,
+              46,
+              56,
+              48,
+              50,
+              50,
+              50,
+              53,
+              90,
+              34,
+              125,
+              44,
+              123,
+              34,
+              105,
+              100,
+              34,
+              58,
+              34,
+              97,
+              100,
+              53,
+              49,
+              101,
+              52,
+              101,
+              48,
+              45,
+              48,
+              98,
+              102,
+              55,
+              45,
+              52,
+              48,
+              99,
+              98,
+              45,
+              97,
+              55,
+              48,
+              98,
+              45,
+              102,
+              55,
+              55,
+              97,
+              97,
+              51,
+              98,
+              53,
+              101,
+              56,
+              100,
+              97,
+              34,
+              44,
+              34,
+              114,
+              101,
+              99,
+              105,
+              112,
+              105,
+              101,
+              110,
+              116,
+              85,
+              115,
+              101,
+              114,
+              110,
+              97,
+              109,
+              101,
+              34,
+              58,
+              34,
+              101,
+              109,
+              112,
+              108,
+              111,
+              121,
+              101,
+              46,
+              99,
+              110,
+              115,
+              116,
+              110,
+              34,
+              44,
+              34,
+              116,
+              105,
+              116,
+              108,
+              101,
+              34,
+              58,
+              34,
+              73,
+              110,
+              102,
+              111,
+              32,
+              115,
+              121,
+              115,
+              116,
+              195,
+              168,
+              109,
+              101,
+              34,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              77,
+              97,
+              105,
+              110,
+              116,
+              101,
+              110,
+              97,
+              110,
+              99,
+              101,
+              32,
+              112,
+              108,
+              97,
+              110,
+              105,
+              102,
+              105,
+              195,
+              169,
+              101,
+              32,
+              99,
+              101,
+              32,
+              115,
+              111,
+              105,
+              114,
+              34,
+              44,
+              34,
+              114,
+              101,
+              97,
+              100,
+              34,
+              58,
+              116,
+              114,
+              117,
+              101,
+              44,
+              34,
+              99,
+              114,
+              101,
+              97,
+              116,
+              101,
+              100,
+              65,
+              116,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              48,
+              52,
+              45,
+              49,
+              57,
+              84,
+              49,
+              52,
+              58,
+              48,
+              57,
+              58,
+              53,
+              48,
+              46,
+              52,
+              51,
+              52,
+              48,
+              54,
+              53,
+              90,
+              34,
+              44,
+              34,
+              117,
+              112,
+              100,
+              97,
+              116,
+              101,
+              100,
+              65,
+              116,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              48,
+              52,
+              45,
+              49,
+              57,
+              84,
+              49,
+              52,
+              58,
+              48,
+              57,
+              58,
+              53,
+              48,
+              46,
+              57,
+              55,
+              56,
+              50,
+              52,
+              51,
+              90,
+              34,
+              125,
+              93
+            ]
+          },
+          "cookie": [],
+          "responseTime": 40,
+          "responseSize": 737
+        },
+        "id": "207ab321-20c0-447b-bf35-ba17c4e0bb7a"
+      },
+      {
+        "cursor": {
+          "ref": "ff80b464-8c9b-4c1c-bb97-20a51e885502",
+          "length": 3,
+          "cycles": 1,
+          "position": 2,
+          "iteration": 0,
+          "httpRequestId": "fd992c6b-7d77-4392-bdf3-f7481a133514"
+        },
+        "item": {
+          "id": "f55e9cbb-ff1e-43dc-bbf0-0dc69ff9a764",
+          "name": "Mark Notification Read (EMPLOYE)",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ],
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employeeToken}}"
+              }
+            ],
+            "method": "PUT"
+          },
+          "response": [],
+          "event": []
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "api",
+              "v1",
+              "notifications",
+              "898d73f1-eee0-4650-b16a-74ec96c3a1e3",
+              "read"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Authorization",
+              "value": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJpOGtJU001NGlGa3MtaWU5RFBBanVYSEdtYzZLajVLdC1EdFdqaU1fbzBvIn0.eyJleHAiOjE3NzY2MDgzMjAsImlhdCI6MTc3NjYwODAyMCwianRpIjoiMzY4NzFjZGYtNzA5MC00NGM4LThmZjAtYjU2ZDAzNmM4MDA4IiwiaXNzIjoiaHR0cDovL2hvc3QuZG9ja2VyLmludGVybmFsOjgwOTAvcmVhbG1zL2Nuc3RuLWludHJhbmV0Iiwic3ViIjoiMjg3ZTkyMjgtYjQ0Yi00MmMyLTkwODktZDgwYzY0ODg2NDE2IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiY25zdG4tcG9zdG1hbiIsInNlc3Npb25fc3RhdGUiOiIxZGM4MTNlMi04OGJjLTRjZDctOWJkMS04MjVlYzhiZjdkNDQiLCJhY3IiOiIxIiwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIkVNUExPWUUiXX0sInNjb3BlIjoicHJvZmlsZSBlbWFpbCIsInNpZCI6IjFkYzgxM2UyLTg4YmMtNGNkNy05YmQxLTgyNWVjOGJmN2Q0NCIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwibmFtZSI6IkVtcGxveWUgQ05TVE4iLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJlbXBsb3llLmNuc3RuIiwiZ2l2ZW5fbmFtZSI6IkVtcGxveWUiLCJmYW1pbHlfbmFtZSI6IkNOU1ROIiwiZW1haWwiOiJlbXBsb3llQGNuc3RuLnRuIn0.vAC2yv0Jrj_EtE4MCslOVQ3NBHUxMM8dn4I2G7LNqKz1_s-N1coun4EZ2-vcL5aoJ_KboWURC6I8qAskZzJSR8pmZvmT-NNipfJCM_E3CVdaH-G-BkOd283uczxOe5loBp_kzO9XrIwGLdx_Z1ZbQ6xhSlQ58n07ITJlHv1eBC2Xoyjz05KQ-SNGj-K8x087OxkdhDMnRRMNKc4HBmeTCSrUtptGNDVApLxFomXwMJcEjKZqKwl8JaGqOwX4Ripqs9qyzZHV2ze0FYjIHTmVMLDJypu3auwv_DH7e6FJNhvlBtiLLirI6HO2m2UzMNjS3SzZ_54BSYPUQmXdvaVUfw"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "b168b25d-a06c-4536-8892-868acc3bab10",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "0",
+              "system": true
+            }
+          ],
+          "method": "PUT"
+        },
+        "response": {
+          "id": "73e8d232-f442-4d58-b43a-b44572cbf19d",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "transfer-encoding",
+              "value": "chunked"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Vary",
+              "value": "Access-Control-Request-Method"
+            },
+            {
+              "key": "Vary",
+              "value": "Access-Control-Request-Headers"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Vary",
+              "value": "Access-Control-Request-Method"
+            },
+            {
+              "key": "Vary",
+              "value": "Access-Control-Request-Headers"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-XSS-Protection",
+              "value": "0"
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, max-age=0, must-revalidate"
+            },
+            {
+              "key": "Pragma",
+              "value": "no-cache"
+            },
+            {
+              "key": "Expires",
+              "value": "0"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "DENY"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Date",
+              "value": "Sun, 19 Apr 2026 14:13:46 GMT"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "no-referrer"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              105,
+              100,
+              34,
+              58,
+              34,
+              56,
+              57,
+              56,
+              100,
+              55,
+              51,
+              102,
+              49,
+              45,
+              101,
+              101,
+              101,
+              48,
+              45,
+              52,
+              54,
+              53,
+              48,
+              45,
+              98,
+              49,
+              54,
+              97,
+              45,
+              55,
+              52,
+              101,
+              99,
+              57,
+              54,
+              99,
+              51,
+              97,
+              49,
+              101,
+              51,
+              34,
+              44,
+              34,
+              114,
+              101,
+              99,
+              105,
+              112,
+              105,
+              101,
+              110,
+              116,
+              85,
+              115,
+              101,
+              114,
+              110,
+              97,
+              109,
+              101,
+              34,
+              58,
+              34,
+              101,
+              109,
+              112,
+              108,
+              111,
+              121,
+              101,
+              46,
+              99,
+              110,
+              115,
+              116,
+              110,
+              34,
+              44,
+              34,
+              116,
+              105,
+              116,
+              108,
+              101,
+              34,
+              58,
+              34,
+              73,
+              110,
+              102,
+              111,
+              32,
+              115,
+              121,
+              115,
+              116,
+              195,
+              168,
+              109,
+              101,
+              34,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              77,
+              97,
+              105,
+              110,
+              116,
+              101,
+              110,
+              97,
+              110,
+              99,
+              101,
+              32,
+              112,
+              108,
+              97,
+              110,
+              105,
+              102,
+              105,
+              195,
+              169,
+              101,
+              32,
+              99,
+              101,
+              32,
+              115,
+              111,
+              105,
+              114,
+              34,
+              44,
+              34,
+              114,
+              101,
+              97,
+              100,
+              34,
+              58,
+              116,
+              114,
+              117,
+              101,
+              44,
+              34,
+              99,
+              114,
+              101,
+              97,
+              116,
+              101,
+              100,
+              65,
+              116,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              48,
+              52,
+              45,
+              49,
+              57,
+              84,
+              49,
+              52,
+              58,
+              49,
+              51,
+              58,
+              52,
+              54,
+              46,
+              51,
+              49,
+              48,
+              54,
+              53,
+              55,
+              90,
+              34,
+              44,
+              34,
+              117,
+              112,
+              100,
+              97,
+              116,
+              101,
+              100,
+              65,
+              116,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              48,
+              52,
+              45,
+              49,
+              57,
+              84,
+              49,
+              52,
+              58,
+              49,
+              51,
+              58,
+              52,
+              54,
+              46,
+              51,
+              49,
+              48,
+              54,
+              55,
+              57,
+              90,
+              34,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 73,
+          "responseSize": 244
+        },
+        "id": "f55e9cbb-ff1e-43dc-bbf0-0dc69ff9a764"
+      }
+    ],
+    "transfers": {
+      "responseTotal": 1176
+    },
+    "failures": [],
+    "error": null
+  }
+}

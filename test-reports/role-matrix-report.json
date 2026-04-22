@@ -1,0 +1,95 @@
+{
+  "generated_at": "2026-04-20T23:57:39.2184032+01:00",
+  "gateway_url": "http://localhost:8088",
+  "keycloak_url": "http://localhost:8090",
+  "realm": "cnstn-intranet",
+  "total_users": 7,
+  "passed_users": 7,
+  "failed_users": 0,
+  "results": [
+    {
+      "username": "admin.cnstn",
+      "role": "ADMIN",
+      "token_ok": true,
+      "notifications_status": 200,
+      "admin_users_status": 200,
+      "kpi_status": 200,
+      "expected_admin_users_status": 200,
+      "expected_kpi_status": 200,
+      "pass": true,
+      "error": null
+    },
+    {
+      "username": "employe.cnstn",
+      "role": "EMPLOYE",
+      "token_ok": true,
+      "notifications_status": 200,
+      "admin_users_status": 403,
+      "kpi_status": 403,
+      "expected_admin_users_status": 403,
+      "expected_kpi_status": 403,
+      "pass": true,
+      "error": null
+    },
+    {
+      "username": "chef.cnstn",
+      "role": "CHEF_HIERARCHIQUE",
+      "token_ok": true,
+      "notifications_status": 200,
+      "admin_users_status": 403,
+      "kpi_status": 403,
+      "expected_admin_users_status": 403,
+      "expected_kpi_status": 403,
+      "pass": true,
+      "error": null
+    },
+    {
+      "username": "salle.cnstn",
+      "role": "RESPONSABLE_SALLE",
+      "token_ok": true,
+      "notifications_status": 200,
+      "admin_users_status": 403,
+      "kpi_status": 403,
+      "expected_admin_users_status": 403,
+      "expected_kpi_status": 403,
+      "pass": true,
+      "error": null
+    },
+    {
+      "username": "securite.cnstn",
+      "role": "RESPONSABLE_SECURITE",
+      "token_ok": true,
+      "notifications_status": 200,
+      "admin_users_status": 403,
+      "kpi_status": 403,
+      "expected_admin_users_status": 403,
+      "expected_kpi_status": 403,
+      "pass": true,
+      "error": null
+    },
+    {
+      "username": "directeur.cnstn",
+      "role": "DIRECTEUR_DSN",
+      "token_ok": true,
+      "notifications_status": 200,
+      "admin_users_status": 403,
+      "kpi_status": 200,
+      "expected_admin_users_status": 403,
+      "expected_kpi_status": 200,
+      "pass": true,
+      "error": null
+    },
+    {
+      "username": "qualite.cnstn",
+      "role": "RESPONSABLE_QUALITE",
+      "token_ok": true,
+      "notifications_status": 200,
+      "admin_users_status": 403,
+      "kpi_status": 403,
+      "expected_admin_users_status": 403,
+      "expected_kpi_status": 403,
+      "pass": true,
+      "error": null
+    }
+  ]
+}

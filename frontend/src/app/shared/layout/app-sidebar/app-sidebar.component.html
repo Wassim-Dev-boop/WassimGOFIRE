@@ -1,0 +1,124 @@
+<aside
+  class="fixed flex flex-col top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200"
+  [ngClass]="{
+    'w-[290px]':
+      (isExpanded$ | async) || (isMobileOpen$ | async) || (isHovered$ | async),
+    'w-[90px]': !(
+      (isExpanded$ | async) ||
+      (isMobileOpen$ | async) ||
+      (isHovered$ | async)
+    ),
+    'translate-x-0': isMobileOpen$ | async,
+    '-translate-x-full': !(isMobileOpen$ | async),
+    'xl:translate-x-0': true
+  }"
+  (mouseenter)="onSidebarMouseEnter()"
+  (mouseleave)="sidebarService.setHovered(false)"
+>
+  <div
+    class="border-b border-gray-200/80 pb-4 pt-5 dark:border-gray-800"
+    [ngClass]="{
+      'xl:flex xl:justify-center': !((isExpanded$ | async) || (isHovered$ | async)),
+      'flex justify-start': (isExpanded$ | async) || (isHovered$ | async)
+    }"
+  >
+    @if ((isExpanded$ | async) || (isHovered$ | async) || (isMobileOpen$ | async)) {
+      <a
+        routerLink="/"
+        class="group flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 transition hover:border-brand-200 hover:bg-brand-50/50 dark:border-gray-800 dark:bg-gray-900/70 dark:hover:border-brand-500/40 dark:hover:bg-brand-500/10"
+      >
+        <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-700 dark:bg-gray-900">
+          <img
+            src="/images/logo/logo1.png"
+            alt="CNSTN Logo"
+            class="h-7 w-7 object-contain"
+          />
+        </span>
+
+        <span class="min-w-0">
+          <span class="block truncate text-lg font-semibold tracking-wide text-gray-900 dark:text-white/90">CNSTN</span>
+          <span class="block truncate text-xs font-medium text-gray-500 dark:text-gray-400">Plateforme interne</span>
+        </span>
+      </a>
+    } @else {
+      <a
+        routerLink="/"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-gray-200 bg-white shadow-theme-xs transition hover:border-brand-200 hover:bg-brand-50/50 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-500/40 dark:hover:bg-brand-500/10"
+      >
+        <img src="/images/logo/logo1.png" alt="CNSTN Logo" class="h-7 w-7 object-contain" />
+      </a>
+    }
+  </div>
+
+  <div class="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
+    <nav class="mb-8">
+      <div class="flex flex-col gap-5">
+        @for (section of visibleSections; track section.title) {
+        <div>
+          <h2
+            class="mb-3 flex items-center text-xs font-semibold uppercase tracking-wide text-gray-400"
+            [ngClass]="{
+              'xl:justify-center': !(
+                (isExpanded$ | async) || (isHovered$ | async)
+              ),
+              'justify-start': (isExpanded$ | async) || (isHovered$ | async)
+            }"
+          >
+            @if ((isExpanded$ | async) || (isHovered$ | async) || (isMobileOpen$ | async)) {
+            {{ section.title }}
+            } @else {
+            <span class="mx-auto block h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+            }
+          </h2>
+
+          <ul class="flex flex-col gap-1.5">
+            @for (nav of section.items; track nav.name) {
+            <li>
+              <a
+                [routerLink]="nav.path"
+                [queryParams]="nav.queryParams"
+                class="menu-item group border border-gray-200/80 dark:border-gray-700/70"
+                [ngClass]="{
+                  'menu-item-active border-brand-200 dark:border-brand-500/40':
+                    isNavItemActive(nav),
+                  'menu-item-inactive': !isNavItemActive(nav),
+                  'xl:justify-center': !(
+                    (isExpanded$ | async) || (isHovered$ | async)
+                  ),
+                  'xl:justify-start':
+                    (isExpanded$ | async) || (isHovered$ | async)
+                }"
+              >
+                <span
+                  class="menu-item-icon-size"
+                  [ngClass]="{
+                    'menu-item-icon-active': isNavItemActive(nav),
+                    'menu-item-icon-inactive': !isNavItemActive(nav)
+                  }"
+                  [innerHTML]="nav.icon | safeHtml"
+                ></span>
+
+                @if ((isExpanded$ | async) || (isHovered$ | async) || (isMobileOpen$ | async)) {
+                <span class="menu-item-text">{{ nav.name }}</span>
+
+                @if (nav.count) {
+                <span
+                  class="menu-count-badge"
+                  [ngClass]="{
+                    'menu-count-badge-warning': nav.countTone === 'warning'
+                  }"
+                >
+                  {{ nav.count }}
+                </span>
+                }
+                }
+              </a>
+            </li>
+            }
+          </ul>
+        </div>
+        }
+      </div>
+    </nav>
+  </div>
+</aside>

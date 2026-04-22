@@ -1,0 +1,1032 @@
+
+Running 64 tests using 4 workers
+
+  Ô£ÿ   1 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:20:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-001-002: Login with invalid credentials (3ms)
+  Ô£ÿ   2 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:39:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-001-003: Logout and token invalidation (3ms)
+  Ô£ÿ   3 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:6:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-001-001: Login with valid credentials (3ms)
+  Ô£ÿ   4 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:59:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-003-001: Create user (Admin) (4ms)
+  Ô£ÿ   5 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:85:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-005-001: Create event (Employee) (3ms)
+  Ô£ÿ   6 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:123:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-049-001: RBAC - Admin sees admin menu (3ms)
+  Ô£ÿ   7 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:104:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-006-001: Reserve room (Employee) (3ms)
+  Ô£ÿ   8 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:133:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-049-002: RBAC - Employee cannot see admin menu (3ms)
+  Ô£ÿ   9 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:151:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-013-001: Chef validates event (2ms)
+  Ô£ÿ  10 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:169:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-046-001: GED - Publish document (4ms)
+  Ô£ÿ  11 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:191:7 ÔÇ║ AUTHENTICATION - Full Suite (T-001 to T-005) ÔÇ║ TC-004: Token expiration and refresh (4ms)
+  Ô£ÿ  12 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:208:7 ÔÇ║ AUTHENTICATION - Full Suite (T-001 to T-005) ÔÇ║ TC-005: CORS headers on API calls (4ms)
+  Ô£ÿ  13 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:237:7 ÔÇ║ USER MANAGEMENT (T-006 to T-010) ÔÇ║ TC-006: Create user - valid data (2ms)
+  Ô£ÿ  14 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:246:7 ÔÇ║ USER MANAGEMENT (T-006 to T-010) ÔÇ║ TC-007: Create user - duplicate email error (5ms)
+  Ô£ÿ  15 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:255:7 ÔÇ║ USER MANAGEMENT (T-006 to T-010) ÔÇ║ TC-008: Modify user and roles (3ms)
+  Ô£ÿ  16 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:265:7 ÔÇ║ USER MANAGEMENT (T-006 to T-010) ÔÇ║ TC-009: Delete user (4ms)
+  Ô£ÿ  18 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:292:7 ÔÇ║ EVENT MANAGEMENT (T-013 to T-016) ÔÇ║ TC-014: Create event - room unavailable (4ms)
+  Ô£ÿ  17 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:275:7 ÔÇ║ USER MANAGEMENT (T-006 to T-010) ÔÇ║ TC-010: User list pagination (5ms)
+  Ô£ÿ  19 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:302:7 ÔÇ║ EVENT MANAGEMENT (T-013 to T-016) ÔÇ║ TC-015: Create event - missing equipment (4ms)
+  Ô£ÿ  20 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:311:7 ÔÇ║ EVENT MANAGEMENT (T-013 to T-016) ÔÇ║ TC-016: Create event - with external partners (4ms)
+  Ô£ÿ  21 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:334:7 ÔÇ║ ROOM RESERVATION (T-017 to T-020) ÔÇ║ TC-018: Race condition - double booking (4ms)
+  Ô£ÿ  22 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:325:7 ÔÇ║ ROOM RESERVATION (T-017 to T-020) ÔÇ║ TC-017: Reserve room - free slot (4ms)
+  Ô£ÿ  23 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:359:7 ÔÇ║ ROOM RESERVATION (T-017 to T-020) ÔÇ║ TC-019: Reserve room - insufficient capacity (5ms)
+  Ô£ÿ  24 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:368:7 ÔÇ║ ROOM RESERVATION (T-017 to T-020) ÔÇ║ TC-020: Cancel room reservation (2ms)
+  Ô£ÿ  25 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:393:7 ÔÇ║ EQUIPMENT RESERVATION (T-021 to T-022) ÔÇ║ TC-022: Reserve equipment - in maintenance (3ms)
+  Ô£ÿ  26 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:384:7 ÔÇ║ EQUIPMENT RESERVATION (T-021 to T-022) ÔÇ║ TC-021: Reserve equipment - available (4ms)
+  Ô£ÿ  27 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:406:7 ÔÇ║ INTERVENTIONS (T-023 to T-024) ÔÇ║ TC-023: Request intervention - creation (4ms)
+  Ô£ÿ  28 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:415:7 ÔÇ║ INTERVENTIONS (T-023 to T-024) ÔÇ║ TC-024: Request intervention - urgent priority (4ms)
+  Ô£ÿ  29 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:437:7 ÔÇ║ DOCUMENTS GED (T-025 to T-027) ÔÇ║ TC-026: Document - no permission access denied (4ms)
+  Ô£ÿ  30 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:428:7 ÔÇ║ DOCUMENTS GED (T-025 to T-027) ÔÇ║ TC-025: Consult published document (6ms)
+  Ô£ÿ  31 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:448:7 ÔÇ║ DOCUMENTS GED (T-025 to T-027) ÔÇ║ TC-027: Download document (5ms)
+  Ô£ÿ  32 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:462:7 ÔÇ║ PARTNERS & SECURITY (T-028 to T-032) ÔÇ║ TC-028: Invite external partner (3ms)
+  Ô£ÿ  33 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:480:7 ÔÇ║ PARTNERS & SECURITY (T-028 to T-032) ÔÇ║ TC-030: Validate event - nominal flow (2ms)
+  Ô£ÿ  34 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:471:7 ÔÇ║ PARTNERS & SECURITY (T-028 to T-032) ÔÇ║ TC-029: Invite partner - invalid email (3ms)
+  Ô£ÿ  35 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:489:7 ÔÇ║ PARTNERS & SECURITY (T-028 to T-032) ÔÇ║ TC-031: Validate event - reject with reason (3ms)
+  Ô£ÿ  36 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:499:7 ÔÇ║ PARTNERS & SECURITY (T-028 to T-032) ÔÇ║ TC-032: Validate event - with partners to verify (3ms)
+  Ô£ÿ  37 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:512:7 ÔÇ║ ROOM MANAGEMENT (T-033 to T-035) ÔÇ║ TC-033: Manage room - create (3ms)
+  Ô£ÿ  38 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:522:7 ÔÇ║ ROOM MANAGEMENT (T-033 to T-035) ÔÇ║ TC-034: Manage room - modify capacity (2ms)
+  Ô£ÿ  39 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:532:7 ÔÇ║ ROOM MANAGEMENT (T-033 to T-035) ÔÇ║ TC-035: Manage room - delete with active reservations (4ms)
+  Ô£ÿ  40 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:546:7 ÔÇ║ EQUIPMENT MANAGEMENT (T-036 to T-037) ÔÇ║ TC-036: Manage equipment - add (3ms)
+  Ô£ÿ  41 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:556:7 ÔÇ║ EQUIPMENT MANAGEMENT (T-036 to T-037) ÔÇ║ TC-037: Manage equipment - mark maintenance (3ms)
+  Ô£ÿ  42 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:570:7 ÔÇ║ INTERVENTION MANAGEMENT (T-038 to T-039) ÔÇ║ TC-038: Manage intervention - accept (3ms)
+  Ô£ÿ  43 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:580:7 ÔÇ║ INTERVENTION MANAGEMENT (T-038 to T-039) ÔÇ║ TC-039: Manage intervention - close with resolution (3ms)
+  Ô£ÿ  44 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:594:7 ÔÇ║ SECURITY VERIFICATION (T-040 to T-043) ÔÇ║ TC-040: Check reservation conflicts (4ms)
+  Ô£ÿ  45 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:603:7 ÔÇ║ SECURITY VERIFICATION (T-040 to T-043) ÔÇ║ TC-041: Check conflicts - double booking detected (2ms)
+  Ô£ÿ  46 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:612:7 ÔÇ║ SECURITY VERIFICATION (T-040 to T-043) ÔÇ║ TC-042: Verify partner - approve (3ms)
+  Ô£ÿ  47 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:622:7 ÔÇ║ SECURITY VERIFICATION (T-040 to T-043) ÔÇ║ TC-043: Verify partner - reject (4ms)
+  Ô£ÿ  48 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:636:7 ÔÇ║ DIRECTION DASHBOARD (T-044 to T-045) ÔÇ║ TC-044: Direction dashboard - KPIs displayed (3ms)
+  Ô£ÿ  49 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:645:7 ÔÇ║ DIRECTION DASHBOARD (T-044 to T-045) ÔÇ║ TC-045: Direction dashboard - performance < 3s (2ms)
+  Ô£ÿ  50 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:659:7 ÔÇ║ GED WORKFLOW (T-046 to T-048) ÔÇ║ TC-046: GED - publish document (3ms)
+  Ô£ÿ  51 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:668:7 ÔÇ║ GED WORKFLOW (T-046 to T-048) ÔÇ║ TC-047: GED - approve document (4ms)
+  Ô£ÿ  52 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:678:7 ÔÇ║ GED WORKFLOW (T-046 to T-048) ÔÇ║ TC-048: GED - reject with comments (3ms)
+  Ô£ÿ  53 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:692:7 ÔÇ║ PERMISSIONS & SECURITY (T-049 to T-051) ÔÇ║ TC-049: Permission - Admin access control (2ms)
+  Ô£ÿ  54 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:704:7 ÔÇ║ PERMISSIONS & SECURITY (T-049 to T-051) ÔÇ║ TC-050: Permission - Employee cannot create user (3ms)
+  Ô£ÿ  55 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:716:7 ÔÇ║ PERMISSIONS & SECURITY (T-049 to T-051) ÔÇ║ TC-051: Permission - Chef validates only own team (2ms)
+  Ô£ÿ  56 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:729:7 ÔÇ║ API VALIDATION (T-052 to T-054) ÔÇ║ TC-052: API - Invalid JSON payload (3ms)
+  Ô£ÿ  57 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:744:7 ÔÇ║ API VALIDATION (T-052 to T-054) ÔÇ║ TC-053: API - Missing required field (3ms)
+  Ô£ÿ  58 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:778:7 ÔÇ║ EMAIL & NOTIFICATIONS (T-055) ÔÇ║ TC-055: Email - Notification sent (2ms)
+  Ô£ÿ  59 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:759:7 ÔÇ║ API VALIDATION (T-052 to T-054) ÔÇ║ TC-054: API - 500 error handling (3ms)
+  Ô£ÿ  60 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:794:7 ÔÇ║ CONCURRENCY & DATA INTEGRITY (T-056 to T-058) ÔÇ║ TC-056: Concurrency - Two simultaneous creations (3ms)
+  Ô£ÿ  61 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:818:7 ÔÇ║ CONCURRENCY & DATA INTEGRITY (T-056 to T-058) ÔÇ║ TC-057: Data - Referential integrity (2ms)
+  Ô£ÿ  62 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:848:7 ÔÇ║ PERFORMANCE & LOAD (T-059 to T-060) ÔÇ║ TC-059: Performance - Page load < 2s (3ms)
+  Ô£ÿ  63 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:833:7 ÔÇ║ CONCURRENCY & DATA INTEGRITY (T-056 to T-058) ÔÇ║ TC-058: Audit - All actions logged (2ms)
+  Ô£ÿ  64 [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:856:7 ÔÇ║ PERFORMANCE & LOAD (T-059 to T-060) ÔÇ║ TC-060: Load test - 100 users simulation (basic) (2ms)
+
+
+  1) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:6:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-001-001: Login with valid credentials 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-SMOKE-TESTS---aa246-ogin-with-valid-credentials-chromium\error-context.md
+
+  2) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:20:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-001-002: Login with invalid credentials 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-SMOKE-TESTS---205d0-in-with-invalid-credentials-chromium\error-context.md
+
+  3) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:39:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-001-003: Logout and token invalidation 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-SMOKE-TESTS---08950-gout-and-token-invalidation-chromium\error-context.md
+
+  4) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:59:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-003-001: Create user (Admin) 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-SMOKE-TESTS---a1e0d--003-001-Create-user-Admin--chromium\error-context.md
+
+  5) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:85:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-005-001: Create event (Employee) 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-SMOKE-TESTS---6537b--001-Create-event-Employee--chromium\error-context.md
+
+  6) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:104:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-006-001: Reserve room (Employee) 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-SMOKE-TESTS---de1e6--001-Reserve-room-Employee--chromium\error-context.md
+
+  7) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:123:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-049-001: RBAC - Admin sees admin menu 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-SMOKE-TESTS---63f94-BAC---Admin-sees-admin-menu-chromium\error-context.md
+
+  8) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:133:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-049-002: RBAC - Employee cannot see admin menu 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-SMOKE-TESTS---d8433-loyee-cannot-see-admin-menu-chromium\error-context.md
+
+  9) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:151:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-013-001: Chef validates event 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-SMOKE-TESTS---8c0b7-13-001-Chef-validates-event-chromium\error-context.md
+
+  10) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:169:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-046-001: GED - Publish document 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-SMOKE-TESTS---a3dce--001-GED---Publish-document-chromium\error-context.md
+
+  11) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:191:7 ÔÇ║ AUTHENTICATION - Full Suite (T-001 to T-005) ÔÇ║ TC-004: Token expiration and refresh 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-AUTHENTICATIO-a8034-oken-expiration-and-refresh-chromium\error-context.md
+
+  12) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:208:7 ÔÇ║ AUTHENTICATION - Full Suite (T-001 to T-005) ÔÇ║ TC-005: CORS headers on API calls 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-AUTHENTICATIO-effa1-5-CORS-headers-on-API-calls-chromium\error-context.md
+
+  13) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:237:7 ÔÇ║ USER MANAGEMENT (T-006 to T-010) ÔÇ║ TC-006: Create user - valid data 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-USER-MANAGEME-7b89f-06-Create-user---valid-data-chromium\error-context.md
+
+  14) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:246:7 ÔÇ║ USER MANAGEMENT (T-006 to T-010) ÔÇ║ TC-007: Create user - duplicate email error 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-USER-MANAGEME-4b950-ser---duplicate-email-error-chromium\error-context.md
+
+  15) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:255:7 ÔÇ║ USER MANAGEMENT (T-006 to T-010) ÔÇ║ TC-008: Modify user and roles 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-USER-MANAGEME-a9bb7-C-008-Modify-user-and-roles-chromium\error-context.md
+
+  16) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:265:7 ÔÇ║ USER MANAGEMENT (T-006 to T-010) ÔÇ║ TC-009: Delete user 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-USER-MANAGEME-9a26f-to-T-010-TC-009-Delete-user-chromium\error-context.md
+
+  17) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:275:7 ÔÇ║ USER MANAGEMENT (T-006 to T-010) ÔÇ║ TC-010: User list pagination 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-USER-MANAGEME-358d0-TC-010-User-list-pagination-chromium\error-context.md
+
+  18) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:292:7 ÔÇ║ EVENT MANAGEMENT (T-013 to T-016) ÔÇ║ TC-014: Create event - room unavailable 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-EVENT-MANAGEM-b79ce-te-event---room-unavailable-chromium\error-context.md
+
+  19) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:302:7 ÔÇ║ EVENT MANAGEMENT (T-013 to T-016) ÔÇ║ TC-015: Create event - missing equipment 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-EVENT-MANAGEM-11dd4-e-event---missing-equipment-chromium\error-context.md
+
+  20) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:311:7 ÔÇ║ EVENT MANAGEMENT (T-013 to T-016) ÔÇ║ TC-016: Create event - with external partners 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-EVENT-MANAGEM-2504c-nt---with-external-partners-chromium\error-context.md
+
+  21) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:325:7 ÔÇ║ ROOM RESERVATION (T-017 to T-020) ÔÇ║ TC-017: Reserve room - free slot 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-ROOM-RESERVAT-a929f-17-Reserve-room---free-slot-chromium\error-context.md
+
+  22) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:334:7 ÔÇ║ ROOM RESERVATION (T-017 to T-020) ÔÇ║ TC-018: Race condition - double booking 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-ROOM-RESERVAT-91b4f--condition---double-booking-chromium\error-context.md
+
+  23) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:359:7 ÔÇ║ ROOM RESERVATION (T-017 to T-020) ÔÇ║ TC-019: Reserve room - insufficient capacity 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-ROOM-RESERVAT-61a31-oom---insufficient-capacity-chromium\error-context.md
+
+  24) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:368:7 ÔÇ║ ROOM RESERVATION (T-017 to T-020) ÔÇ║ TC-020: Cancel room reservation 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-ROOM-RESERVAT-5ce5b-020-Cancel-room-reservation-chromium\error-context.md
+
+  25) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:384:7 ÔÇ║ EQUIPMENT RESERVATION (T-021 to T-022) ÔÇ║ TC-021: Reserve equipment - available 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-EQUIPMENT-RES-2f47e-serve-equipment---available-chromium\error-context.md
+
+  26) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:393:7 ÔÇ║ EQUIPMENT RESERVATION (T-021 to T-022) ÔÇ║ TC-022: Reserve equipment - in maintenance 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-EQUIPMENT-RES-3a2e5--equipment---in-maintenance-chromium\error-context.md
+
+  27) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:406:7 ÔÇ║ INTERVENTIONS (T-023 to T-024) ÔÇ║ TC-023: Request intervention - creation 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-INTERVENTIONS-c5934-est-intervention---creation-chromium\error-context.md
+
+  28) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:415:7 ÔÇ║ INTERVENTIONS (T-023 to T-024) ÔÇ║ TC-024: Request intervention - urgent priority 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-INTERVENTIONS-1faf2-ervention---urgent-priority-chromium\error-context.md
+
+  29) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:428:7 ÔÇ║ DOCUMENTS GED (T-025 to T-027) ÔÇ║ TC-025: Consult published document 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-DOCUMENTS-GED-ee66d--Consult-published-document-chromium\error-context.md
+
+  30) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:437:7 ÔÇ║ DOCUMENTS GED (T-025 to T-027) ÔÇ║ TC-026: Document - no permission access denied 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-DOCUMENTS-GED-20b20-no-permission-access-denied-chromium\error-context.md
+
+  31) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:448:7 ÔÇ║ DOCUMENTS GED (T-025 to T-027) ÔÇ║ TC-027: Download document 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-DOCUMENTS-GED-73dd0-27-TC-027-Download-document-chromium\error-context.md
+
+  32) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:462:7 ÔÇ║ PARTNERS & SECURITY (T-028 to T-032) ÔÇ║ TC-028: Invite external partner 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-PARTNERS-SECU-2c064-028-Invite-external-partner-chromium\error-context.md
+
+  33) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:471:7 ÔÇ║ PARTNERS & SECURITY (T-028 to T-032) ÔÇ║ TC-029: Invite partner - invalid email 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-PARTNERS-SECU-1aeb2-ite-partner---invalid-email-chromium\error-context.md
+
+  34) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:480:7 ÔÇ║ PARTNERS & SECURITY (T-028 to T-032) ÔÇ║ TC-030: Validate event - nominal flow 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-PARTNERS-SECU-f564c-lidate-event---nominal-flow-chromium\error-context.md
+
+  35) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:489:7 ÔÇ║ PARTNERS & SECURITY (T-028 to T-032) ÔÇ║ TC-031: Validate event - reject with reason 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-PARTNERS-SECU-15e86--event---reject-with-reason-chromium\error-context.md
+
+  36) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:499:7 ÔÇ║ PARTNERS & SECURITY (T-028 to T-032) ÔÇ║ TC-032: Validate event - with partners to verify 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-PARTNERS-SECU-f9f59-t---with-partners-to-verify-chromium\error-context.md
+
+  37) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:512:7 ÔÇ║ ROOM MANAGEMENT (T-033 to T-035) ÔÇ║ TC-033: Manage room - create 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-ROOM-MANAGEME-556ee-TC-033-Manage-room---create-chromium\error-context.md
+
+  38) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:522:7 ÔÇ║ ROOM MANAGEMENT (T-033 to T-035) ÔÇ║ TC-034: Manage room - modify capacity 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-ROOM-MANAGEME-62ec1-nage-room---modify-capacity-chromium\error-context.md
+
+  39) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:532:7 ÔÇ║ ROOM MANAGEMENT (T-033 to T-035) ÔÇ║ TC-035: Manage room - delete with active reservations 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-ROOM-MANAGEME-bdeb7-te-with-active-reservations-chromium\error-context.md
+
+  40) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:546:7 ÔÇ║ EQUIPMENT MANAGEMENT (T-036 to T-037) ÔÇ║ TC-036: Manage equipment - add 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-EQUIPMENT-MAN-0f5c2--036-Manage-equipment---add-chromium\error-context.md
+
+  41) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:556:7 ÔÇ║ EQUIPMENT MANAGEMENT (T-036 to T-037) ÔÇ║ TC-037: Manage equipment - mark maintenance 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-EQUIPMENT-MAN-4e826-quipment---mark-maintenance-chromium\error-context.md
+
+  42) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:570:7 ÔÇ║ INTERVENTION MANAGEMENT (T-038 to T-039) ÔÇ║ TC-038: Manage intervention - accept 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-INTERVENTION--9b167-anage-intervention---accept-chromium\error-context.md
+
+  43) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:580:7 ÔÇ║ INTERVENTION MANAGEMENT (T-038 to T-039) ÔÇ║ TC-039: Manage intervention - close with resolution 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-INTERVENTION--15cb0-ion---close-with-resolution-chromium\error-context.md
+
+  44) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:594:7 ÔÇ║ SECURITY VERIFICATION (T-040 to T-043) ÔÇ║ TC-040: Check reservation conflicts 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-SECURITY-VERI-23ae0-Check-reservation-conflicts-chromium\error-context.md
+
+  45) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:603:7 ÔÇ║ SECURITY VERIFICATION (T-040 to T-043) ÔÇ║ TC-041: Check conflicts - double booking detected 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-SECURITY-VERI-dde65-s---double-booking-detected-chromium\error-context.md
+
+  46) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:612:7 ÔÇ║ SECURITY VERIFICATION (T-040 to T-043) ÔÇ║ TC-042: Verify partner - approve 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-SECURITY-VERI-eb51a-42-Verify-partner---approve-chromium\error-context.md
+
+  47) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:622:7 ÔÇ║ SECURITY VERIFICATION (T-040 to T-043) ÔÇ║ TC-043: Verify partner - reject 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-SECURITY-VERI-7297c-043-Verify-partner---reject-chromium\error-context.md
+
+  48) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:636:7 ÔÇ║ DIRECTION DASHBOARD (T-044 to T-045) ÔÇ║ TC-044: Direction dashboard - KPIs displayed 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-DIRECTION-DAS-47ecb--dashboard---KPIs-displayed-chromium\error-context.md
+
+  49) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:645:7 ÔÇ║ DIRECTION DASHBOARD (T-044 to T-045) ÔÇ║ TC-045: Direction dashboard - performance < 3s 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-DIRECTION-DAS-fee16--dashboard---performance-3s-chromium\error-context.md
+
+  50) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:659:7 ÔÇ║ GED WORKFLOW (T-046 to T-048) ÔÇ║ TC-046: GED - publish document 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-GED-WORKFLOW--94093--046-GED---publish-document-chromium\error-context.md
+
+  51) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:668:7 ÔÇ║ GED WORKFLOW (T-046 to T-048) ÔÇ║ TC-047: GED - approve document 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-GED-WORKFLOW--a27af--047-GED---approve-document-chromium\error-context.md
+
+  52) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:678:7 ÔÇ║ GED WORKFLOW (T-046 to T-048) ÔÇ║ TC-048: GED - reject with comments 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-GED-WORKFLOW--5b38b--GED---reject-with-comments-chromium\error-context.md
+
+  53) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:692:7 ÔÇ║ PERMISSIONS & SECURITY (T-049 to T-051) ÔÇ║ TC-049: Permission - Admin access control 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-PERMISSIONS-S-08729-sion---Admin-access-control-chromium\error-context.md
+
+  54) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:704:7 ÔÇ║ PERMISSIONS & SECURITY (T-049 to T-051) ÔÇ║ TC-050: Permission - Employee cannot create user 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-PERMISSIONS-S-c8834-Employee-cannot-create-user-chromium\error-context.md
+
+  55) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:716:7 ÔÇ║ PERMISSIONS & SECURITY (T-049 to T-051) ÔÇ║ TC-051: Permission - Chef validates only own team 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-PERMISSIONS-S-cb5ab-hef-validates-only-own-team-chromium\error-context.md
+
+  56) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:729:7 ÔÇ║ API VALIDATION (T-052 to T-054) ÔÇ║ TC-052: API - Invalid JSON payload 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-API-VALIDATIO-87842--API---Invalid-JSON-payload-chromium\error-context.md
+
+  57) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:744:7 ÔÇ║ API VALIDATION (T-052 to T-054) ÔÇ║ TC-053: API - Missing required field 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-API-VALIDATIO-4eec2-PI---Missing-required-field-chromium\error-context.md
+
+  58) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:759:7 ÔÇ║ API VALIDATION (T-052 to T-054) ÔÇ║ TC-054: API - 500 error handling 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-API-VALIDATIO-f3275-54-API---500-error-handling-chromium\error-context.md
+
+  59) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:778:7 ÔÇ║ EMAIL & NOTIFICATIONS (T-055) ÔÇ║ TC-055: Email - Notification sent 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-EMAIL-NOTIFIC-f627a-5-Email---Notification-sent-chromium\error-context.md
+
+  60) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:794:7 ÔÇ║ CONCURRENCY & DATA INTEGRITY (T-056 to T-058) ÔÇ║ TC-056: Concurrency - Two simultaneous creations 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-CONCURRENCY-D-f6d69--Two-simultaneous-creations-chromium\error-context.md
+
+  61) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:818:7 ÔÇ║ CONCURRENCY & DATA INTEGRITY (T-056 to T-058) ÔÇ║ TC-057: Data - Referential integrity 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-CONCURRENCY-D-3ef65-ata---Referential-integrity-chromium\error-context.md
+
+  62) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:833:7 ÔÇ║ CONCURRENCY & DATA INTEGRITY (T-056 to T-058) ÔÇ║ TC-058: Audit - All actions logged 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-CONCURRENCY-D-9573a--Audit---All-actions-logged-chromium\error-context.md
+
+  63) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:848:7 ÔÇ║ PERFORMANCE & LOAD (T-059 to T-060) ÔÇ║ TC-059: Performance - Page load < 2s 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-PERFORMANCE-L-500b3--Performance---Page-load-2s-chromium\error-context.md
+
+  64) [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:856:7 ÔÇ║ PERFORMANCE & LOAD (T-059 to T-060) ÔÇ║ TC-060: Load test - 100 users simulation (basic) 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\wassi\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+    Ôòæ Looks like Playwright was just installed or updated.       Ôòæ
+    Ôòæ Please run the following command to download new browsers: Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ     npx playwright install                                 Ôòæ
+    Ôòæ                                                            Ôòæ
+    Ôòæ <3 Playwright Team                                         Ôòæ
+    ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+    Error Context: test-results\all-60-tests-PERFORMANCE-L-45c59-100-users-simulation-basic--chromium\error-context.md
+
+  64 failed
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:6:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-001-001: Login with valid credentials 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:20:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-001-002: Login with invalid credentials 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:39:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-001-003: Logout and token invalidation 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:59:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-003-001: Create user (Admin) 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:85:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-005-001: Create event (Employee) 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:104:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-006-001: Reserve room (Employee) 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:123:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-049-001: RBAC - Admin sees admin menu 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:133:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-049-002: RBAC - Employee cannot see admin menu 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:151:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-013-001: Chef validates event 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:169:7 ÔÇ║ SMOKE TESTS - Critical Path ÔÇ║ @smoke TC-046-001: GED - Publish document 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:191:7 ÔÇ║ AUTHENTICATION - Full Suite (T-001 to T-005) ÔÇ║ TC-004: Token expiration and refresh 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:208:7 ÔÇ║ AUTHENTICATION - Full Suite (T-001 to T-005) ÔÇ║ TC-005: CORS headers on API calls 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:237:7 ÔÇ║ USER MANAGEMENT (T-006 to T-010) ÔÇ║ TC-006: Create user - valid data 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:246:7 ÔÇ║ USER MANAGEMENT (T-006 to T-010) ÔÇ║ TC-007: Create user - duplicate email error 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:255:7 ÔÇ║ USER MANAGEMENT (T-006 to T-010) ÔÇ║ TC-008: Modify user and roles 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:265:7 ÔÇ║ USER MANAGEMENT (T-006 to T-010) ÔÇ║ TC-009: Delete user 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:275:7 ÔÇ║ USER MANAGEMENT (T-006 to T-010) ÔÇ║ TC-010: User list pagination 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:292:7 ÔÇ║ EVENT MANAGEMENT (T-013 to T-016) ÔÇ║ TC-014: Create event - room unavailable 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:302:7 ÔÇ║ EVENT MANAGEMENT (T-013 to T-016) ÔÇ║ TC-015: Create event - missing equipment 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:311:7 ÔÇ║ EVENT MANAGEMENT (T-013 to T-016) ÔÇ║ TC-016: Create event - with external partners 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:325:7 ÔÇ║ ROOM RESERVATION (T-017 to T-020) ÔÇ║ TC-017: Reserve room - free slot 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:334:7 ÔÇ║ ROOM RESERVATION (T-017 to T-020) ÔÇ║ TC-018: Race condition - double booking 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:359:7 ÔÇ║ ROOM RESERVATION (T-017 to T-020) ÔÇ║ TC-019: Reserve room - insufficient capacity 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:368:7 ÔÇ║ ROOM RESERVATION (T-017 to T-020) ÔÇ║ TC-020: Cancel room reservation 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:384:7 ÔÇ║ EQUIPMENT RESERVATION (T-021 to T-022) ÔÇ║ TC-021: Reserve equipment - available 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:393:7 ÔÇ║ EQUIPMENT RESERVATION (T-021 to T-022) ÔÇ║ TC-022: Reserve equipment - in maintenance 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:406:7 ÔÇ║ INTERVENTIONS (T-023 to T-024) ÔÇ║ TC-023: Request intervention - creation 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:415:7 ÔÇ║ INTERVENTIONS (T-023 to T-024) ÔÇ║ TC-024: Request intervention - urgent priority 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:428:7 ÔÇ║ DOCUMENTS GED (T-025 to T-027) ÔÇ║ TC-025: Consult published document 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:437:7 ÔÇ║ DOCUMENTS GED (T-025 to T-027) ÔÇ║ TC-026: Document - no permission access denied 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:448:7 ÔÇ║ DOCUMENTS GED (T-025 to T-027) ÔÇ║ TC-027: Download document 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:462:7 ÔÇ║ PARTNERS & SECURITY (T-028 to T-032) ÔÇ║ TC-028: Invite external partner 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:471:7 ÔÇ║ PARTNERS & SECURITY (T-028 to T-032) ÔÇ║ TC-029: Invite partner - invalid email 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:480:7 ÔÇ║ PARTNERS & SECURITY (T-028 to T-032) ÔÇ║ TC-030: Validate event - nominal flow 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:489:7 ÔÇ║ PARTNERS & SECURITY (T-028 to T-032) ÔÇ║ TC-031: Validate event - reject with reason 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:499:7 ÔÇ║ PARTNERS & SECURITY (T-028 to T-032) ÔÇ║ TC-032: Validate event - with partners to verify 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:512:7 ÔÇ║ ROOM MANAGEMENT (T-033 to T-035) ÔÇ║ TC-033: Manage room - create 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:522:7 ÔÇ║ ROOM MANAGEMENT (T-033 to T-035) ÔÇ║ TC-034: Manage room - modify capacity 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:532:7 ÔÇ║ ROOM MANAGEMENT (T-033 to T-035) ÔÇ║ TC-035: Manage room - delete with active reservations 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:546:7 ÔÇ║ EQUIPMENT MANAGEMENT (T-036 to T-037) ÔÇ║ TC-036: Manage equipment - add 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:556:7 ÔÇ║ EQUIPMENT MANAGEMENT (T-036 to T-037) ÔÇ║ TC-037: Manage equipment - mark maintenance 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:570:7 ÔÇ║ INTERVENTION MANAGEMENT (T-038 to T-039) ÔÇ║ TC-038: Manage intervention - accept 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:580:7 ÔÇ║ INTERVENTION MANAGEMENT (T-038 to T-039) ÔÇ║ TC-039: Manage intervention - close with resolution 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:594:7 ÔÇ║ SECURITY VERIFICATION (T-040 to T-043) ÔÇ║ TC-040: Check reservation conflicts 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:603:7 ÔÇ║ SECURITY VERIFICATION (T-040 to T-043) ÔÇ║ TC-041: Check conflicts - double booking detected 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:612:7 ÔÇ║ SECURITY VERIFICATION (T-040 to T-043) ÔÇ║ TC-042: Verify partner - approve 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:622:7 ÔÇ║ SECURITY VERIFICATION (T-040 to T-043) ÔÇ║ TC-043: Verify partner - reject 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:636:7 ÔÇ║ DIRECTION DASHBOARD (T-044 to T-045) ÔÇ║ TC-044: Direction dashboard - KPIs displayed 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:645:7 ÔÇ║ DIRECTION DASHBOARD (T-044 to T-045) ÔÇ║ TC-045: Direction dashboard - performance < 3s 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:659:7 ÔÇ║ GED WORKFLOW (T-046 to T-048) ÔÇ║ TC-046: GED - publish document 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:668:7 ÔÇ║ GED WORKFLOW (T-046 to T-048) ÔÇ║ TC-047: GED - approve document 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:678:7 ÔÇ║ GED WORKFLOW (T-046 to T-048) ÔÇ║ TC-048: GED - reject with comments 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:692:7 ÔÇ║ PERMISSIONS & SECURITY (T-049 to T-051) ÔÇ║ TC-049: Permission - Admin access control 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:704:7 ÔÇ║ PERMISSIONS & SECURITY (T-049 to T-051) ÔÇ║ TC-050: Permission - Employee cannot create user 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:716:7 ÔÇ║ PERMISSIONS & SECURITY (T-049 to T-051) ÔÇ║ TC-051: Permission - Chef validates only own team 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:729:7 ÔÇ║ API VALIDATION (T-052 to T-054) ÔÇ║ TC-052: API - Invalid JSON payload 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:744:7 ÔÇ║ API VALIDATION (T-052 to T-054) ÔÇ║ TC-053: API - Missing required field 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:759:7 ÔÇ║ API VALIDATION (T-052 to T-054) ÔÇ║ TC-054: API - 500 error handling 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:778:7 ÔÇ║ EMAIL & NOTIFICATIONS (T-055) ÔÇ║ TC-055: Email - Notification sent 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:794:7 ÔÇ║ CONCURRENCY & DATA INTEGRITY (T-056 to T-058) ÔÇ║ TC-056: Concurrency - Two simultaneous creations 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:818:7 ÔÇ║ CONCURRENCY & DATA INTEGRITY (T-056 to T-058) ÔÇ║ TC-057: Data - Referential integrity 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:833:7 ÔÇ║ CONCURRENCY & DATA INTEGRITY (T-056 to T-058) ÔÇ║ TC-058: Audit - All actions logged 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:848:7 ÔÇ║ PERFORMANCE & LOAD (T-059 to T-060) ÔÇ║ TC-059: Performance - Page load < 2s 
+    [chromium] ÔÇ║ e2e\all-60-tests.spec.ts:856:7 ÔÇ║ PERFORMANCE & LOAD (T-059 to T-060) ÔÇ║ TC-060: Load test - 100 users simulation (basic) 
+
+[36m  Serving HTML report at http://localhost:9323. Press Ctrl+C to quit.[39m

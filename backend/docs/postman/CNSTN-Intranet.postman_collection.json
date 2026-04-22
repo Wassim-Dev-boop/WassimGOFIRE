@@ -1,0 +1,700 @@
+{
+  "info": {
+    "_postman_id": "c2d5f8f0-85b4-4d55-a6d3-1fd8f84d9410",
+    "name": "CNSTN Intranet - Full API",
+    "description": "Collection de test CNSTN Intranet (Spring Cloud + Keycloak). Les tokens sont récupérés par rôle puis réutilisés sur les endpoints métier.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 - Auth (Keycloak Tokens)",
+      "item": [
+        {
+          "name": "Get ADMIN Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password", "type": "text" },
+                { "key": "client_id", "value": "{{postmanClientId}}", "type": "text" },
+                { "key": "username", "value": "{{adminUsername}}", "type": "text" },
+                { "key": "password", "value": "{{adminPassword}}", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token",
+              "host": ["{{keycloakUrl}}"],
+              "path": ["realms", "{{realm}}", "protocol", "openid-connect", "token"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('adminToken', json.access_token);",
+                  "pm.test('ADMIN token reçu', () => pm.expect(json.access_token).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get EMPLOYE Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password", "type": "text" },
+                { "key": "client_id", "value": "{{postmanClientId}}", "type": "text" },
+                { "key": "username", "value": "{{employeeUsername}}", "type": "text" },
+                { "key": "password", "value": "{{employeePassword}}", "type": "text" }
+              ]
+            },
+            "url": { "raw": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token", "host": ["{{keycloakUrl}}"], "path": ["realms", "{{realm}}", "protocol", "openid-connect", "token"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('employeeToken', json.access_token);",
+                  "pm.test('EMPLOYE token reçu', () => pm.expect(json.access_token).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get CHEF_HIERARCHIQUE Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password", "type": "text" },
+                { "key": "client_id", "value": "{{postmanClientId}}", "type": "text" },
+                { "key": "username", "value": "{{chefUsername}}", "type": "text" },
+                { "key": "password", "value": "{{chefPassword}}", "type": "text" }
+              ]
+            },
+            "url": { "raw": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token", "host": ["{{keycloakUrl}}"], "path": ["realms", "{{realm}}", "protocol", "openid-connect", "token"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('chefToken', json.access_token);",
+                  "pm.test('CHEF token reçu', () => pm.expect(json.access_token).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get RESPONSABLE_SALLE Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password", "type": "text" },
+                { "key": "client_id", "value": "{{postmanClientId}}", "type": "text" },
+                { "key": "username", "value": "{{roomManagerUsername}}", "type": "text" },
+                { "key": "password", "value": "{{roomManagerPassword}}", "type": "text" }
+              ]
+            },
+            "url": { "raw": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token", "host": ["{{keycloakUrl}}"], "path": ["realms", "{{realm}}", "protocol", "openid-connect", "token"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('roomManagerToken', json.access_token);",
+                  "pm.test('RESPONSABLE_SALLE token reçu', () => pm.expect(json.access_token).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get RESPONSABLE_SECURITE Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password", "type": "text" },
+                { "key": "client_id", "value": "{{postmanClientId}}", "type": "text" },
+                { "key": "username", "value": "{{securityManagerUsername}}", "type": "text" },
+                { "key": "password", "value": "{{securityManagerPassword}}", "type": "text" }
+              ]
+            },
+            "url": { "raw": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token", "host": ["{{keycloakUrl}}"], "path": ["realms", "{{realm}}", "protocol", "openid-connect", "token"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('securityManagerToken', json.access_token);",
+                  "pm.test('RESPONSABLE_SECURITE token reçu', () => pm.expect(json.access_token).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get DIRECTEUR_DSN Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password", "type": "text" },
+                { "key": "client_id", "value": "{{postmanClientId}}", "type": "text" },
+                { "key": "username", "value": "{{directorUsername}}", "type": "text" },
+                { "key": "password", "value": "{{directorPassword}}", "type": "text" }
+              ]
+            },
+            "url": { "raw": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token", "host": ["{{keycloakUrl}}"], "path": ["realms", "{{realm}}", "protocol", "openid-connect", "token"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('directorToken', json.access_token);",
+                  "pm.test('DIRECTEUR_DSN token reçu', () => pm.expect(json.access_token).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get RESPONSABLE_QUALITE Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password", "type": "text" },
+                { "key": "client_id", "value": "{{postmanClientId}}", "type": "text" },
+                { "key": "username", "value": "{{qualityManagerUsername}}", "type": "text" },
+                { "key": "password", "value": "{{qualityManagerPassword}}", "type": "text" }
+              ]
+            },
+            "url": { "raw": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token", "host": ["{{keycloakUrl}}"], "path": ["realms", "{{realm}}", "protocol", "openid-connect", "token"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('qualityManagerToken', json.access_token);",
+                  "pm.test('RESPONSABLE_QUALITE token reçu', () => pm.expect(json.access_token).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Auth User Service (ADMIN)",
+      "item": [
+        {
+          "name": "Create Department",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"DSI-{{$timestamp}}\",\n  \"name\": \"Direction des Systèmes d'Information {{$timestamp}}\",\n  \"description\": \"Département DSI\",\n  \"active\": true\n}"
+            },
+            "url": "{{gatewayUrl}}/api/v1/admin/departments"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('departmentId', json.id);",
+                  "pm.test('Department créé', () => pm.expect(json.id).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Departments",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{gatewayUrl}}/api/v1/admin/departments?page=0&size=20"
+          }
+        },
+        {
+          "name": "Create User EMPLOYE",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"agent.local.{{$timestamp}}\",\n  \"email\": \"agent.local.{{$timestamp}}@cnstn.tn\",\n  \"firstName\": \"Agent\",\n  \"lastName\": \"Local\",\n  \"phone\": \"+21620000001\",\n  \"departmentId\": \"{{departmentId}}\",\n  \"roles\": [\"EMPLOYE\"],\n  \"enabled\": true,\n  \"initialPassword\": \"User@12345\"\n}"
+            },
+            "url": "{{gatewayUrl}}/api/v1/admin/users"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('employeeUserId', json.id);",
+                  "pm.test('User créé', () => pm.expect(json.id).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{gatewayUrl}}/api/v1/admin/users?page=0&size=20"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Event Service",
+      "item": [
+        {
+          "name": "Create Event (EMPLOYE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{employeeToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Réunion Intranet\",\n  \"description\": \"Point d'avancement plateforme\",\n  \"startAt\": \"{{eventStartAt}}\",\n  \"endAt\": \"{{eventEndAt}}\",\n  \"location\": \"Salle A\"\n}"
+            },
+            "url": "{{gatewayUrl}}/api/v1/events"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('eventId', json.id);",
+                  "pm.test('Event créé', () => pm.expect(json.id).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Decision Event (CHEF_HIERARCHIQUE)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{chefToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": true,\n  \"decisionComment\": \"Validé pour lancement\"\n}"
+            },
+            "url": "{{gatewayUrl}}/api/v1/events/{{eventId}}/decision"
+          }
+        },
+        {
+          "name": "Invite Partner",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{chefToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"partnerName\": \"Tech Partner\",\n  \"partnerEmail\": \"partner@example.com\"\n}"
+            },
+            "url": "{{gatewayUrl}}/api/v1/events/{{eventId}}/partners"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Reservation Service",
+      "item": [
+        {
+          "name": "Create Room (RESPONSABLE_SALLE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{roomManagerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Salle B {{$timestamp}}\",\n  \"location\": \"Bloc 1\",\n  \"capacity\": 20,\n  \"active\": true\n}"
+            },
+            "url": "{{gatewayUrl}}/api/v1/rooms"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('roomId', json.id);",
+                  "pm.test('Salle créée', () => pm.expect(json.id).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Equipment (RESPONSABLE_SALLE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{roomManagerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Projecteur X {{$timestamp}}\",\n  \"serialNumber\": \"PRJ-{{$timestamp}}\",\n  \"description\": \"Projecteur salle réunion\",\n  \"active\": true\n}"
+            },
+            "url": "{{gatewayUrl}}/api/v1/equipments"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('equipmentId', json.id);",
+                  "pm.test('Équipement créé', () => pm.expect(json.id).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Reservation Room (EMPLOYE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{employeeToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"{{roomId}}\",\n  \"startAt\": \"{{reservationStartAt}}\",\n  \"endAt\": \"{{reservationEndAt}}\",\n  \"purpose\": \"Réunion projet\"\n}"
+            },
+            "url": "{{gatewayUrl}}/api/v1/reservations"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('reservationId', json.id);",
+                  "pm.test('Réservation créée', () => pm.expect(json.id).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check Conflicts (RESPONSABLE_SECURITE)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{securityManagerToken}}" }
+            ],
+            "url": "{{gatewayUrl}}/api/v1/reservations/conflicts?roomId={{roomId}}&startAt={{reservationStartAt}}&endAt={{reservationEndAt}}"
+          }
+        },
+        {
+          "name": "Security Validation (RESPONSABLE_SECURITE)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{securityManagerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": true\n}"
+            },
+            "url": "{{gatewayUrl}}/api/v1/reservations/{{reservationId}}/security-validation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Intervention Service",
+      "item": [
+        {
+          "name": "Create Intervention (EMPLOYE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{employeeToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Panne réseau\",\n  \"description\": \"Connexion instable au 2ème étage\"\n}"
+            },
+            "url": "{{gatewayUrl}}/api/v1/interventions"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('interventionId', json.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Intervention Status (RESPONSABLE_SALLE)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{roomManagerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\",\n  \"assignedTo\": \"tech.team\"\n}"
+            },
+            "url": "{{gatewayUrl}}/api/v1/interventions/{{interventionId}}/status"
+          }
+        },
+        {
+          "name": "Validate Intervention (RESPONSABLE_SALLE)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{roomManagerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": true,\n  \"note\": \"Intervention réalisée\"\n}"
+            },
+            "url": "{{gatewayUrl}}/api/v1/interventions/{{interventionId}}/validate"
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - GED Service",
+      "item": [
+        {
+          "name": "Create Document (EMPLOYE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{employeeToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Procédure sécurité\",\n  \"category\": \"SECURITE\",\n  \"content\": \"Contenu initial du document GED\"\n}"
+            },
+            "url": "{{gatewayUrl}}/api/v1/documents"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('documentId', json.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Document Workflow",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{employeeToken}}" }
+            ],
+            "url": "{{gatewayUrl}}/api/v1/documents/{{documentId}}/submit"
+          }
+        },
+        {
+          "name": "Approve Document (RESPONSABLE_QUALITE)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{qualityManagerToken}}" }
+            ],
+            "url": "{{gatewayUrl}}/api/v1/documents/{{documentId}}/approve"
+          }
+        },
+        {
+          "name": "Publish Document (RESPONSABLE_QUALITE)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{qualityManagerToken}}" }
+            ],
+            "url": "{{gatewayUrl}}/api/v1/documents/{{documentId}}/publish"
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Notification Service",
+      "item": [
+        {
+          "name": "Create Notification (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientUsername\": \"{{employeeUsername}}\",\n  \"title\": \"Info système\",\n  \"message\": \"Maintenance planifiée ce soir\"\n}"
+            },
+            "url": "{{gatewayUrl}}/api/v1/notifications"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('notificationId', json.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List My Notifications (EMPLOYE)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{employeeToken}}" }
+            ],
+            "url": "{{gatewayUrl}}/api/v1/notifications"
+          }
+        },
+        {
+          "name": "Mark Notification Read (EMPLOYE)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{employeeToken}}" }
+            ],
+            "url": "{{gatewayUrl}}/api/v1/notifications/{{notificationId}}/read"
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Reporting Service",
+      "item": [
+        {
+          "name": "Dashboard KPI (DIRECTEUR_DSN)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{directorToken}}" }
+            ],
+            "url": "{{gatewayUrl}}/api/v1/kpis/dashboard"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "gatewayUrl", "value": "http://localhost:8080" },
+    { "key": "keycloakUrl", "value": "http://localhost:8090" },
+    { "key": "realm", "value": "cnstn-intranet" }
+  ]
+}
