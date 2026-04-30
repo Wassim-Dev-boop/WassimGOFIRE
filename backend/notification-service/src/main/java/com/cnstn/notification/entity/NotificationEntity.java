@@ -2,6 +2,8 @@ package com.cnstn.notification.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -29,6 +31,16 @@ public class NotificationEntity {
 
     @Column(name = "read_flag", nullable = false)
     private boolean readFlag = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "email_delivery_status", length = 20)
+    private EmailDeliveryStatus emailDeliveryStatus;
+
+    @Column(name = "email_last_attempt_at")
+    private Instant emailLastAttemptAt;
+
+    @Column(name = "email_last_error", length = 1200)
+    private String emailLastError;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -76,6 +88,30 @@ public class NotificationEntity {
 
     public void setReadFlag(boolean readFlag) {
         this.readFlag = readFlag;
+    }
+
+    public EmailDeliveryStatus getEmailDeliveryStatus() {
+        return emailDeliveryStatus;
+    }
+
+    public void setEmailDeliveryStatus(EmailDeliveryStatus emailDeliveryStatus) {
+        this.emailDeliveryStatus = emailDeliveryStatus;
+    }
+
+    public Instant getEmailLastAttemptAt() {
+        return emailLastAttemptAt;
+    }
+
+    public void setEmailLastAttemptAt(Instant emailLastAttemptAt) {
+        this.emailLastAttemptAt = emailLastAttemptAt;
+    }
+
+    public String getEmailLastError() {
+        return emailLastError;
+    }
+
+    public void setEmailLastError(String emailLastError) {
+        this.emailLastError = emailLastError;
     }
 
     public Instant getCreatedAt() {

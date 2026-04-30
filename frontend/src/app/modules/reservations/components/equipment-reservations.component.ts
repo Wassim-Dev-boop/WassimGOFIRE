@@ -1,13 +1,17 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AppRole, Equipment, EquipmentReservation } from '../../../core/models';
+import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { AppRole, Equipment, EquipmentReservation, Event } from '../../../core/models';
 import { AuthService } from '../../../core/services/auth.service';
+import { EventService } from '../../../core/services/event.service';
 import { ReservationService } from '../../../core/services/reservation.service';
 import { Option, SelectComponent } from '../../../shared/components/form/select/select.component';
 
 type EquipmentVisualStatus = 'DISPONIBLE' | 'EN_COURS' | 'INDISPONIBLE';
 type EquipmentStatusFilter = 'all' | 'available' | 'in-use' | 'unavailable';
+type EquipmentBusinessStatus = 'DISPONIBLE' | 'OCCUPE' | 'MAINTENANCE' | 'INACTIVE';
 
 interface EquipmentRowView {
   item: Equipment;
@@ -43,14 +47,41 @@ type ReserveActionState = 'ready' | 'no-permission' | 'no-stock';
             </div>
           </div>
 
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              *ngIf="canManageInventory()"
+              type="button"
+              (click)="openCreateEquipmentModal()"
+              class="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-brand-300 px-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-brand-500/50 dark:text-brand-300 dark:hover:bg-brand-500/10"
+            >
+              <span class="text-lg leading-none">+</span>
+              Nouvel equipement
+            </button>
+            <button
+              type="button"
+              (click)="openNewReservationModal()"
+              [disabled]="!canCreateReservations()"
+              class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-success-500 px-4 text-sm font-semibold text-white transition hover:bg-success-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span class="text-lg leading-none">+</span>
+              Nouvelle reservation
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-5 inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-900">
           <button
             type="button"
-            (click)="openNewReservationModal()"
-            [disabled]="!canCreateReservations()"
-            class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-success-500 px-4 text-sm font-semibold text-white transition hover:bg-success-600 disabled:cursor-not-allowed disabled:opacity-50"
+            (click)="goToRoomReservations()"
+            class="h-9 rounded-lg px-4 text-sm font-semibold text-gray-600 transition hover:bg-white hover:text-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03] dark:hover:text-white/90"
           >
-            <span class="text-lg leading-none">+</span>
-            Nouvelle reservation
+            Salles
+          </button>
+          <button
+            type="button"
+            class="h-9 rounded-lg bg-white px-4 text-sm font-semibold text-brand-700 shadow-theme-xs dark:bg-white/[0.03] dark:text-brand-300"
+          >
+            Equipements logistiques
           </button>
         </div>
 
@@ -76,7 +107,7 @@ type ReserveActionState = 'ready' | 'no-permission' | 'no-stock';
           </article>
         </div>
 
-        <div class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_220px_220px_auto] lg:items-center">
+        <div class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_220px_220px_auto_auto] lg:items-center">
           <input
             type="text"
             [(ngModel)]="searchTerm"
@@ -98,6 +129,14 @@ type ReserveActionState = 'ready' | 'no-permission' | 'no-stock';
 
           <button
             type="button"
+            (click)="applyFilters()"
+            class="h-11 rounded-xl bg-brand-500 px-4 text-sm font-semibold text-white transition hover:bg-brand-600"
+          >
+            Appliquer
+          </button>
+
+          <button
+            type="button"
             (click)="resetFilters()"
             class="h-11 rounded-xl border border-gray-300 px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
           >
@@ -106,8 +145,22 @@ type ReserveActionState = 'ready' | 'no-permission' | 'no-stock';
         </div>
       </div>
 
+      <div
+        *ngIf="equipmentLoading"
+        class="rounded-2xl border border-gray-200 bg-white px-6 py-8 text-center text-sm text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300"
+      >
+        Chargement des equipements...
+      </div>
+
+      <div
+        *ngIf="!equipmentLoading && equipmentLoadError"
+        class="rounded-2xl border border-error-200 bg-error-50 px-6 py-4 text-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300"
+      >
+        {{ equipmentLoadError }}
+      </div>
+
       <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-        <div class="overflow-x-auto">
+        <div class="max-h-[68vh] overflow-auto">
           <table class="min-w-full">
             <thead>
               <tr class="border-b border-gray-200 dark:border-gray-800">
@@ -140,16 +193,50 @@ type ReserveActionState = 'ready' | 'no-permission' | 'no-stock';
                 <td class="px-4 py-4 align-top text-2sm text-gray-800 dark:text-gray-200">{{ row.reservedBy }}</td>
                 <td class="px-4 py-4 align-top text-2sm text-gray-800 dark:text-gray-200">{{ row.expectedReturn }}</td>
                 <td class="px-4 py-4 align-top text-right">
-                  <button
-                    type="button"
-                    (click)="onReserveClick(row)"
-                    class="h-11 rounded-lg border border-gray-300 px-5 text-base font-semibold transition disabled:cursor-not-allowed disabled:opacity-55 dark:border-gray-700"
-                    [ngClass]="getReserveActionState(row) === 'ready'
-                      ? 'text-gray-800 hover:bg-gray-100 dark:text-white/90 dark:hover:bg-white/[0.03]'
-                      : 'text-gray-500 dark:text-gray-400'"
-                  >
-                    {{ getReserveActionState(row) === 'ready' ? 'Reserver' : 'Complet' }}
-                  </button>
+                  <div class="flex flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      (click)="onReserveClick(row)"
+                      class="h-10 rounded-lg border border-gray-300 px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-55 dark:border-gray-700"
+                      [ngClass]="getReserveActionState(row) === 'ready'
+                        ? 'text-gray-800 hover:bg-gray-100 dark:text-white/90 dark:hover:bg-white/[0.03]'
+                        : 'text-gray-500 dark:text-gray-400'"
+                    >
+                      {{ getReserveActionLabel(row) }}
+                    </button>
+                    <button
+                      type="button"
+                      (click)="openEquipmentDetails(row.item)"
+                      class="h-10 rounded-lg border border-gray-300 px-3 text-xs font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+                    >
+                      Voir planning
+                    </button>
+                    <button
+                      *ngIf="canManageInventory()"
+                      type="button"
+                      (click)="openEditEquipmentModal(row.item)"
+                      class="h-10 rounded-lg border border-gray-300 px-3 text-xs font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+                    >
+                      Modifier
+                    </button>
+                    <button
+                      *ngIf="canManageInventory()"
+                      type="button"
+                      (click)="setEquipmentBusinessStatus(row.item, 'MAINTENANCE')"
+                      [disabled]="row.item.status === 'MAINTENANCE'"
+                      class="h-10 rounded-lg border border-warning-300 px-3 text-xs font-semibold text-warning-700 hover:bg-warning-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-warning-500/50 dark:text-warning-300 dark:hover:bg-warning-500/10"
+                    >
+                      Maintenance
+                    </button>
+                    <button
+                      *ngIf="canManageInventory()"
+                      type="button"
+                      (click)="toggleEquipmentActive(row.item)"
+                      class="h-10 rounded-lg border border-brand-300 px-3 text-xs font-semibold text-brand-700 hover:bg-brand-50 dark:border-brand-500/50 dark:text-brand-300 dark:hover:bg-brand-500/10"
+                    >
+                      {{ row.item.status === 'RETIRED' ? 'Reactiver' : 'Desactiver' }}
+                    </button>
+                  </div>
                 </td>
               </tr>
 
@@ -164,6 +251,44 @@ type ReserveActionState = 'ready' | 'no-permission' | 'no-stock';
       </div>
 
       <div
+        *ngIf="!equipmentLoading && equipmentTotalElements > 0"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-white/[0.03]"
+      >
+        <p class="text-sm text-gray-600 dark:text-gray-300">
+          Affichage {{ getPaginationStart(equipmentPage, equipmentPageSize, equipmentTotalElements) }}-{{ getPaginationEnd(equipmentPage, equipmentPageSize, equipmentTotalElements) }} sur {{ equipmentTotalElements }} éléments
+        </p>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            (click)="previousEquipmentPage()"
+            [disabled]="equipmentPage === 0"
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300"
+          >
+            Precedent
+          </button>
+          <button
+            *ngFor="let page of getVisiblePages(equipmentPage, equipmentTotalPages)"
+            type="button"
+            (click)="goToEquipmentPage(page)"
+            class="rounded-lg border px-3 py-2 text-sm font-semibold transition dark:border-gray-700"
+            [ngClass]="page === equipmentPage
+              ? 'border-brand-500 bg-brand-500 text-white'
+              : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.03]'"
+          >
+            {{ page + 1 }}
+          </button>
+          <button
+            type="button"
+            (click)="nextEquipmentPage()"
+            [disabled]="equipmentPage + 1 >= equipmentTotalPages"
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300"
+          >
+            Suivant
+          </button>
+        </div>
+      </div>
+
+      <div
         *ngIf="feedbackMessage"
         class="rounded-xl border px-4 py-3 text-sm"
         [ngClass]="feedbackTone === 'success'
@@ -171,6 +296,16 @@ type ReserveActionState = 'ready' | 'no-permission' | 'no-stock';
           : 'border-error-200 bg-error-50 text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300'"
       >
         {{ feedbackMessage }}
+      </div>
+
+      <div *ngIf="lastCreatedReservationId" class="flex justify-end">
+        <button
+          type="button"
+          (click)="downloadLatestReservationPdf()"
+          class="h-10 rounded-lg border border-brand-300 px-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-brand-500/50 dark:text-brand-300 dark:hover:bg-brand-500/10"
+        >
+          Telecharger PDF reservation
+        </button>
       </div>
 
       <div
@@ -193,6 +328,15 @@ type ReserveActionState = 'ready' | 'no-permission' | 'no-stock';
           </div>
 
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="sm:col-span-2">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Evenement lie</label>
+              <app-select
+                [(ngModel)]="selectedEventId"
+                [options]="eventSelectOptions"
+                placeholder="Choisir un evenement"
+              ></app-select>
+            </div>
+
             <div class="sm:col-span-2">
               <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Equipement</label>
               <app-select
@@ -229,6 +373,16 @@ type ReserveActionState = 'ready' | 'no-permission' | 'no-stock';
               />
             </div>
 
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Quantite demandee</label>
+              <input
+                type="number"
+                min="1"
+                [(ngModel)]="bookingForm.quantityRequested"
+                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+
             <div class="sm:col-span-2 flex justify-end gap-2 pt-2">
               <button
                 type="button"
@@ -249,10 +403,183 @@ type ReserveActionState = 'ready' | 'no-permission' | 'no-stock';
           </div>
         </div>
       </div>
+
+      <div
+        *ngIf="isEquipmentFormModalOpen"
+        class="fixed inset-0 z-[110100] flex items-center justify-center bg-gray-950/60 p-4"
+      >
+        <div class="w-full max-w-3xl rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 sm:p-6">
+          <div class="mb-5 flex items-start justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-semibold text-gray-900 dark:text-white/90">
+                {{ equipmentFormMode === 'create' ? 'Nouvel equipement' : 'Modifier equipement' }}
+              </h2>
+              <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Gestion metier responsable salle</p>
+            </div>
+            <button
+              type="button"
+              (click)="closeEquipmentFormModal()"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+            >
+              x
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Nom</label>
+              <input
+                type="text"
+                [(ngModel)]="equipmentForm.name"
+                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Type</label>
+              <input
+                type="text"
+                [(ngModel)]="equipmentForm.type"
+                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Numero serie</label>
+              <input
+                type="text"
+                [(ngModel)]="equipmentForm.serialNumber"
+                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Localisation</label>
+              <input
+                type="text"
+                [(ngModel)]="equipmentForm.location"
+                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Quantite totale</label>
+              <input
+                type="number"
+                min="1"
+                [(ngModel)]="equipmentForm.totalQuantity"
+                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Quantite disponible</label>
+              <input
+                type="number"
+                min="0"
+                [(ngModel)]="equipmentForm.availableQuantity"
+                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Statut</label>
+              <app-select
+                [(ngModel)]="equipmentForm.status"
+                [options]="equipmentStatusOptions"
+                placeholder="Choisir un statut"
+              ></app-select>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Description</label>
+              <textarea
+                rows="3"
+                [(ngModel)]="equipmentForm.description"
+                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              ></textarea>
+            </div>
+          </div>
+
+          <p *ngIf="equipmentFormError" class="mt-4 text-sm text-error-600 dark:text-error-300">{{ equipmentFormError }}</p>
+
+          <div class="mt-5 flex justify-end gap-2">
+            <button
+              type="button"
+              (click)="closeEquipmentFormModal()"
+              class="h-11 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              (click)="saveEquipment()"
+              [disabled]="equipmentFormSaving"
+              class="h-11 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {{ equipmentFormSaving ? 'Enregistrement...' : 'Enregistrer' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        *ngIf="isEquipmentDetailsModalOpen && selectedEquipmentDetails"
+        class="fixed inset-0 z-[110050] flex items-center justify-center bg-gray-950/60 p-4"
+      >
+        <div class="w-full max-w-3xl rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 sm:p-6">
+          <div class="mb-4 flex items-center justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-semibold text-gray-900 dark:text-white/90">{{ selectedEquipmentDetails.name }}</h2>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                {{ selectedEquipmentDetails.type || getCategoryLabel(selectedEquipmentDetails.category) }} - {{ selectedEquipmentDetails.location }}
+              </p>
+            </div>
+            <button
+              type="button"
+              (click)="closeEquipmentDetailsModal()"
+              class="h-10 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+            >
+              Fermer
+            </button>
+          </div>
+
+          <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm dark:border-gray-700 dark:bg-gray-900">
+            <p class="text-gray-700 dark:text-gray-300">{{ selectedEquipmentDetails.description || 'Aucune description' }}</p>
+            <p class="mt-2 text-gray-600 dark:text-gray-300">
+              Quantite: {{ selectedEquipmentDetails.availableQuantity ?? 0 }} / {{ selectedEquipmentDetails.totalQuantity ?? 0 }}
+            </p>
+          </div>
+
+          <div class="mt-4">
+            <h3 class="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Reservations liees
+            </h3>
+            <div class="max-h-60 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700">
+              <table class="min-w-full">
+                <thead>
+                  <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Demandeur</th>
+                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Quantite</th>
+                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Debut</th>
+                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Fin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let reservation of getEquipmentReservationsForDetails(selectedEquipmentDetails.id)" class="border-b border-gray-200 dark:border-gray-700">
+                    <td class="px-3 py-2 text-xs text-gray-700 dark:text-gray-200">{{ reservation.userName }}</td>
+                    <td class="px-3 py-2 text-xs text-gray-700 dark:text-gray-200">{{ reservation.quantityRequested || 1 }}</td>
+                    <td class="px-3 py-2 text-xs text-gray-700 dark:text-gray-200">{{ reservation.startDate | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td class="px-3 py-2 text-xs text-gray-700 dark:text-gray-200">{{ reservation.endDate | date:'dd/MM/yyyy HH:mm' }}</td>
+                  </tr>
+                  <tr *ngIf="getEquipmentReservationsForDetails(selectedEquipmentDetails.id).length === 0">
+                    <td colspan="4" class="px-3 py-3 text-center text-xs text-gray-500 dark:text-gray-400">
+                      Aucune reservation liee pour cet equipement.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
 })
-export class EquipmentReservationsComponent implements OnInit {
+export class EquipmentReservationsComponent implements OnInit, OnDestroy {
   currentRole: AppRole = 'EMPLOYEE';
   currentUserId = '';
   currentUserName = '';
@@ -262,6 +589,7 @@ export class EquipmentReservationsComponent implements OnInit {
     EMPLOYEE: 'Employe',
     MANAGER: 'Chef hierarchique',
     ROOM_MANAGER: 'Responsable salle',
+    IT_MANAGER: 'Responsable IT',
     SECURITY_MANAGER: 'Responsable securite',
     DSN_DIRECTOR: 'Directeur DSN',
     QUALITY_MANAGER: 'Responsable qualite',
@@ -269,13 +597,41 @@ export class EquipmentReservationsComponent implements OnInit {
 
   equipment: Equipment[] = [];
   equipmentReservations: EquipmentReservation[] = [];
+  events: Event[] = [];
 
   searchTerm = '';
   categoryFilter: 'all' | Equipment['category'] = 'all';
   statusFilter: EquipmentStatusFilter = 'all';
+  equipmentPage = 0;
+  equipmentPageSize = 10;
+  equipmentTotalElements = 0;
+  equipmentTotalPages = 0;
+  equipmentLoading = false;
+  equipmentLoadError = '';
+  private equipmentPageSubscription?: Subscription;
 
   isModalOpen = false;
   selectedEquipmentId = '';
+  selectedEventId = '';
+  isEquipmentFormModalOpen = false;
+  equipmentFormMode: 'create' | 'edit' = 'create';
+  editingEquipmentId: string | null = null;
+  equipmentFormSaving = false;
+  equipmentFormError = '';
+  isEquipmentDetailsModalOpen = false;
+  selectedEquipmentDetails: Equipment | null = null;
+
+  equipmentForm = {
+    name: '',
+    type: '',
+    serialNumber: '',
+    location: '',
+    description: '',
+    totalQuantity: 1,
+    availableQuantity: 1,
+    status: 'DISPONIBLE' as EquipmentBusinessStatus,
+    active: true,
+  };
 
   readonly categoryFilterOptions: Option[] = [
     { value: 'all', label: 'Toutes categories' },
@@ -294,6 +650,13 @@ export class EquipmentReservationsComponent implements OnInit {
     { value: 'unavailable', label: 'Indisponible' },
   ];
 
+  readonly equipmentStatusOptions: Option[] = [
+    { value: 'DISPONIBLE', label: 'Disponible' },
+    { value: 'OCCUPE', label: 'Occupe' },
+    { value: 'MAINTENANCE', label: 'Maintenance' },
+    { value: 'INACTIVE', label: 'Inactif' },
+  ];
+
   get reservableEquipmentOptions(): Option[] {
     return this.reservableRows.map((row) => ({
       value: row.item.id,
@@ -301,21 +664,43 @@ export class EquipmentReservationsComponent implements OnInit {
     }));
   }
 
+  get eventSelectOptions(): Option[] {
+    return this.events
+      .filter((event) => (event.eventMode ?? (event.onlineEvent ? 'EN_LIGNE' : 'PRESENTIEL')) !== 'EN_LIGNE')
+      .map((event) => ({
+      value: event.id,
+      label: `${event.title} [${event.eventMode ?? (event.onlineEvent ? 'EN_LIGNE' : 'PRESENTIEL')}] (${event.startDate.toLocaleDateString('fr-FR')})`,
+    }));
+  }
+
   feedbackMessage = '';
   feedbackTone: 'success' | 'error' = 'success';
+  lastCreatedReservationId = '';
 
   bookingForm = {
     purpose: '',
     startDate: '',
     endDate: '',
+    quantityRequested: 1,
   };
 
   constructor(
     private reservationService: ReservationService,
     private authService: AuthService,
+    private eventService: EventService,
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
+    this.equipmentPageSubscription = this.reservationService.equipmentPageState$.subscribe((pageState) => {
+      this.equipmentPage = pageState.page;
+      this.equipmentPageSize = pageState.size;
+      this.equipmentTotalElements = pageState.totalElements;
+      const safeSize = pageState.size > 0 ? pageState.size : this.equipmentPageSize || 1;
+      const computedPages = pageState.totalElements > 0 ? Math.ceil(pageState.totalElements / safeSize) : 0;
+      this.equipmentTotalPages = Math.max(pageState.totalPages, computedPages);
+    });
+
     this.authService.currentUser$.subscribe((user) => {
       if (!user) {
         return;
@@ -329,13 +714,19 @@ export class EquipmentReservationsComponent implements OnInit {
     this.loadData();
   }
 
+  ngOnDestroy(): void {
+    this.equipmentPageSubscription?.unsubscribe();
+  }
+
   loadData(): void {
-    this.reservationService.getEquipment().subscribe((equipment) => {
-      this.equipment = equipment;
+    this.loadEquipment();
+
+    this.reservationService.getEquipmentReservations({ page: 0, size: 500, sort: 'startAt,desc' }).subscribe((reservations) => {
+      this.equipmentReservations = reservations;
     });
 
-    this.reservationService.getEquipmentReservations().subscribe((reservations) => {
-      this.equipmentReservations = reservations;
+    this.eventService.getEvents().subscribe((events) => {
+      this.events = events;
     });
   }
 
@@ -344,18 +735,7 @@ export class EquipmentReservationsComponent implements OnInit {
   }
 
   get filteredRows(): EquipmentRowView[] {
-    const normalizedSearch = this.searchTerm.trim().toLowerCase();
-
     return this.allRows.filter((row) => {
-      const matchesSearch =
-        normalizedSearch.length === 0 ||
-        row.item.name.toLowerCase().includes(normalizedSearch) ||
-        row.item.description.toLowerCase().includes(normalizedSearch);
-
-      if (!matchesSearch) {
-        return false;
-      }
-
       if (this.categoryFilter !== 'all' && row.item.category !== this.categoryFilter) {
         return false;
       }
@@ -381,9 +761,11 @@ export class EquipmentReservationsComponent implements OnInit {
   get canSubmitEquipmentBooking(): boolean {
     return (
       this.selectedEquipmentId.length > 0 &&
+      this.selectedEventId.length > 0 &&
       this.bookingForm.purpose.trim().length > 0 &&
       this.bookingForm.startDate.length > 0 &&
-      this.bookingForm.endDate.length > 0
+      this.bookingForm.endDate.length > 0 &&
+      this.bookingForm.quantityRequested > 0
     );
   }
 
@@ -423,6 +805,25 @@ export class EquipmentReservationsComponent implements OnInit {
     ].includes(this.currentRole);
   }
 
+  canManageInventory(): boolean {
+    return this.currentRole === 'ADMIN' || this.currentRole === 'ROOM_MANAGER';
+  }
+
+  goToRoomReservations(): void {
+    this.router.navigateByUrl('/reservations/salles');
+  }
+
+  getReserveActionLabel(row: EquipmentRowView): string {
+    const actionState = this.getReserveActionState(row);
+    if (actionState === 'no-permission') {
+      return 'Reservation indisponible (role)';
+    }
+    if (actionState === 'no-stock') {
+      return 'Complet';
+    }
+    return 'Reserver';
+  }
+
   openReservationModal(item: Equipment): void {
     const row = this.allRows.find((candidate) => candidate.item.id === item.id);
     if (!row || row.status !== 'DISPONIBLE' || row.availableQty <= 0 || !this.canCreateReservations()) {
@@ -430,6 +831,7 @@ export class EquipmentReservationsComponent implements OnInit {
     }
 
     this.selectedEquipmentId = item.id;
+    this.selectedEventId = this.eventSelectOptions[0]?.value || '';
     this.initializeBookingWindow();
     this.isModalOpen = true;
   }
@@ -456,14 +858,166 @@ export class EquipmentReservationsComponent implements OnInit {
 
     const firstRow = this.reservableRows[0];
     this.selectedEquipmentId = firstRow ? firstRow.item.id : '';
+    this.selectedEventId = this.eventSelectOptions[0]?.value || '';
     this.initializeBookingWindow();
     this.isModalOpen = true;
+  }
+
+  openCreateEquipmentModal(): void {
+    if (!this.canManageInventory()) {
+      return;
+    }
+
+    this.equipmentFormMode = 'create';
+    this.editingEquipmentId = null;
+    this.equipmentFormError = '';
+    this.equipmentForm = {
+      name: '',
+      type: '',
+      serialNumber: '',
+      location: '',
+      description: '',
+      totalQuantity: 1,
+      availableQuantity: 1,
+      status: 'DISPONIBLE',
+      active: true,
+    };
+    this.isEquipmentFormModalOpen = true;
+  }
+
+  openEditEquipmentModal(equipment: Equipment): void {
+    if (!this.canManageInventory()) {
+      return;
+    }
+
+    this.equipmentFormMode = 'edit';
+    this.editingEquipmentId = equipment.id;
+    this.equipmentFormError = '';
+    this.equipmentForm = {
+      name: equipment.name,
+      type: equipment.type || this.getCategoryLabel(equipment.category),
+      serialNumber: equipment.serialNumber,
+      location: equipment.location,
+      description: equipment.description || '',
+      totalQuantity: equipment.totalQuantity ?? 1,
+      availableQuantity: equipment.availableQuantity ?? (equipment.totalQuantity ?? 1),
+      status: this.toBusinessEquipmentStatus(equipment.status),
+      active: equipment.isActive ?? equipment.status !== 'RETIRED',
+    };
+    this.isEquipmentFormModalOpen = true;
+  }
+
+  closeEquipmentFormModal(): void {
+    this.isEquipmentFormModalOpen = false;
+    this.equipmentFormSaving = false;
+  }
+
+  saveEquipment(): void {
+    if (!this.canManageInventory()) {
+      return;
+    }
+
+    const name = this.equipmentForm.name.trim();
+    const type = this.equipmentForm.type.trim();
+    const serialNumber = this.equipmentForm.serialNumber.trim();
+    const location = this.equipmentForm.location.trim();
+    const description = this.equipmentForm.description.trim();
+    const totalQuantity = Number(this.equipmentForm.totalQuantity);
+    const availableQuantity = Number(this.equipmentForm.availableQuantity);
+
+    if (!name || !type || !serialNumber || !Number.isFinite(totalQuantity) || totalQuantity < 1) {
+      this.equipmentFormError = 'Nom, type, numero de serie et quantite totale valide sont obligatoires.';
+      return;
+    }
+    if (!Number.isFinite(availableQuantity) || availableQuantity < 0 || availableQuantity > totalQuantity) {
+      this.equipmentFormError = 'La quantite disponible doit etre comprise entre 0 et la quantite totale.';
+      return;
+    }
+
+    this.equipmentFormSaving = true;
+    this.equipmentFormError = '';
+
+    const payload: Omit<Equipment, 'id' | 'createdAt'> = {
+      name,
+      description,
+      category: this.inferCategoryFromType(type),
+      type,
+      serialNumber,
+      status: this.toFrontendEquipmentStatus(this.equipmentForm.status),
+      totalQuantity,
+      availableQuantity,
+      isActive: this.equipmentForm.status !== 'INACTIVE' && this.equipmentForm.active,
+      location,
+    };
+
+    const request$ = this.equipmentFormMode === 'create'
+      ? this.reservationService.addEquipment(payload)
+      : this.reservationService.updateEquipment(this.editingEquipmentId!, payload);
+
+    request$.subscribe({
+      next: () => {
+        this.showFeedback(
+          this.equipmentFormMode === 'create' ? 'Equipement cree avec succes.' : 'Equipement mis a jour avec succes.',
+          'success',
+        );
+        this.closeEquipmentFormModal();
+        this.loadData();
+      },
+      error: (error) => {
+        this.equipmentFormSaving = false;
+        this.equipmentFormError = this.readBackendError(error, 'Impossible d enregistrer l equipement.');
+      },
+    });
+  }
+
+  openEquipmentDetails(equipment: Equipment): void {
+    this.selectedEquipmentDetails = equipment;
+    this.isEquipmentDetailsModalOpen = true;
+  }
+
+  closeEquipmentDetailsModal(): void {
+    this.isEquipmentDetailsModalOpen = false;
+    this.selectedEquipmentDetails = null;
+  }
+
+  getEquipmentReservationsForDetails(equipmentId: string): EquipmentReservation[] {
+    return this.equipmentReservations
+      .filter((reservation) => reservation.equipmentId === equipmentId)
+      .sort((left, right) => right.startDate.getTime() - left.startDate.getTime());
+  }
+
+  setEquipmentBusinessStatus(equipment: Equipment, status: EquipmentBusinessStatus): void {
+    if (!this.canManageInventory()) {
+      return;
+    }
+
+    const payload: Partial<Equipment> = {
+      status: this.toFrontendEquipmentStatus(status),
+      isActive: status !== 'INACTIVE',
+    };
+
+    this.reservationService.updateEquipment(equipment.id, payload).subscribe({
+      next: () => {
+        this.showFeedback('Statut equipement mis a jour.', 'success');
+        this.loadData();
+      },
+      error: (error) => {
+        this.showFeedback(this.readBackendError(error, 'Mise a jour du statut equipement impossible.'), 'error');
+      },
+    });
+  }
+
+  toggleEquipmentActive(equipment: Equipment): void {
+    const status: EquipmentBusinessStatus = equipment.status === 'RETIRED' ? 'DISPONIBLE' : 'INACTIVE';
+    this.setEquipmentBusinessStatus(equipment, status);
   }
 
   resetFilters(): void {
     this.searchTerm = '';
     this.categoryFilter = 'all';
     this.statusFilter = 'all';
+    this.equipmentPage = 0;
+    this.loadEquipment();
   }
 
   closeModal(): void {
@@ -478,6 +1032,10 @@ export class EquipmentReservationsComponent implements OnInit {
     const selectedItem = this.equipment.find((item) => item.id === this.selectedEquipmentId);
     if (!selectedItem) {
       this.showFeedback('Veuillez selectionner un equipement valide.', 'error');
+      return;
+    }
+    if (!this.selectedEventId) {
+      this.showFeedback('Veuillez selectionner un evenement lie.', 'error');
       return;
     }
 
@@ -495,6 +1053,7 @@ export class EquipmentReservationsComponent implements OnInit {
 
     this.reservationService
       .reserveEquipment({
+        eventId: this.selectedEventId,
         equipmentId: selectedItem.id,
         equipmentName: selectedItem.name,
         userId: this.currentUserId,
@@ -502,22 +1061,40 @@ export class EquipmentReservationsComponent implements OnInit {
         purpose: this.bookingForm.purpose.trim(),
         startDate,
         endDate,
+        quantityRequested: this.bookingForm.quantityRequested,
       })
       .subscribe({
         next: (result) => {
-          if (!result) {
-            this.showFeedback('Reservation impossible pour cet equipement.', 'error');
-            return;
-          }
+        if (!result) {
+          this.lastCreatedReservationId = '';
+          this.showFeedback('Quantite insuffisante pour cet equipement sur ce creneau.', 'error');
+          return;
+        }
 
-          this.showFeedback('Reservation equipement enregistree.', 'success');
-          this.loadData();
-          this.closeModal();
-        },
-        error: () => {
-          this.showFeedback('Erreur serveur lors de la reservation. Reessayez.', 'error');
-        },
-      });
+        this.lastCreatedReservationId = result.id;
+        this.showFeedback('Reservation equipement enregistree.', 'success');
+        this.loadData();
+        this.closeModal();
+      },
+        error: (error) => {
+          this.showFeedback(this.readBackendError(error, 'Erreur serveur lors de la reservation. Reessayez.'), 'error');
+      },
+    });
+  }
+
+  downloadLatestReservationPdf(): void {
+    if (!this.lastCreatedReservationId) {
+      return;
+    }
+
+    this.reservationService.downloadLatestOfficialDocument(this.lastCreatedReservationId).subscribe({
+      next: () => {
+        this.showFeedback('PDF officiel de reservation telecharge.', 'success');
+      },
+      error: () => {
+        this.showFeedback('Aucun PDF officiel disponible pour cette reservation.', 'error');
+      },
+    });
   }
 
   getReserveActionState(row: EquipmentRowView): ReserveActionState {
@@ -576,14 +1153,64 @@ export class EquipmentReservationsComponent implements OnInit {
     return 'bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-300';
   }
 
+  private toBusinessEquipmentStatus(status: Equipment['status']): EquipmentBusinessStatus {
+    if (status === 'MAINTENANCE') {
+      return 'MAINTENANCE';
+    }
+    if (status === 'RETIRED') {
+      return 'INACTIVE';
+    }
+    if (status === 'IN_USE') {
+      return 'OCCUPE';
+    }
+    return 'DISPONIBLE';
+  }
+
+  private toFrontendEquipmentStatus(status: EquipmentBusinessStatus): Equipment['status'] {
+    if (status === 'MAINTENANCE') {
+      return 'MAINTENANCE';
+    }
+    if (status === 'INACTIVE') {
+      return 'RETIRED';
+    }
+    if (status === 'OCCUPE') {
+      return 'IN_USE';
+    }
+    return 'AVAILABLE';
+  }
+
+  private inferCategoryFromType(type: string): Equipment['category'] {
+    const normalized = type.toLowerCase();
+    if (normalized.includes('project')) {
+      return 'PROJECTOR';
+    }
+    if (normalized.includes('laptop') || normalized.includes('ordi')) {
+      return 'LAPTOP';
+    }
+    if (normalized.includes('camera') || normalized.includes('cam')) {
+      return 'CAMERA';
+    }
+    if (normalized.includes('micro')) {
+      return 'MICROPHONE';
+    }
+    if (normalized.includes('ecran') || normalized.includes('screen')) {
+      return 'SCREEN';
+    }
+    return 'OTHER';
+  }
+
   private toRow(item: Equipment): EquipmentRowView {
-    const totalQty = 1;
+    const totalQty = Math.max(1, item.totalQuantity ?? 1);
     const activeReservations = this.getActiveReservations(item.id);
+    const reservedQty = activeReservations.reduce((accumulator, reservation) => (
+      accumulator + Math.max(reservation.quantityRequested || 1, 1)
+    ), 0);
+    const declaredAvailable = item.availableQuantity != null
+      ? Math.max(0, Math.min(item.availableQuantity, totalQty))
+      : totalQty;
 
     const blockedByStatus = item.status === 'MAINTENANCE' || item.status === 'RETIRED';
-    const usedByStatus = item.status === 'IN_USE' || activeReservations.length > 0;
-
-    const availableQty = blockedByStatus || usedByStatus ? 0 : totalQty;
+    const availableQty = blockedByStatus ? 0 : Math.max(0, declaredAvailable - reservedQty);
 
     const status = this.resolveStatus(item, availableQty, totalQty);
 
@@ -645,10 +1272,11 @@ export class EquipmentReservationsComponent implements OnInit {
     const now = new Date();
     const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-    this.bookingForm = {
+      this.bookingForm = {
       purpose: '',
       startDate: this.toDateTimeLocal(now),
       endDate: this.toDateTimeLocal(tomorrow),
+      quantityRequested: 1,
     };
   }
 
@@ -674,5 +1302,99 @@ export class EquipmentReservationsComponent implements OnInit {
 
   private unique(values: string[]): string[] {
     return Array.from(new Set(values.filter((value) => value.trim().length > 0)));
+  }
+
+  private readBackendError(error: unknown, fallback: string): string {
+    const detail = (error as { error?: { detail?: string } })?.error?.detail;
+    if (typeof detail === 'string' && detail.trim().length > 0) {
+      return detail;
+    }
+    return fallback;
+  }
+
+  applyFilters(): void {
+    this.equipmentPage = 0;
+    this.loadEquipment();
+  }
+
+  nextEquipmentPage(): void {
+    if (this.equipmentPage + 1 >= this.equipmentTotalPages) {
+      return;
+    }
+    this.equipmentPage += 1;
+    this.loadEquipment();
+  }
+
+  previousEquipmentPage(): void {
+    if (this.equipmentPage <= 0) {
+      return;
+    }
+    this.equipmentPage -= 1;
+    this.loadEquipment();
+  }
+
+  goToEquipmentPage(page: number): void {
+    if (page < 0 || page >= this.equipmentTotalPages || page === this.equipmentPage) {
+      return;
+    }
+    this.equipmentPage = page;
+    this.loadEquipment();
+  }
+
+  getVisiblePages(currentPage: number, totalPages: number): number[] {
+    if (totalPages <= 0) {
+      return [];
+    }
+
+    const maxButtons = 5;
+    const half = Math.floor(maxButtons / 2);
+    let start = Math.max(0, currentPage - half);
+    let end = Math.min(totalPages - 1, start + maxButtons - 1);
+
+    if ((end - start + 1) < maxButtons) {
+      start = Math.max(0, end - maxButtons + 1);
+    }
+
+    const pages: number[] = [];
+    for (let page = start; page <= end; page += 1) {
+      pages.push(page);
+    }
+    return pages;
+  }
+
+  getPaginationStart(page: number, size: number, total: number): number {
+    if (total <= 0) {
+      return 0;
+    }
+    return page * size + 1;
+  }
+
+  getPaginationEnd(page: number, size: number, total: number): number {
+    if (total <= 0) {
+      return 0;
+    }
+    return Math.min((page + 1) * size, total);
+  }
+
+  private loadEquipment(): void {
+    this.equipmentLoading = true;
+    this.reservationService.getEquipment({
+      page: this.equipmentPage,
+      size: this.equipmentPageSize,
+      sort: 'name,asc',
+      search: this.searchTerm.trim() || undefined,
+      active: undefined,
+    }).subscribe({
+      next: (equipment) => {
+        this.equipment = equipment;
+        this.equipmentLoadError = '';
+        this.equipmentLoading = false;
+      },
+      error: (error) => {
+        this.equipment = [];
+        this.equipmentLoading = false;
+        this.equipmentLoadError = this.readBackendError(error, 'Chargement des equipements impossible. Verifiez vos droits puis reessayez.');
+      }
+    });
   }
 }

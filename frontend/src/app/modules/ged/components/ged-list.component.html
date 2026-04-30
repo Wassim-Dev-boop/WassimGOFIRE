@@ -1,0 +1,1070 @@
+<div class="mx-auto max-w-[1800px] space-y-5 px-4 py-5">
+  <section class="cnstn-card p-5">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-3">
+          <span class="inline-flex size-12 items-center justify-center rounded-2xl border border-blue-light-100 bg-blue-light-50 text-blue-light-600">
+            <svg class="size-6" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M2.5 5.25C2.5 4.14543 3.39543 3.25 4.5 3.25H8.25L9.83333 4.83333H15.5C16.6046 4.83333 17.5 5.72876 17.5 6.83333V14.5C17.5 15.6046 16.6046 16.5 15.5 16.5H4.5C3.39543 16.5 2.5 15.6046 2.5 14.5V5.25Z" stroke="currentColor" stroke-width="1.4"/>
+            </svg>
+          </span>
+          <div>
+            <h1 class="text-3xl font-semibold text-gray-900">GED</h1>
+            <p class="text-sm text-gray-600">Gerez, organisez et consultez les documents relies au backend reel.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
+          {{ roleLabels[currentRole] }}
+        </span>
+        <span data-testid="ged-total-count" class="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+          {{ totalDocumentCount() }} documents
+        </span>
+        <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700" [attr.title]="selectedFolderLabel()">
+          Dossier actif: {{ selectedFolderLabel() }}
+        </span>
+      </div>
+    </div>
+
+    <div class="mt-4 flex flex-wrap gap-2">
+      <button
+        *ngIf="canManageGed()"
+        type="button"
+        (click)="openCreateFolder(selectedFolderId)"
+        class="cnstn-btn-secondary"
+      >
+        Nouveau dossier
+      </button>
+      <button
+        *ngIf="canManageGed()"
+        type="button"
+        (click)="openCreateDocument()"
+        [disabled]="!canCreateDocumentFromSelection()"
+        class="cnstn-btn-primary"
+      >
+        Nouveau document
+      </button>
+      <button
+        *ngIf="canViewAuditLogs()"
+        type="button"
+        (click)="toggleAuditPanel()"
+        class="cnstn-btn-secondary"
+      >
+        {{ showAuditPanel ? 'Masquer traces' : 'Voir traces' }}
+      </button>
+    </div>
+    <p *ngIf="canManageGed()" class="mt-2 text-xs text-gray-500">{{ selectedFolderCreationHint() }}</p>
+  </section>
+
+  <section class="cnstn-card p-4">
+    <div class="grid grid-cols-1 gap-3 xl:grid-cols-[2fr_repeat(4,minmax(0,1fr))_auto_auto]">
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Recherche</label>
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <svg class="size-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M14.58 13.41L18 16.83L16.83 18L13.41 14.58C12.17 15.55 10.62 16.12 8.92 16.12C4.97 16.12 1.75 12.9 1.75 8.95C1.75 5 4.97 1.78 8.92 1.78C12.87 1.78 16.09 5 16.09 8.95C16.09 10.65 15.52 12.2 14.58 13.41ZM8.92 3.45C5.89 3.45 3.42 5.92 3.42 8.95C3.42 11.98 5.89 14.45 8.92 14.45C11.95 14.45 14.42 11.98 14.42 8.95C14.42 5.92 11.95 3.45 8.92 3.45Z" fill="currentColor"/>
+            </svg>
+          </span>
+          <input
+            data-testid="ged-filter-search"
+            [(ngModel)]="searchTerm"
+            type="text"
+            placeholder="Rechercher par titre, reference, categorie..."
+            class="cnstn-input pl-9"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Confidentialite</label>
+        <select
+          data-testid="ged-filter-confidentiality"
+          [(ngModel)]="selectedConfidentiality"
+          class="cnstn-select"
+        >
+          <option value="ALL">Toutes</option>
+          <option *ngFor="let level of confidentialityOptions" [value]="level">{{ formatConfidentialityLabel(level) }}</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Statut</label>
+        <select
+          data-testid="ged-filter-status"
+          [(ngModel)]="selectedStatus"
+          (change)="onStatusChange()"
+          class="cnstn-select"
+        >
+          <option *ngFor="let option of statusOptions" [ngValue]="option.value">{{ option.label }}</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Categorie</label>
+        <select
+          data-testid="ged-filter-category"
+          [(ngModel)]="selectedCategory"
+          (change)="onCategoryChange()"
+          class="cnstn-select"
+        >
+          <option value="ALL">Toutes</option>
+          <option *ngFor="let category of categoryOptions" [value]="category">{{ category }}</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Tri</label>
+        <select
+          data-testid="ged-filter-sort"
+          [(ngModel)]="selectedSortOption"
+          (change)="onSortChange()"
+          class="cnstn-select"
+        >
+          <option value="updatedDesc">Date modification</option>
+          <option value="updatedAsc">Date ancienne</option>
+          <option value="titleAsc">Titre A-Z</option>
+          <option value="titleDesc">Titre Z-A</option>
+          <option value="referenceAsc">Reference A-Z</option>
+          <option value="referenceDesc">Reference Z-A</option>
+        </select>
+      </div>
+
+      <button type="button" (click)="clearFilters()" class="cnstn-btn-secondary self-end">
+        Reinitialiser
+      </button>
+      <button type="button" (click)="applySearch()" class="cnstn-btn-primary self-end">
+        Appliquer
+      </button>
+    </div>
+  </section>
+
+  <section class="cnstn-card p-3">
+    <div class="flex flex-wrap gap-2">
+      <button
+        *ngFor="let tab of categoryTabs"
+        type="button"
+        (click)="onSelectCategoryTab(tab.id)"
+        class="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition"
+        [ngClass]="isCategoryTabActive(tab.id)
+          ? 'border-brand-500 bg-brand-500 text-white'
+          : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'"
+      >
+        <span>{{ tab.label }}</span>
+        <span
+          class="rounded-full px-2 py-0.5 text-xs"
+          [ngClass]="isCategoryTabActive(tab.id)
+            ? 'bg-white/20 text-white'
+            : 'bg-gray-100 text-gray-700'"
+        >
+          {{ categoryTabCount(tab.id) }}
+        </span>
+      </button>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-1 gap-5 xl:grid-cols-12">
+    <aside class="cnstn-card xl:col-span-3">
+      <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+        <div>
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-600">Arborescence</h2>
+          <p class="text-xs text-gray-500">{{ visibleFolders.length }} dossier(s)</p>
+        </div>
+        <button
+          *ngIf="canManageGed()"
+          type="button"
+          (click)="openCreateSubFolder()"
+          [disabled]="!selectedFolderId"
+          class="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Sous-dossier
+        </button>
+      </div>
+
+      <div class="max-h-[620px] overflow-auto px-3 py-3">
+        <div *ngIf="isLoadingFolders" class="rounded-xl border border-dashed border-gray-300 px-3 py-8 text-center text-sm text-gray-500">
+          Chargement des dossiers...
+        </div>
+
+        <div *ngIf="!isLoadingFolders && visibleFolders.length === 0" class="rounded-xl border border-dashed border-gray-300 px-3 py-8 text-center text-sm text-gray-500">
+          Aucun dossier disponible.
+        </div>
+
+        <div *ngFor="let folder of visibleFolders; trackBy: trackByFolderId" class="mb-1">
+          <div class="flex items-center gap-2 rounded-lg px-1 py-0.5 hover:bg-gray-50">
+            <button
+              type="button"
+              [attr.data-testid]="'ged-folder-' + folder.id"
+              (click)="onSelectFolder(folder.id)"
+              class="group flex flex-1 items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition"
+              [style.paddingLeft.px]="8 + folder.displayDepth * 16"
+              [ngClass]="selectedFolderId === folder.id
+                ? 'border border-brand-300 bg-brand-50 text-brand-700'
+                : 'text-gray-700 hover:bg-white'"
+              [attr.title]="folder.breadcrumb"
+            >
+              <svg class="size-4 shrink-0 text-gray-400 group-hover:text-brand-500" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M2.5 5.25C2.5 4.14543 3.39543 3.25 4.5 3.25H8.25L9.83333 4.83333H15.5C16.6046 4.83333 17.5 5.72876 17.5 6.83333V14.5C17.5 15.6046 16.6046 16.5 15.5 16.5H4.5C3.39543 16.5 2.5 15.6046 2.5 14.5V5.25Z" stroke="currentColor" stroke-width="1.4"/>
+              </svg>
+              <span class="min-w-0 flex-1 truncate font-medium">{{ folder.name }}</span>
+              <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">{{ folder.documentCount }}</span>
+            </button>
+
+            <button
+              *ngIf="canManageGed()"
+              type="button"
+              (click)="openEditFolder(folder)"
+              class="rounded-md border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700"
+            >
+              Modifier
+            </button>
+            <button
+              *ngIf="canManageGed()"
+              type="button"
+              (click)="openFolderDetails(folder)"
+              class="rounded-md border border-brand-300 px-2 py-1 text-xs font-semibold text-brand-700"
+            >
+              Details
+            </button>
+            <button
+              *ngIf="canManageGed()"
+              type="button"
+              [attr.data-testid]="'ged-folder-delete-' + folder.id"
+              (click)="archiveFolder(folder)"
+              class="rounded-md border border-red-300 px-2 py-1 text-xs font-semibold text-red-700"
+            >
+              Archiver
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="cnstn-table-shell xl:col-span-6">
+      <div class="flex flex-wrap items-center justify-between border-b border-gray-100 px-4 py-3">
+        <div>
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-600">Documents</h2>
+          <p class="text-xs text-gray-500">{{ totalDocumentsCount }} document(s) correspondant aux filtres</p>
+        </div>
+        <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">
+          Page {{ currentPage }} / {{ totalPages() }}
+        </span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50/80">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Reference</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Titre</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Categorie</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Confidentialite</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Statut</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">V</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-gray-100 bg-white">
+            <tr *ngIf="isLoadingDocuments">
+              <td colspan="7" class="px-4 py-12 text-center text-sm text-gray-500">Chargement des documents...</td>
+            </tr>
+
+            <tr
+              *ngFor="let document of documents; trackBy: trackByDocumentId"
+              class="align-top transition hover:bg-gray-50/80"
+              [ngClass]="selectedDocument?.id === document.id ? 'bg-brand-50/60' : ''"
+              (click)="onSelectDocument(document)"
+            >
+              <td class="px-4 py-4">
+                <p class="text-xs font-semibold text-gray-700">{{ document.referenceCode }}</p>
+                <p class="mt-1 text-[11px] text-gray-500">{{ formatDate(document.updatedAt) }}</p>
+              </td>
+              <td class="px-4 py-4">
+                <p class="max-w-xs truncate text-sm font-semibold text-gray-900" [attr.title]="document.title">{{ document.title }}</p>
+                <p class="mt-1 text-xs text-gray-500">{{ document.subCategory || 'Sans sous-categorie' }}</p>
+              </td>
+              <td class="px-4 py-4">
+                <span class="rounded-full px-2.5 py-1 text-xs font-semibold" [ngClass]="getCategoryBadgeClass(document.category.name)">{{ document.category.name || 'N/A' }}</span>
+              </td>
+              <td class="px-4 py-4">
+                <span class="rounded-full px-2.5 py-1 text-xs font-semibold" [ngClass]="getConfidentialityBadgeClass(document.confidentialityLevel || 'INTERNAL')">
+                  {{ formatConfidentialityLabel(document.confidentialityLevel || 'INTERNAL') }}
+                </span>
+              </td>
+              <td class="px-4 py-4">
+                <span class="rounded-full px-2.5 py-1 text-xs font-semibold" [ngClass]="getStatusTagClass(document.gedStatus)">
+                  {{ document.gedStatus }}
+                </span>
+              </td>
+              <td class="px-4 py-4">
+                <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">v{{ document.currentVersionNumber || 1 }}</span>
+              </td>
+              <td class="px-4 py-4">
+                <div class="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    [attr.data-testid]="'ged-view-' + document.id"
+                    (click)="openPreview(document); $event.stopPropagation()"
+                    class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50"
+                  >
+                    Voir
+                  </button>
+
+                  <div class="relative" (click)="onMenuContainerClick($event)">
+                    <button
+                      type="button"
+                      [attr.data-testid]="'ged-actions-toggle-' + document.id"
+                      (click)="toggleActionMenu(document.id, $event)"
+                      class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50"
+                    >
+                      ...
+                    </button>
+
+                    <div *ngIf="isActionMenuOpen(document.id)" class="absolute right-0 top-10 z-20 w-52 overflow-hidden rounded-xl border border-gray-200 bg-white p-1 shadow-lg">
+                      <button type="button" (click)="openPreviewFromAction(document)" class="flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-semibold text-gray-700 transition hover:bg-gray-100">Consulter</button>
+                      <button
+                        type="button"
+                        [attr.data-testid]="'ged-download-' + document.id"
+                        (click)="downloadDocument(document)"
+                        class="flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
+                      >
+                        Telecharger
+                      </button>
+                      <button type="button" (click)="openAnnexesFromAction(document)" class="flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-semibold text-gray-700 transition hover:bg-gray-100">Annexes</button>
+                      <button
+                        *ngIf="canManageGed()"
+                        type="button"
+                        [attr.data-testid]="'ged-open-version-' + document.id"
+                        (click)="openVersionsFromAction(document)"
+                        class="flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
+                      >
+                        Versions
+                      </button>
+                      <button
+                        *ngIf="canManageGed()"
+                        type="button"
+                        [attr.data-testid]="'ged-open-acl-' + document.id"
+                        (click)="openAclFromAction(document)"
+                        class="flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
+                      >
+                        Gerer les acces
+                      </button>
+                      <button *ngIf="canSubmit(document)" type="button" (click)="submitDocument(document)" class="flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-semibold text-warning-700 transition hover:bg-warning-50">Soumettre</button>
+                      <button *ngIf="canApprove(document)" type="button" (click)="approveDocument(document)" class="flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-semibold text-brand-700 transition hover:bg-brand-50">Valider</button>
+                      <button *ngIf="canPublishDocument(document)" type="button" (click)="publishDocument(document)" class="flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-semibold text-success-700 transition hover:bg-success-50">Publier</button>
+                      <button *ngIf="canManageGed()" type="button" (click)="openEditFromAction(document)" class="flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-semibold text-gray-700 transition hover:bg-gray-100">Editer</button>
+                      <button *ngIf="canManageGed()" type="button" (click)="archiveDocument(document)" class="flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-semibold text-error-700 transition hover:bg-error-50">Archiver</button>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+
+            <tr *ngIf="!isLoadingDocuments && documents.length === 0">
+              <td colspan="7" class="px-4 py-12 text-center text-sm text-gray-500">
+                Aucun document pour les filtres courants.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex flex-col gap-3 border-t border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-sm text-gray-600">
+          Affichage {{ currentRangeStart() }}-{{ currentRangeEnd() }} sur {{ totalDocumentsCount }} documents
+        </p>
+        <div class="flex items-center gap-2">
+          <button type="button" (click)="previousPage()" [disabled]="!canGoToPreviousPage()" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+            Precedent
+          </button>
+          <button
+            *ngFor="let page of paginationPages()"
+            type="button"
+            (click)="goToPage(page)"
+            class="rounded-lg border px-3 py-1.5 text-sm font-semibold transition"
+            [ngClass]="page === currentPage
+              ? 'border-brand-500 bg-brand-500 text-white'
+              : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
+          >
+            {{ page }}
+          </button>
+          <button type="button" (click)="nextPage()" [disabled]="!canGoToNextPage()" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+            Suivant
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="cnstn-card xl:col-span-3 p-4">
+      <div class="flex items-center justify-between gap-3 border-b border-gray-100 pb-3">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-600">Document selectionne</h2>
+        <button
+          type="button"
+          [disabled]="!selectedDocument"
+          (click)="selectDocumentAndOpenPreview()"
+          class="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Consulter
+        </button>
+      </div>
+
+      <div *ngIf="!selectedDocument" class="mt-4 rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500">
+        Selectionnez un document dans la liste pour afficher ses details et actions.
+      </div>
+
+      <div *ngIf="selectedDocument" class="mt-4 space-y-4">
+        <div class="rounded-xl border border-gray-200 bg-gray-50 p-3">
+          <p class="text-xs font-semibold text-gray-500">{{ selectedDocument.referenceCode || 'REF-N/A' }}</p>
+          <p class="mt-1 text-base font-semibold text-gray-900">{{ selectedDocument.title }}</p>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <span class="rounded-full px-2.5 py-1 text-xs font-semibold" [ngClass]="getStatusTagClass(selectedDocument.gedStatus)">
+              {{ selectedDocument.gedStatus }}
+            </span>
+            <span class="rounded-full px-2.5 py-1 text-xs font-semibold" [ngClass]="getConfidentialityBadgeClass(selectedDocument.confidentialityLevel || 'INTERNAL')">
+              {{ formatConfidentialityLabel(selectedDocument.confidentialityLevel || 'INTERNAL') }}
+            </span>
+            <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">v{{ selectedDocument.currentVersionNumber || 1 }}</span>
+          </div>
+        </div>
+
+        <div class="space-y-2 text-sm">
+          <div class="flex items-start justify-between gap-2">
+            <span class="text-gray-500">Categorie</span>
+            <span class="text-right font-medium text-gray-800">{{ selectedDocument.category.name || 'N/A' }}</span>
+          </div>
+          <div class="flex items-start justify-between gap-2">
+            <span class="text-gray-500">Sous-categorie</span>
+            <span class="text-right font-medium text-gray-800">{{ selectedDocument.subCategory || 'Non definie' }}</span>
+          </div>
+          <div class="flex items-start justify-between gap-2">
+            <span class="text-gray-500">Dossier</span>
+            <span class="text-right font-medium text-gray-800">{{ selectedDocumentFolderLabel() }}</span>
+          </div>
+          <div class="flex items-start justify-between gap-2">
+            <span class="text-gray-500">Modifie le</span>
+            <span class="text-right font-medium text-gray-800">{{ formatDate(selectedDocument.updatedAt) }}</span>
+          </div>
+          <div class="flex items-start justify-between gap-2">
+            <span class="text-gray-500">Service proprietaire</span>
+            <span class="text-right font-medium text-gray-800">{{ selectedDocument.ownerService || 'N/A' }}</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button data-testid="ged-selected-download" type="button" (click)="selectDocumentAndDownload()" class="cnstn-btn-secondary w-full !px-2 !py-2 text-xs">
+            Telecharger
+          </button>
+          <button data-testid="ged-selected-print" type="button" (click)="printSelectedDocument()" [disabled]="isPrintingSelectedDocument" class="cnstn-btn-secondary w-full !px-2 !py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60">
+            {{ isPrintingSelectedDocument ? 'Impression...' : 'Imprimer' }}
+          </button>
+          <button data-testid="ged-selected-acl" type="button" (click)="selectDocumentAndOpenAcl()" [disabled]="!canManageGed()" class="cnstn-btn-secondary w-full !px-2 !py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60">
+            Gerer les acces
+          </button>
+          <button data-testid="ged-selected-versions" type="button" (click)="selectDocumentAndOpenVersions()" [disabled]="!canManageGed()" class="cnstn-btn-secondary w-full !px-2 !py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60">
+            Versions
+          </button>
+          <button data-testid="ged-selected-annexes" type="button" (click)="selectDocumentAndOpenAnnexes()" class="cnstn-btn-secondary w-full !px-2 !py-2 text-xs">
+            Annexes
+          </button>
+          <button data-testid="ged-selected-edit" type="button" (click)="selectDocumentAndEdit()" [disabled]="!canManageGed()" class="cnstn-btn-secondary w-full !px-2 !py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60">
+            Editer
+          </button>
+          <button data-testid="ged-selected-submit" type="button" (click)="selectDocumentAndSubmit()" [disabled]="!canSubmit(selectedDocument)" class="cnstn-btn-outline w-full !px-2 !py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60">
+            Soumettre
+          </button>
+          <button data-testid="ged-selected-approve" type="button" (click)="selectDocumentAndApprove()" [disabled]="!canApprove(selectedDocument)" class="cnstn-btn-outline w-full !px-2 !py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60">
+            Valider
+          </button>
+          <button data-testid="ged-selected-publish" type="button" (click)="selectDocumentAndPublish()" [disabled]="!canPublishDocument(selectedDocument)" class="cnstn-btn-outline w-full !px-2 !py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60">
+            Publier
+          </button>
+          <button data-testid="ged-selected-archive" type="button" (click)="selectDocumentAndArchive()" [disabled]="!canManageGed()" class="cnstn-btn-danger w-full !px-2 !py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60">
+            Archiver
+          </button>
+        </div>
+
+        <div class="space-y-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+          <p *ngIf="!canManageGed()">Gerer les acces, versions, edition et archivage reserves a l administrateur ou au responsable qualite.</p>
+          <p *ngIf="!canSubmit(selectedDocument)">Soumission inactive: statut incompatible.</p>
+          <p *ngIf="!canApprove(selectedDocument)">Validation inactive: necessite un document en attente qualite et un role autorise.</p>
+          <p *ngIf="!canPublishDocument(selectedDocument)">Publication inactive: necessite un document valide qualite et la permission de publication.</p>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+  <section *ngIf="showAuditPanel" class="cnstn-card">
+    <div class="border-b border-gray-100 px-4 py-3">
+      <h3 class="text-sm font-semibold text-gray-900">Audit GED (dernieres actions)</h3>
+    </div>
+    <div class="max-h-72 overflow-auto">
+      <table class="min-w-full divide-y divide-gray-200 text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Date</th>
+            <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Action</th>
+            <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Acteur</th>
+            <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Entite</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr *ngFor="let log of auditLogs">
+            <td class="px-4 py-2 text-gray-700">{{ formatDate(log.createdAt) }}</td>
+            <td class="px-4 py-2 text-gray-700">{{ log.action }}</td>
+            <td class="px-4 py-2 text-gray-700">{{ log.actorUsername }}</td>
+            <td class="px-4 py-2 text-gray-700">{{ log.entityType }}</td>
+          </tr>
+          <tr *ngIf="isLoadingAuditLogs">
+            <td colspan="4" class="px-4 py-6 text-center text-sm text-gray-500">Chargement des traces...</td>
+          </tr>
+          <tr *ngIf="!isLoadingAuditLogs && auditLogs.length === 0">
+            <td colspan="4" class="px-4 py-6 text-center text-sm text-gray-500">Aucune trace disponible.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div
+    *ngIf="feedbackMessage"
+    class="rounded-xl border px-4 py-2 text-sm"
+    [ngClass]="feedbackTone === 'success'
+      ? 'border-success-200 bg-success-50 text-success-700'
+      : 'border-error-200 bg-error-50 text-error-700'"
+  >
+    {{ feedbackMessage }}
+  </div>
+</div>
+
+<div *ngIf="showFolderModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 px-4">
+  <div class="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white/90">
+      {{ editingFolderId ? 'Modifier dossier principal' : 'Nouveau dossier principal' }}
+    </h3>
+    <div class="mt-4 grid grid-cols-1 gap-3">
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Nom dossier</label>
+        <input [(ngModel)]="folderName" type="text" class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200" />
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Parent</label>
+        <select [(ngModel)]="folderParentId" class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+          <option [ngValue]="null">Racine</option>
+          <option *ngFor="let folder of flatFolders" [ngValue]="folder.id">{{ folder.breadcrumb }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Catégorie (optionnel)</label>
+        <input [(ngModel)]="folderCategory" type="text" class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200" />
+      </div>
+    </div>
+    <div class="mt-5 flex justify-end gap-2">
+      <button type="button" (click)="closeFolderModal()" class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-300">Annuler</button>
+      <button type="button" (click)="saveFolder()" [disabled]="isSavingFolder" class="rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-white">
+        {{ isSavingFolder ? 'Enregistrement...' : 'Enregistrer' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showFolderDetailsModal && folderDetailsTarget" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 px-4">
+  <div class="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white/90">Détails dossier principal</h3>
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ folderDetailsTarget.breadcrumb }}</p>
+      </div>
+      <button type="button" (click)="closeFolderDetailsModal()" class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-300">
+        Fermer
+      </button>
+    </div>
+
+    <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div class="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Nom dossier</p>
+        <p class="mt-1 text-sm font-medium text-gray-900 dark:text-white/90">{{ folderDetailsTarget.name }}</p>
+      </div>
+      <div class="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Categorie</p>
+        <p class="mt-1 text-sm font-medium text-gray-900 dark:text-white/90">{{ folderDetailsTarget.category || 'Non precisee' }}</p>
+      </div>
+      <div class="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Documents lies (arborescence)</p>
+        <p class="mt-1 text-sm font-medium text-gray-900 dark:text-white/90">{{ countDocumentsInFolderTree(folderDetailsTarget.id) }}</p>
+      </div>
+      <div class="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Sous-dossiers directs</p>
+        <p class="mt-1 text-sm font-medium text-gray-900 dark:text-white/90">{{ folderDetailsChildren(folderDetailsTarget.id).length }}</p>
+      </div>
+    </div>
+
+    <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <section class="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+        <h4 class="text-sm font-semibold text-gray-900 dark:text-white/90">Sous-dossiers</h4>
+        <div class="mt-2 space-y-2">
+          <p *ngIf="folderDetailsChildren(folderDetailsTarget.id).length === 0" class="text-xs text-gray-500 dark:text-gray-400">Aucun sous-dossier.</p>
+          <div *ngFor="let child of folderDetailsChildren(folderDetailsTarget.id)" class="rounded-lg bg-gray-50 px-3 py-2 text-xs dark:bg-gray-800">
+            <p class="font-semibold text-gray-800 dark:text-gray-200">{{ child.name }}</p>
+            <p class="text-gray-500 dark:text-gray-400">{{ child.documentCount }} document(s)</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+        <h4 class="text-sm font-semibold text-gray-900 dark:text-white/90">Documents du dossier (vue courante)</h4>
+        <div class="mt-2 space-y-2">
+          <p *ngIf="folderDetailsDocuments(folderDetailsTarget.id).length === 0" class="text-xs text-gray-500 dark:text-gray-400">Aucun document affiche dans ce dossier.</p>
+          <div *ngFor="let document of folderDetailsDocuments(folderDetailsTarget.id)" class="rounded-lg bg-gray-50 px-3 py-2 text-xs dark:bg-gray-800">
+            <p class="font-semibold text-gray-800 dark:text-gray-200">{{ document.referenceCode }} - {{ document.title }}</p>
+            <p class="text-gray-500 dark:text-gray-400">{{ formatDate(document.updatedAt) }}</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showDocumentModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 px-4">
+  <div class="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white/90">
+      {{ editingDocument ? 'Modifier document' : 'Nouveau document' }}
+    </h3>
+    <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Dossier</label>
+        <select data-testid="ged-document-folder" [(ngModel)]="documentFolderId" class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+          <option *ngFor="let folder of flatFolders" [ngValue]="folder.id">{{ folder.breadcrumb }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Confidentialité</label>
+        <select data-testid="ged-document-confidentiality" [(ngModel)]="documentConfidentiality" class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+          <option *ngFor="let level of confidentialityOptions" [value]="level">{{ level }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Titre</label>
+        <input data-testid="ged-document-title" [(ngModel)]="documentTitle" type="text" class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200" />
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Catégorie</label>
+        <input data-testid="ged-document-category" [(ngModel)]="documentCategory" type="text" class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200" />
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Sous-categorie</label>
+        <input data-testid="ged-document-subcategory" [(ngModel)]="documentSubCategory" type="text" class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200" />
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          Fichier
+        </label>
+        <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+          Formats autorises: PDF, DOC, DOCX, XLS, XLSX, PNG, JPG, JPEG, TXT.
+        </p>
+        <div class="rounded-xl border border-dashed border-gray-300 p-3 dark:border-gray-700">
+          <input
+            data-testid="ged-upload-input"
+            type="file"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt"
+            (change)="onDocumentFileSelected($event)"
+            class="block w-full text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-500 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-600 dark:text-gray-200"
+          />
+          <div *ngIf="documentUploadFile" class="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs dark:bg-gray-800">
+            <p class="font-semibold text-gray-800 dark:text-gray-100">{{ documentUploadFile.name }}</p>
+            <p class="mt-1 text-gray-600 dark:text-gray-400">
+              {{ formatFileSize(documentUploadFile.size) }} • {{ documentUploadFile.type || 'type inconnu' }}
+            </p>
+            <button
+              type="button"
+              (click)="removeDocumentFile()"
+              class="mt-2 rounded-lg border border-gray-300 px-2 py-1 font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+            >
+              Retirer le fichier
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="md:col-span-2">
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Description</label>
+        <textarea data-testid="ged-document-description" [(ngModel)]="documentDescription" rows="2" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"></textarea>
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Roles ACL (CSV)</label>
+        <input [(ngModel)]="documentAllowedRoles" type="text" placeholder="EMPLOYE, CHEF_HIERARCHIQUE" class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200" />
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Services ACL (CSV)</label>
+        <input [(ngModel)]="documentAllowedServices" type="text" placeholder="DSI, QUALITE" class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200" />
+      </div>
+    </div>
+    <div class="mt-5 flex justify-end gap-2">
+      <button type="button" (click)="closeDocumentModal()" class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-300">Annuler</button>
+      <button data-testid="ged-document-save" type="button" (click)="saveDocument()" [disabled]="isSavingDocument" class="rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-white">
+        {{ isSavingDocument ? 'Enregistrement...' : 'Enregistrer' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showVersionModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 px-4">
+  <div class="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white/90">Ajouter une version</h3>
+    <div class="mt-4 grid grid-cols-1 gap-3">
+      <div class="rounded-xl border border-dashed border-gray-300 p-3 dark:border-gray-700">
+        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          Fichier de version
+        </label>
+        <input
+          data-testid="ged-version-upload-input"
+          type="file"
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt"
+          (change)="onVersionFileSelected($event)"
+          class="block w-full text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-500 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-600 dark:text-gray-200"
+        />
+        <div *ngIf="versionUploadFile" class="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs dark:bg-gray-800">
+          <p class="font-semibold text-gray-800 dark:text-gray-100">{{ versionUploadFile.name }}</p>
+          <p class="mt-1 text-gray-600 dark:text-gray-400">
+            {{ formatFileSize(versionUploadFile.size) }} • {{ versionUploadFile.type || 'type inconnu' }}
+          </p>
+          <button
+            type="button"
+            (click)="removeVersionFile()"
+            class="mt-2 rounded-lg border border-gray-300 px-2 py-1 font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+          >
+            Retirer le fichier
+          </button>
+        </div>
+      </div>
+      <input [(ngModel)]="versionChangeNote" type="text" placeholder="Note de changement" class="h-10 rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200" />
+    </div>
+    <div class="mt-5 flex justify-end gap-2">
+      <button type="button" (click)="closeVersionModal()" class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-300">Annuler</button>
+      <button data-testid="ged-version-save" type="button" (click)="saveVersion()" [disabled]="isSavingVersion" class="rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-white">
+        {{ isSavingVersion ? 'Ajout...' : 'Ajouter version' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showAclModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 px-4">
+  <div data-testid="ged-acl-modal" class="max-h-[92vh] w-full max-w-4xl overflow-auto rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-lg dark:border-gray-800 dark:bg-gray-900">
+    <div class="flex flex-wrap items-start justify-between gap-3 border-b border-gray-100 pb-4 dark:border-gray-800">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white/90">Droits d'accès documentaires</h3>
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          {{ aclTarget?.referenceCode }} • {{ aclTarget?.title }}
+        </p>
+      </div>
+      <span
+        class="rounded-full px-3 py-1 text-xs font-semibold"
+        [ngClass]="getConfidentialityBadgeClass(aclConfidentiality)"
+      >
+        {{ formatConfidentialityLabel(aclConfidentiality) }}
+      </span>
+    </div>
+
+    <div *ngIf="isLoadingAcl" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+      Chargement des droits d'accès...
+    </div>
+
+    <div *ngIf="!isLoadingAcl" class="mt-4 space-y-4">
+      <section class="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Niveau de confidentialité</label>
+        <select
+          data-testid="ged-acl-confidentiality"
+          [(ngModel)]="aclConfidentiality"
+          class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+        >
+          <option *ngFor="let level of confidentialityOptions" [ngValue]="level">{{ formatConfidentialityLabel(level) }}</option>
+        </select>
+      </section>
+
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section class="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+          <h4 class="text-sm font-semibold text-gray-900 dark:text-white/90">Rôles autorisés</h4>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Ces rôles peuvent accéder au document selon les droits définis.
+          </p>
+          <div class="mt-3 grid grid-cols-1 gap-2">
+            <label
+              *ngFor="let role of aclRoleOptions"
+              class="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700"
+              [ngClass]="isAclRoleSelected(role)
+                ? 'bg-brand-50 dark:bg-brand-500/10'
+                : 'bg-white dark:bg-gray-900'"
+            >
+              <span class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  [attr.data-testid]="'ged-acl-role-' + role"
+                  [checked]="isAclRoleSelected(role)"
+                  [disabled]="isSystemAclRole(role)"
+                  (change)="toggleAclRole(role, $any($event.target).checked)"
+                  class="size-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500/30 dark:border-gray-600"
+                />
+                <span class="font-medium text-gray-700 dark:text-gray-200">{{ formatRoleLabel(role) }}</span>
+              </span>
+              <span
+                *ngIf="isSystemAclRole(role)"
+                class="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+              >
+                Auto
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <section class="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+          <h4 class="text-sm font-semibold text-gray-900 dark:text-white/90">Services autorisés</h4>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Liste issue des services détectés dans la GED et du document courant.
+          </p>
+          <input
+            [(ngModel)]="aclServiceSearch"
+            type="text"
+            placeholder="Rechercher un service..."
+            class="mt-3 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+          />
+          <div class="mt-3 grid grid-cols-1 gap-2" *ngIf="filteredAclServiceOptions().length > 0; else noServiceOption">
+            <label
+              *ngFor="let service of filteredAclServiceOptions()"
+              class="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700"
+              [ngClass]="isAclServiceSelected(service)
+                ? 'bg-brand-50 dark:bg-brand-500/10'
+                : 'bg-white dark:bg-gray-900'"
+            >
+              <span class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  [attr.data-testid]="'ged-acl-service-' + toTestIdSlug(service)"
+                  [checked]="isAclServiceSelected(service)"
+                  [disabled]="isSystemAclService(service)"
+                  (change)="toggleAclService(service, $any($event.target).checked)"
+                  class="size-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500/30 dark:border-gray-600"
+                />
+                <span class="font-medium text-gray-700 dark:text-gray-200">{{ formatServiceLabel(service) }}</span>
+              </span>
+              <span
+                *ngIf="isSystemAclService(service)"
+                class="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+              >
+                Auto
+              </span>
+            </label>
+          </div>
+          <ng-template #noServiceOption>
+            <p class="mt-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+              Aucun service disponible pour sélection.
+            </p>
+          </ng-template>
+        </section>
+      </div>
+
+      <section data-testid="ged-acl-summary" class="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+        <h4 class="text-sm font-semibold text-gray-900 dark:text-white/90">Résumé des accès actifs</h4>
+        <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">
+          Ce document est accessible par : {{ aclAudienceSummary() }}
+        </p>
+        <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">
+          Confidentialité : {{ formatConfidentialityLabel(aclConfidentiality) }}
+        </p>
+        <div class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <div>
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Roles</p>
+            <div class="flex flex-wrap gap-2">
+              <span
+                *ngFor="let role of aclSelectedRoles"
+                class="rounded-full bg-brand-500/10 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:text-brand-300"
+              >
+                {{ formatRoleLabel(role) }}
+              </span>
+              <span *ngIf="aclSelectedRoles.length === 0" class="text-xs text-gray-500 dark:text-gray-400">Aucun rôle.</span>
+            </div>
+          </div>
+          <div>
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Services</p>
+            <div class="flex flex-wrap gap-2">
+              <span
+                *ngFor="let service of aclSelectedServices"
+                class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+              >
+                {{ formatServiceLabel(service) }}
+              </span>
+              <span *ngIf="aclSelectedServices.length === 0" class="text-xs text-gray-500 dark:text-gray-400">Aucun service.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+        <h4 class="text-sm font-semibold text-gray-900 dark:text-white/90">Permissions</h4>
+        <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">
+          {{ aclPermissionsSummary() }}
+        </p>
+      </section>
+    </div>
+
+    <div class="mt-5 flex justify-end gap-2">
+      <button type="button" (click)="closeAclModal()" class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-300">
+        Annuler
+      </button>
+      <button data-testid="ged-acl-save" type="button" (click)="saveAcl()" [disabled]="isSavingAcl || isLoadingAcl" class="rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-white">
+        {{ isSavingAcl ? 'Enregistrement...' : 'Enregistrer les droits' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showPreviewModal" class="fixed inset-0 z-[100000] bg-gray-950/70 p-3 md:p-6">
+  <div class="mx-auto flex h-full w-full max-w-6xl flex-col rounded-2xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-gray-900"
+       [ngClass]="previewFullscreen ? 'max-w-none' : ''">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white/90">{{ previewDocument?.title }}</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          {{ previewData?.referenceCode }} • v{{ previewData?.versionNumber }} • {{ previewFileName || (previewData?.fileName || 'Fichier') }}
+        </p>
+        <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+          {{ previewMimeType }} • {{ formatFileSize(previewFileSize) }}
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button data-testid="ged-preview-fullscreen-toggle" type="button" (click)="togglePreviewFullscreen()" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-300">
+          {{ previewFullscreen ? 'Quitter plein écran' : 'Plein écran' }}
+        </button>
+        <button type="button" (click)="closePreview()" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-300">
+          Fermer
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 border-b border-gray-100 px-4 py-3 md:grid-cols-[220px_1fr_auto] dark:border-gray-800">
+      <select
+        [(ngModel)]="previewVersionNumber"
+        (change)="onPreviewVersionChange()"
+        class="h-10 rounded-lg border border-gray-300 bg-transparent px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+      >
+        <option *ngFor="let version of previewVersions" [ngValue]="version.versionNumber">
+          Version {{ version.versionNumber }} - {{ version.fileName }}
+        </option>
+      </select>
+
+      <div class="flex gap-2">
+        <input
+          data-testid="ged-preview-search"
+          [(ngModel)]="previewSearch"
+          type="text"
+          placeholder="Recherche dans le document"
+          [disabled]="!canSearchInPreview()"
+          class="h-10 flex-1 rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+        />
+        <button
+          data-testid="ged-preview-search-btn"
+          type="button"
+          (click)="searchInPreview()"
+          [disabled]="!canSearchInPreview()"
+          class="rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-white"
+        >
+          Rechercher
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button data-testid="ged-preview-zoom-out" type="button" (click)="zoomOutPreview()" class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-300">-</button>
+        <span data-testid="ged-preview-zoom-value" class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ previewData?.zoomPercent || previewZoomPercent }}%</span>
+        <button data-testid="ged-preview-zoom-in" type="button" (click)="zoomInPreview()" class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-300">+</button>
+        <button type="button" (click)="resetPreviewZoom()" class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-300">Réinitialiser</button>
+      </div>
+    </div>
+
+    <div class="grid flex-1 grid-cols-1 gap-4 overflow-hidden p-4 lg:grid-cols-[1fr_320px]">
+      <div class="flex min-h-0 flex-col rounded-xl border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between border-b border-gray-100 px-3 py-2 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-300">
+          <div>
+            Page {{ previewPageDisplay() }}
+            <span *ngIf="canSearchInPreview() && previewSearch && previewSearchMatches > 0" class="ml-2">
+              Correspondances: {{ previewSearchMatches }}
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button data-testid="ged-preview-prev-page" type="button" (click)="previousPreviewPage()" [disabled]="!canNavigatePreviewPages()" class="rounded-md border border-gray-300 px-2 py-1 font-semibold disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700">Précédent</button>
+            <button data-testid="ged-preview-next-page" type="button" (click)="nextPreviewPage()" [disabled]="!canNavigatePreviewPages()" class="rounded-md border border-gray-300 px-2 py-1 font-semibold disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700">Suivant</button>
+            <button data-testid="ged-preview-download" type="button" (click)="downloadFromPreview()" class="rounded-md bg-success-500 px-2 py-1 font-semibold text-white">Télécharger</button>
+            <button data-testid="ged-preview-print" type="button" (click)="printFromPreview()" [disabled]="!canPrintPreview() || isPrintingPreview" class="rounded-md bg-brand-500 px-2 py-1 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+              {{ isPrintingPreview ? 'Impression...' : 'Imprimer' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="min-h-0 flex-1 overflow-auto bg-gray-50 p-4 dark:bg-gray-800" data-testid="ged-preview-content">
+          <div *ngIf="isLoadingPreview" class="text-sm text-gray-500 dark:text-gray-400">Chargement aperçu...</div>
+
+          <iframe
+            *ngIf="!isLoadingPreview && isPreviewMode('pdf') && previewPdfUrl"
+            [src]="previewPdfUrl"
+            class="h-full min-h-[520px] w-full rounded-lg border border-gray-200 bg-white dark:border-gray-700"
+            data-testid="ged-preview-pdf-frame"
+            title="Aperçu PDF"
+          ></iframe>
+
+          <div *ngIf="!isLoadingPreview && isPreviewMode('image')" class="flex h-full min-h-[520px] items-center justify-center overflow-auto rounded-lg border border-gray-200 bg-black/5 p-4 dark:border-gray-700 dark:bg-black/20">
+            <img
+              data-testid="ged-preview-image"
+              [src]="previewBlobUrl"
+              [style.transform]="'scale(' + (previewZoomPercent / 100) + ')'"
+              [style.transformOrigin]="'center center'"
+              class="max-h-full max-w-full rounded-md object-contain transition"
+              alt="Aperçu image GED"
+            />
+          </div>
+
+          <pre
+            *ngIf="!isLoadingPreview && isPreviewMode('text')"
+            class="min-h-[520px] whitespace-pre-wrap font-mono leading-6 text-gray-800 dark:text-gray-100"
+            [style.fontSize.%]="previewZoomPercent"
+            >{{ previewTextContent || 'Contenu texte vide.' }}</pre
+          >
+
+          <div *ngIf="!isLoadingPreview && isPreviewMode('fallback')" data-testid="ged-preview-fallback" class="flex min-h-[520px] flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white px-6 text-center dark:border-gray-700 dark:bg-gray-900">
+            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">Aperçu non disponible</p>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">{{ previewFallbackMessage() }}</p>
+            <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">Nom: {{ previewFileName || 'N/A' }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Type MIME: {{ previewMimeType || 'N/A' }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Taille: {{ formatFileSize(previewFileSize) }}</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="min-h-0 overflow-auto rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+        <h4 class="text-sm font-semibold text-gray-900 dark:text-white/90">Documents liés / annexes</h4>
+        <div class="mt-3 space-y-2">
+          <div *ngFor="let link of previewLinks" class="rounded-lg border border-gray-200 p-2 text-xs dark:border-gray-700">
+            <p class="font-semibold text-gray-800 dark:text-gray-200">{{ link.linkedReferenceCode }} - {{ link.linkedTitle }}</p>
+            <p class="text-gray-500 dark:text-gray-400">{{ link.relationType }} • {{ link.createdBy }}</p>
+          </div>
+          <p *ngIf="previewLinks.length === 0" class="text-xs text-gray-500 dark:text-gray-400">Aucun lien documentaire.</p>
+        </div>
+
+        <div *ngIf="canManageGed()" class="mt-4 space-y-2 border-t border-gray-100 pt-3 dark:border-gray-700">
+          <h5 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Ajouter un lien</h5>
+          <select [(ngModel)]="selectedLinkedDocumentId" class="h-10 w-full rounded-lg border border-gray-300 px-3 text-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+            <option value="">Choisir un document</option>
+            <option *ngFor="let item of availableLinkTargets()" [value]="item.id">{{ item.referenceCode }} - {{ item.title }}</option>
+          </select>
+          <select [(ngModel)]="selectedRelationType" class="h-10 w-full rounded-lg border border-gray-300 px-3 text-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+            <option *ngFor="let relation of relationTypeOptions" [value]="relation">{{ relation }}</option>
+          </select>
+          <button type="button" (click)="addPreviewLink()" class="w-full rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-white">
+            Ajouter lien
+          </button>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+
+

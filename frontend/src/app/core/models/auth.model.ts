@@ -3,6 +3,7 @@ export type AppRole =
   | 'EMPLOYEE'
   | 'MANAGER'
   | 'ROOM_MANAGER'
+  | 'IT_MANAGER'
   | 'SECURITY_MANAGER'
   | 'DSN_DIRECTOR'
   | 'QUALITY_MANAGER';

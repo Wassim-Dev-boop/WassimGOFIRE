@@ -1,0 +1,14 @@
+{
+  "properties": [
+    {
+      "name": "app.internal.api-key",
+      "type": "java.lang.String",
+      "description": "Internal API key required by internal notification endpoints."
+    },
+    {
+      "name": "app.mail.from",
+      "type": "java.lang.String",
+      "description": "Default sender address for outgoing emails."
+    }
+  ]
+}

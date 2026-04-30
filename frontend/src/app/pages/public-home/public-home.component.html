@@ -1,0 +1,73 @@
+<div class="public-home-shell">
+  <header class="home-topbar">
+    <a routerLink="/accueil" class="brand-link">
+      <span class="brand-logo">
+        <img src="/images/logo/logo1.png" alt="CNSTN" />
+      </span>
+      <span>
+        <strong>CNSTN</strong>
+        <small>Plateforme interne</small>
+      </span>
+    </a>
+
+    <nav class="topbar-nav">
+      <a href="#modules">Modules</a>
+      <a href="#avantages">Avantages</a>
+      <a href="#cas-usage">Cas d'usage</a>
+    </nav>
+
+    <a routerLink="/signin" class="topbar-login">Connexion</a>
+  </header>
+
+  <main class="home-main">
+    <section class="hero-zone">
+      <div>
+        <h1>Unifiez vos operations. Simplifiez votre workflow.</h1>
+        <p>
+          CNSTN centralise la GED, les evenements, les reservations, les interventions et
+          les notifications dans une seule plateforme interne.
+        </p>
+
+        <div class="hero-actions">
+          <a routerLink="/signin" class="cta-primary">Se connecter</a>
+          <a routerLink="/signup" class="cta-secondary">Creer un compte</a>
+          <a href="#modules" class="cta-link">Decouvrir</a>
+        </div>
+
+        <div id="avantages" class="pill-row">
+          <span *ngFor="let item of advantages">{{ item }}</span>
+        </div>
+      </div>
+
+      <aside class="hero-preview" aria-hidden="true">
+        <h2>Experience unifiee</h2>
+        <ul>
+          <li>Navigation claire par module</li>
+          <li>Actions et permissions reelles</li>
+          <li>Workflow trace de bout en bout</li>
+        </ul>
+      </aside>
+    </section>
+
+    <section id="modules" class="home-section">
+      <h2>Tous vos outils. Un seul endroit.</h2>
+      <p>Des modules connectes au backend reel et coherents avec les besoins du centre.</p>
+
+      <div class="module-grid">
+        <article *ngFor="let module of integratedModules">
+          <h3>{{ module.title }}</h3>
+          <p>{{ module.description }}</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="cas-usage" class="home-section role-section">
+      <h2>Cas d'usage par role</h2>
+      <div class="role-grid">
+        <span *ngFor="let role of roleUseCases">{{ role }}</span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="home-footer">© {{ currentYear }} CNSTN - Plateforme interne</footer>
+</div>

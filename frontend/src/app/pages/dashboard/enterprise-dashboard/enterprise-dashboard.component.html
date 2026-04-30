@@ -1,32 +1,52 @@
 <div class="space-y-6">
   @if (isLoading) {
-  <div class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
-    <p class="text-sm text-gray-500 dark:text-gray-400">Chargement du dashboard...</p>
-  </div>
+  <section class="cnstn-loading-state">
+    <p class="text-sm">Chargement du tableau de bord...</p>
+  </section>
+  } @else if (hasError) {
+  <section class="cnstn-error-state">
+    <p class="font-semibold">Erreur de chargement</p>
+    <p class="mt-1 text-sm">{{ loadErrorMessage }}</p>
+    <button type="button" class="cnstn-btn-secondary mt-4" (click)="reloadDashboard()">Recharger</button>
+  </section>
   } @else if (isAdminView || isEmployeeView || isManagerResponsibleView) {
+  <section class="cnstn-card p-5">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-semibold text-gray-900 md:text-3xl">{{ dashboardTitle }}</h1>
+        <p class="mt-1 text-sm text-gray-600">
+          Indicateurs reels bases sur vos acces et vos donnees metier.
+        </p>
+      </div>
+      <span class="inline-flex rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
+        {{ currentRoleLabel }}
+      </span>
+    </div>
+  </section>
+
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
     @for (card of kpiCards; track card.label; let index = $index) {
     <article
-      class="dashboard-motion-panel rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]"
+      class="dashboard-motion-panel cnstn-kpi-card"
       [class.is-active]="dashboardMotionReady"
       [style.--motion-delay]="(index * 70) + 'ms'"
     >
       <div class="mb-3 flex items-start justify-between gap-4">
         <div class="min-w-0">
-          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ card.label }}</p>
-          <h3 class="mt-2 text-4xl font-semibold tabular-nums text-gray-900 dark:text-white/90">
+          <p class="text-sm font-medium text-gray-500">{{ card.label }}</p>
+          <h3 class="mt-2 text-4xl font-semibold tabular-nums text-gray-900">
             {{ getAnimatedKpiValue(index, card.value) }}
           </h3>
         </div>
         <span
-          class="inline-flex size-9 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800"
+          class="inline-flex size-9 items-center justify-center rounded-lg bg-gray-100"
           [ngClass]="card.iconColorClass"
           [innerHTML]="card.icon | safeHtml"
         ></span>
       </div>
       <p
-        class="text-base font-medium"
-        [ngClass]="card.deltaTone === 'positive' ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'"
+        class="text-sm font-semibold"
+        [ngClass]="card.deltaTone === 'positive' ? 'text-success-700' : 'text-error-700'"
       >
         {{ card.delta }}
       </p>
@@ -40,12 +60,12 @@
       [class.is-active]="dashboardMotionReady"
       style="--motion-delay: 120ms"
     >
-      <app-monthly-sales-chart
-        [title]="monthlySalesTitle"
-        [seriesName]="monthlySalesSeriesName"
-        [seriesData]="monthlySalesData"
-        [categories]="monthlySalesCategories"
-      ></app-monthly-sales-chart>
+      <app-activity-chart
+        [title]="monthlyActivityTitle"
+        [seriesName]="monthlyActivitySeriesName"
+        [seriesData]="monthlyActivityData"
+        [categories]="monthlyActivityCategories"
+      ></app-activity-chart>
     </section>
 
     <section
@@ -53,7 +73,7 @@
       [class.is-active]="dashboardMotionReady"
       style="--motion-delay: 190ms"
     >
-      <app-monthly-target
+      <app-monthly-performance
         [title]="monthlyTargetTitle"
         [subtitle]="monthlyTargetSubtitle"
         [progress]="monthlyTargetProgress"
@@ -69,89 +89,200 @@
         [targetTrend]="monthlyTargetTrend"
         [revenueTrend]="monthlyRevenueTrend"
         [todayTrend]="monthlyTodayTrend"
-      ></app-monthly-target>
+      ></app-monthly-performance>
     </section>
   </div>
 
   <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
     <section
-      class="dashboard-motion-panel rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]"
+      class="dashboard-motion-panel cnstn-card p-5"
       [class.is-active]="dashboardMotionReady"
-      style="--motion-delay: 260ms"
+      style="--motion-delay: 250ms"
     >
-      <h2 class="text-2xl font-semibold text-gray-900 dark:text-white/90">Activite recente</h2>
+      <div class="mb-4 flex items-center justify-between gap-2">
+        <h2 class="text-xl font-semibold text-gray-900">Taches et validations</h2>
+      </div>
 
-      <div class="mt-5 space-y-4">
-        @for (activity of recentActivities; track activity.title + activity.timeAgo; let index = $index) {
-        <article
-          class="dashboard-motion-item border-b border-gray-200 pb-4 last:border-b-0 last:pb-0 dark:border-gray-800"
-          [class.is-active]="dashboardMotionReady"
-          [style.--motion-delay]="(330 + index * 90) + 'ms'"
-        >
-          <div class="flex items-start gap-3">
-            <span class="mt-2 inline-block size-2.5 rounded-full" [ngClass]="activity.dotClass"></span>
-            <div class="min-w-0">
-              <p class="text-xl font-semibold leading-tight text-gray-900 dark:text-white/90">
-                {{ activity.title }}
-                <span
-                  class="ml-2 inline-flex rounded-full px-2.5 py-0.5 text-sm font-semibold"
-                  [ngClass]="activity.tagClass"
-                >
-                  {{ activity.tag }}
-                </span>
-              </p>
-              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                @if (activity.timeAgo === 'Hier') {
-                {{ activity.timeAgo }}
-                } @else {
-                Il y a {{ activity.timeAgo }}
-                }
-              </p>
-            </div>
+      <div class="space-y-3">
+        @for (task of roleTasks; track task.title + task.detail) {
+        <article class="rounded-xl border border-gray-200 bg-gray-50 p-3">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <p class="text-sm font-semibold text-gray-900">{{ task.title }}</p>
+            <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold" [ngClass]="getTaskToneClass(task)">
+              {{ task.tone === 'high' ? 'Haute' : task.tone === 'medium' ? 'Moyenne' : 'Basse' }}
+            </span>
           </div>
+          <p class="mt-1 text-sm text-gray-600">{{ task.detail }}</p>
+          @if (task.route) {
+          <a [routerLink]="task.route" [queryParams]="task.queryParams" class="mt-2 inline-flex text-sm font-semibold text-brand-600 hover:text-brand-700">
+            Ouvrir
+          </a>
+          }
         </article>
         }
       </div>
     </section>
 
     <section
-      class="dashboard-motion-panel rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]"
+      class="dashboard-motion-panel cnstn-card p-5"
       [class.is-active]="dashboardMotionReady"
-      style="--motion-delay: 320ms"
+      style="--motion-delay: 300ms"
     >
-      <h2 class="text-2xl font-semibold text-gray-900 dark:text-white/90">Actions rapides</h2>
+      <div class="mb-4 flex items-center justify-between gap-2">
+        <h2 class="text-xl font-semibold text-gray-900">Prochains evenements</h2>
+        @if (canViewEventsForRole) {
+        <a routerLink="/events" class="text-sm font-semibold text-brand-600 hover:text-brand-700">Voir tout</a>
+        }
+      </div>
 
-      <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        @for (action of quickActions; track action.label; let index = $index) {
+      @if (upcomingEvents.length === 0) {
+      <div class="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-sm text-gray-500">
+        {{ getUpcomingEmptyMessage() }}
+      </div>
+      } @else {
+      <div class="space-y-3">
+        @for (event of upcomingEvents; track event.id) {
+        <article class="rounded-xl border border-gray-200 bg-gray-50 p-3">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <p class="text-sm font-semibold text-gray-900">{{ event.title }}</p>
+            <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold" [ngClass]="event.statusClass">
+              {{ event.statusLabel }}
+            </span>
+          </div>
+          <p class="mt-1 text-sm text-gray-600">{{ event.dateLabel }}</p>
+          <p class="text-sm text-gray-500">{{ event.locationLabel }}</p>
+          <a [routerLink]="event.route" class="mt-2 inline-flex text-sm font-semibold text-brand-600 hover:text-brand-700">
+            Voir l evenement
+          </a>
+        </article>
+        }
+      </div>
+      }
+    </section>
+  </div>
+
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
+    <section
+      class="dashboard-motion-panel cnstn-card p-5 xl:col-span-6"
+      [class.is-active]="dashboardMotionReady"
+      style="--motion-delay: 340ms"
+    >
+      <h2 class="text-xl font-semibold text-gray-900">Activite recente</h2>
+
+      @if (recentActivities.length === 0) {
+      <div class="mt-4 rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-sm text-gray-500">
+        Aucune activite recente.
+      </div>
+      } @else {
+      <div class="mt-4 space-y-3">
+        @for (activity of recentActivities; track activity.title + activity.timeAgo; let index = $index) {
+        <article
+          class="dashboard-motion-item rounded-xl border border-gray-200 bg-gray-50 p-3"
+          [class.is-active]="dashboardMotionReady"
+          [style.--motion-delay]="(410 + index * 70) + 'ms'"
+        >
+          <div class="flex items-start gap-3">
+            <span class="mt-2 inline-block size-2.5 rounded-full" [ngClass]="activity.dotClass"></span>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-gray-900">
+                {{ activity.title }}
+              </p>
+              <div class="mt-1 flex flex-wrap items-center gap-2">
+                <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold" [ngClass]="activity.tagClass">
+                  {{ activity.tag }}
+                </span>
+                <span class="text-xs text-gray-500">Il y a {{ activity.timeAgo }}</span>
+              </div>
+            </div>
+          </div>
+        </article>
+        }
+      </div>
+      }
+    </section>
+
+    <section
+      class="dashboard-motion-panel cnstn-card p-5 xl:col-span-3"
+      [class.is-active]="dashboardMotionReady"
+      style="--motion-delay: 390ms"
+    >
+      <h2 class="text-xl font-semibold text-gray-900">Mini calendrier</h2>
+      <p class="mt-1 text-sm text-gray-500">{{ miniCalendarMonthLabel }}</p>
+
+      <div class="mt-4 grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-400">
+        <span>Lun</span>
+        <span>Mar</span>
+        <span>Mer</span>
+        <span>Jeu</span>
+        <span>Ven</span>
+        <span>Sam</span>
+        <span>Dim</span>
+      </div>
+
+      <div class="mt-2 grid grid-cols-7 gap-1">
+        @for (cell of miniCalendarCells; track $index) {
+        <div
+          class="relative flex h-9 items-center justify-center rounded-lg text-xs"
+          [ngClass]="{
+            'bg-gray-100 text-gray-800': cell.isCurrentMonth && !cell.isToday,
+            'bg-brand-500 text-white font-semibold': cell.isToday,
+            'text-transparent': !cell.isCurrentMonth
+          }"
+        >
+          @if (cell.dayNumber) {
+          {{ cell.dayNumber }}
+          @if (cell.eventCount > 0) {
+          <span class="absolute bottom-0.5 h-1.5 w-1.5 rounded-full" [ngClass]="cell.isToday ? 'bg-white' : 'bg-brand-500'"></span>
+          }
+          }
+        </div>
+        }
+      </div>
+    </section>
+
+    <section
+      class="dashboard-motion-panel cnstn-card p-5 xl:col-span-3"
+      [class.is-active]="dashboardMotionReady"
+      style="--motion-delay: 430ms"
+    >
+      <h2 class="text-xl font-semibold text-gray-900">Acces rapides</h2>
+      <div class="mt-4 space-y-2">
+        @for (action of quickActionsWithState; track action.label; let index = $index) {
+        @if (!action.disabled) {
         <a
           [routerLink]="action.route"
           [queryParams]="action.queryParams"
-          class="dashboard-motion-item group flex min-h-24 items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 transition hover:border-brand-300 hover:bg-brand-50/60 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-brand-500/10"
+          class="dashboard-motion-item group flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 transition hover:border-brand-300 hover:bg-brand-50"
           [class.is-active]="dashboardMotionReady"
-          [style.--motion-delay]="(390 + index * 70) + 'ms'"
+          [style.--motion-delay]="(460 + index * 55) + 'ms'"
         >
-          <span
-            class="inline-flex size-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500 group-hover:text-brand-500 dark:bg-gray-800 dark:text-gray-300"
-            [innerHTML]="action.icon | safeHtml"
-          ></span>
-          <span class="text-2xl font-semibold leading-tight text-gray-900 dark:text-white/90">{{ action.label }}</span>
+          <span class="inline-flex size-8 items-center justify-center rounded-lg bg-white text-gray-500 group-hover:text-brand-600" [innerHTML]="action.icon | safeHtml"></span>
+          <span class="text-sm font-semibold text-gray-900">{{ action.label }}</span>
         </a>
+        } @else {
+        <div
+          class="dashboard-motion-item rounded-xl border border-gray-200 bg-gray-100 px-3 py-2.5"
+          [class.is-active]="dashboardMotionReady"
+          [style.--motion-delay]="(460 + index * 55) + 'ms'"
+        >
+          <div class="flex items-center gap-3">
+            <span class="inline-flex size-8 items-center justify-center rounded-lg bg-white text-gray-400" [innerHTML]="action.icon | safeHtml"></span>
+            <span class="text-sm font-semibold text-gray-500">{{ action.label }}</span>
+          </div>
+          <p class="mt-1 text-xs text-gray-500">{{ action.disabledReason }}</p>
+        </div>
+        }
         }
       </div>
     </section>
   </div>
   } @else {
-  <div class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
-    <h2 class="text-2xl font-semibold text-gray-900 dark:text-white/90">Dashboard entreprise</h2>
-    <p class="mt-2 text-base text-gray-600 dark:text-gray-300">
-      Cette vue detaillee est reservee aux roles ADMIN, EMPLOYEE, MANAGER et responsables. Connectez-vous avec l'un de ces roles pour afficher le dashboard complet.
+  <section class="cnstn-empty-state">
+    <h2 class="text-lg font-semibold text-gray-900">Tableau de bord indisponible</h2>
+    <p class="mt-1 text-sm text-gray-600">
+      Cette vue est reservee aux roles metier autorises.
     </p>
-    <a
-      routerLink="/profile"
-      class="mt-4 inline-flex rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-    >
-      Ouvrir le profil
-    </a>
-  </div>
+    <a routerLink="/profile" class="cnstn-btn-secondary mt-4">Ouvrir le profil</a>
+  </section>
   }
 </div>

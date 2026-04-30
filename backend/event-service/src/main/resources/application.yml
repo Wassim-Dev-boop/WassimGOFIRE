@@ -12,9 +12,12 @@ spring:
     password: ${DB_PASSWORD:postgres}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
   flyway:
-    enabled: false
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
   security:
     oauth2:
       resourceserver:
@@ -38,9 +41,17 @@ zoom:
     secret: ${ZOOM_SDK_SECRET:}
 
 app:
+  internal:
+    api-key: ${EVENT_INTERNAL_API_KEY:${NOTIFICATION_INTERNAL_API_KEY:change-me}}
+  reservation:
+    base-url: ${RESERVATION_SERVICE_URL:http://reservation-service:8083}
+    internal-api-key: ${RESERVATION_INTERNAL_API_KEY:${NOTIFICATION_INTERNAL_API_KEY:change-me}}
   notification:
-    base-url: ${NOTIFICATION_SERVICE_URL:http://localhost:8086}
+    base-url: ${NOTIFICATION_SERVICE_URL:http://notification-service:8086}
     internal-api-key: ${NOTIFICATION_INTERNAL_API_KEY:change-me}
   auth-user:
-    base-url: ${AUTH_USER_SERVICE_URL:http://localhost:8081}
+    base-url: ${AUTH_USER_SERVICE_URL:http://auth-user-service:8081}
     internal-api-key: ${AUTH_USER_INTERNAL_API_KEY:${NOTIFICATION_INTERNAL_API_KEY:change-me}}
+  events:
+    invitations:
+      frontend-invitations-url: ${EVENT_INVITATIONS_FRONTEND_URL:http://localhost:4200/invitations}

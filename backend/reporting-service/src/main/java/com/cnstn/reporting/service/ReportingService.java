@@ -7,10 +7,15 @@ import com.cnstn.reporting.client.ReservationClient;
 import com.cnstn.reporting.dto.GenericPageResponse;
 import com.cnstn.reporting.dto.KpiResponse;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ReportingService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ReportingService.class);
 
     private final EventClient eventClient;
     private final ReservationClient reservationClient;
@@ -29,18 +34,23 @@ public class ReportingService {
         this.gedClient = gedClient;
     }
 
-    @CircuitBreaker(name = "kpiAggregator", fallbackMethod = "fallbackKpis")
+    @CircuitBreaker(name = "kpiAggregator")
     public KpiResponse dashboardKpis() {
-        long events = safeTotal(eventClient.count(0, 1));
-        long reservations = safeTotal(reservationClient.count(0, 1));
-        long interventions = safeTotal(interventionClient.count(0, 1));
-        long documents = safeTotal(gedClient.count(0, 1));
+        long events = safeCount("events", () -> eventClient.count(0, 1));
+        long reservations = safeCount("reservations", () -> reservationClient.count(0, 1));
+        long interventions = safeCount("interventions", () -> interventionClient.count(0, 1));
+        long documents = safeCount("documents", () -> gedClient.count(0, 1));
 
         return new KpiResponse(events, reservations, interventions, documents);
     }
 
-    public KpiResponse fallbackKpis(Throwable throwable) {
-        return new KpiResponse(0, 0, 0, 0);
+    private long safeCount(String source, Supplier<GenericPageResponse> supplier) {
+        try {
+            return safeTotal(supplier.get());
+        } catch (Exception ex) {
+            LOG.warn("KPI source '{}' unavailable, fallback to 0: {}", source, ex.getMessage());
+            return 0;
+        }
     }
 
     private long safeTotal(GenericPageResponse response) {

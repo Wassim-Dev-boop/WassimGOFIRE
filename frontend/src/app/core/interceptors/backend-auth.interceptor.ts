@@ -1,7 +1,8 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { catchError, throwError } from 'rxjs';
 
-const TOKEN_STORAGE_KEYS = ['backend_access_token', 'auth_token', 'access_token'];
+const TOKEN_STORAGE_KEYS = ['backend_access_token', 'backend_refresh_token', 'auth_token', 'access_token'];
+const AUTH_HEADER_TOKEN_KEYS = ['backend_access_token', 'auth_token', 'access_token'];
 const USER_STORAGE_KEY = 'enterprise-auth-user';
 
 interface JwtPayload {
@@ -46,7 +47,7 @@ function clearFrontendSession(): void {
   }
 
   window.localStorage.removeItem(USER_STORAGE_KEY);
-  for (const key of TOKEN_STORAGE_KEYS) {
+  for (const key of AUTH_HEADER_TOKEN_KEYS) {
     window.localStorage.removeItem(key);
   }
 }

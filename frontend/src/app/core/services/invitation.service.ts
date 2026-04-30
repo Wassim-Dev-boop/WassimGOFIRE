@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
 import { ApiPageResponse, buildApiUrl, extractPageContent } from '../config/backend-api.config';
-import { Invitation, InvitationStatus, InvitationResponse } from '../models';
+import { Invitation, InvitationResponse, InvitationStatus } from '../models';
 import { AuthService } from './auth.service';
 
 interface BackendEventSummary {
@@ -26,32 +26,64 @@ interface BackendPartnerInviteResponse {
   createdAt?: string;
 }
 
+interface BackendInternalInviteRecipient {
+  username: string;
+  email: string;
+  displayName: string;
+}
+
+interface BackendInternalInviteRequest {
+  recipients: BackendInternalInviteRecipient[];
+  message?: string | null;
+}
+
+interface BackendEventInvitationResponse {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  eventStartAt: string;
+  eventEndAt: string;
+  eventMode: 'PRESENTIEL' | 'EN_LIGNE' | 'HYBRIDE';
+  eventLocation?: string;
+  onlineMeetingLink?: string;
+  invitedUsername: string;
+  invitedEmail: string;
+  invitedDisplayName: string;
+  invitedByUsername: string;
+  invitedByDisplayName: string;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED' | 'CANCELLED';
+  message?: string;
+  responseReason?: string;
+  respondedAt?: string;
+  expiresAt?: string;
+  createdAt?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class InvitationService {
-  private readonly storageKey = 'enterprise-invitations-cache';
   private invitationsSubject = new BehaviorSubject<Invitation[]>([]);
   public invitations$ = this.invitationsSubject.asObservable();
 
-  constructor(private http: HttpClient, private authService: AuthService) {
-    this.restoreInvitationsFromStorage();
-  }
+  constructor(private http: HttpClient, private authService: AuthService) {}
 
   getInvitations(): Observable<Invitation[]> {
-    return of(this.invitationsSubject.value);
+    return this.refreshInternalInvitations().pipe(
+      map((invitations) => invitations.filter((invitation) => !invitation.isExternalPartner)),
+    );
   }
 
-  getInvitationsByUser(userId: string): Observable<Invitation[]> {
-    return this.getInvitations().pipe(
-      map((invitations) => invitations.filter((invitation) => invitation.recipientId === userId || invitation.senderId === userId)),
-    );
+  getInvitationsByUser(_userId: string): Observable<Invitation[]> {
+    return this.getInvitations();
   }
 
   getInvitationsByEvent(eventId: string): Observable<Invitation[]> {
-    return this.getInvitations().pipe(
-      map((invitations) => invitations.filter((invitation) => invitation.eventId === eventId)),
-    );
+    return this.http
+      .get<BackendEventInvitationResponse[]>(buildApiUrl(`/api/v1/events/${eventId}/invitations`))
+      .pipe(
+        map((items) => (Array.isArray(items) ? items.map((item) => this.mapInternalInvitation(item)) : [])),
+      );
   }
 
   getInvitationsByStatus(status: InvitationStatus): Observable<Invitation[]> {
@@ -62,81 +94,96 @@ export class InvitationService {
 
   sendInvitation(invitation: Omit<Invitation, 'id' | 'sentAt'>): Observable<Invitation> {
     if (invitation.isExternalPartner) {
-      const payload: BackendPartnerInviteRequest = {
-        partnerName: invitation.recipientName,
-        partnerEmail: invitation.recipientEmail,
-      };
-
-      const request$ = this.http
-        .post<BackendPartnerInviteResponse>(buildApiUrl(`/api/v1/events/${invitation.eventId}/partners`), payload)
-        .pipe(
-          map((response) => this.mapPartnerInvitation(response, invitation)),
-          tap((created) => this.updateInvitations([...this.invitationsSubject.value, created])),
-        );
-
-      return this.withFallback(request$, () => this.createLocalInvitation(invitation));
+      return this.sendPartnerInvitation(invitation);
     }
 
-    return this.createLocalInvitation(invitation);
+    const payload: BackendInternalInviteRequest = {
+      recipients: [
+        {
+          username: (invitation.recipientUsername || invitation.recipientId || invitation.recipientEmail).trim(),
+          email: invitation.recipientEmail.trim().toLowerCase(),
+          displayName: invitation.recipientName.trim(),
+        },
+      ],
+      message: invitation.message?.trim() || null,
+    };
+
+    return this.http
+      .post<BackendEventInvitationResponse[]>(buildApiUrl(`/api/v1/events/${invitation.eventId}/invitations`), payload)
+      .pipe(
+        map((created) => {
+          const first = Array.isArray(created) ? created[0] : undefined;
+          if (!first) {
+            throw new Error('Creation invitation impossible.');
+          }
+          return this.mapInternalInvitation(first);
+        }),
+        tap((created) => this.upsertInvitation(created)),
+      );
   }
 
   sendBulkInvitations(
     eventId: string,
     recipients: Array<{ userId: string; email: string; name: string }>,
-    senderId: string,
-    senderName: string,
+    _senderId: string,
+    _senderName: string,
+    message?: string,
   ): Observable<Invitation[]> {
-    const created = recipients.map((recipient) => ({
-      id: this.generateId(),
-      eventId,
-      eventTitle: 'Event Invitation',
-      eventDate: new Date(),
-      eventLocation: 'TBD',
-      recipientId: recipient.userId,
-      recipientEmail: recipient.email,
-      recipientName: recipient.name,
-      senderId,
-      senderName,
-      status: InvitationStatus.PENDING,
-      sentAt: new Date(),
-      isExternalPartner: false,
-      isVerifiedByDsn: true,
-    } satisfies Invitation));
+    const normalizedRecipients = recipients
+      .map((recipient) => ({
+        username: (recipient.userId || recipient.email).trim(),
+        email: recipient.email.trim().toLowerCase(),
+        displayName: recipient.name.trim(),
+      }))
+      .filter((recipient) => !!recipient.username && !!recipient.email && !!recipient.displayName);
 
-    this.invitationsSubject.next([...this.invitationsSubject.value, ...created]);
-    this.persistInvitations(this.invitationsSubject.value);
-    return of(created);
+    if (normalizedRecipients.length === 0) {
+      return of([]);
+    }
+
+    const payload: BackendInternalInviteRequest = {
+      recipients: normalizedRecipients,
+      message: message?.trim() || null,
+    };
+
+    return this.http
+      .post<BackendEventInvitationResponse[]>(buildApiUrl(`/api/v1/events/${eventId}/invitations`), payload)
+      .pipe(
+        map((created) => (Array.isArray(created) ? created.map((item) => this.mapInternalInvitation(item)) : [])),
+        tap((createdInvitations) => this.upsertInvitations(createdInvitations)),
+      );
   }
 
   respondToInvitation(invitationId: string, response: InvitationResponse): Observable<Invitation | null> {
-    const invitations = this.invitationsSubject.value;
-    const invitation = invitations.find((item) => item.id === invitationId);
-    if (!invitation) {
-      return of(null);
+    if (response.status === InvitationStatus.ACCEPTED) {
+      return this.acceptInvitation(invitationId);
     }
-
-    invitation.status = response.status;
-    invitation.respondedAt = response.respondedAt;
-    invitation.responseReason = response.responseReason;
-    this.updateInvitations([...invitations]);
-    return of(invitation);
+    if (response.status === InvitationStatus.DECLINED) {
+      return this.declineInvitation(invitationId, response.responseReason);
+    }
+    return of(null);
   }
 
   acceptInvitation(invitationId: string): Observable<Invitation | null> {
-    return this.respondToInvitation(invitationId, {
-      invitationId,
-      status: InvitationStatus.ACCEPTED,
-      respondedAt: new Date(),
-    });
+    return this.http
+      .post<BackendEventInvitationResponse>(buildApiUrl(`/api/v1/events/invitations/${invitationId}/accept`), {})
+      .pipe(
+        map((updated) => this.mapInternalInvitation(updated)),
+        tap((updated) => this.upsertInvitation(updated)),
+        catchError(() => of(null)),
+      );
   }
 
   declineInvitation(invitationId: string, reason?: string): Observable<Invitation | null> {
-    return this.respondToInvitation(invitationId, {
-      invitationId,
-      status: InvitationStatus.DECLINED,
-      respondedAt: new Date(),
-      responseReason: reason,
-    });
+    return this.http
+      .post<BackendEventInvitationResponse>(buildApiUrl(`/api/v1/events/invitations/${invitationId}/decline`), {
+        reason: reason?.trim() || null,
+      })
+      .pipe(
+        map((updated) => this.mapInternalInvitation(updated)),
+        tap((updated) => this.upsertInvitation(updated)),
+        catchError(() => of(null)),
+      );
   }
 
   getInvitation(id: string): Observable<Invitation | undefined> {
@@ -153,7 +200,7 @@ export class InvitationService {
     }
 
     invitation.status = InvitationStatus.CANCELLED;
-    this.updateInvitations([...invitations]);
+    this.invitationsSubject.next([...invitations]);
     return of(true);
   }
 
@@ -167,22 +214,36 @@ export class InvitationService {
     );
   }
 
-  verifyPartnerAccess(invitationId: string, verifiedBy: string): Observable<Invitation | null> {
-    const invitations = this.invitationsSubject.value;
-    const invitation = invitations.find((item) => item.id === invitationId);
-    if (!invitation) {
-      return of(null);
-    }
+  refreshInternalInvitations(): Observable<Invitation[]> {
+    return this.http
+      .get<BackendEventInvitationResponse[]>(buildApiUrl('/api/v1/events/invitations/mine'))
+      .pipe(
+        map((items) => (Array.isArray(items) ? items.map((item) => this.mapInternalInvitation(item)) : [])),
+        tap((internalInvitations) => {
+          const externalInvitations = this.invitationsSubject.value.filter((invitation) => invitation.isExternalPartner);
+          this.invitationsSubject.next(this.mergeById([...externalInvitations, ...internalInvitations]));
+        }),
+      );
+  }
 
-    invitation.isVerifiedByDsn = true;
-    invitation.verifiedBy = verifiedBy;
-    invitation.verifiedAt = new Date();
-    this.updateInvitations([...invitations]);
-    return of(invitation);
+  private sendPartnerInvitation(invitation: Omit<Invitation, 'id' | 'sentAt'>): Observable<Invitation> {
+    const payload: BackendPartnerInviteRequest = {
+      partnerName: invitation.recipientName,
+      partnerEmail: invitation.recipientEmail,
+    };
+
+    const request$ = this.http
+      .post<BackendPartnerInviteResponse>(buildApiUrl(`/api/v1/events/${invitation.eventId}/partners`), payload)
+      .pipe(
+        map((response) => this.mapPartnerInvitation(response, invitation)),
+        tap((created) => this.upsertInvitation(created)),
+      );
+
+    return request$;
   }
 
   private refreshPartnerInvitations(): Observable<Invitation[]> {
-    const request$ = this.http
+    return this.http
       .get<ApiPageResponse<BackendEventSummary>>(buildApiUrl('/api/v1/events'))
       .pipe(
         map((response) => extractPageContent(response)),
@@ -200,11 +261,11 @@ export class InvitationService {
                   eventTitle: event.title,
                   eventDate: this.toDate(event.startAt),
                   eventLocation: event.location || '',
-                  senderId: 'backend',
-                  senderName: 'Backend API',
                   recipientId: partner.partnerEmail,
                   recipientEmail: partner.partnerEmail,
                   recipientName: partner.partnerName,
+                  senderId: 'backend',
+                  senderName: 'Backend API',
                   status: InvitationStatus.PENDING,
                   respondedAt: undefined,
                   message: '',
@@ -223,34 +284,75 @@ export class InvitationService {
             map((collections) => collections.flat()),
           );
         }),
-        tap((partnerInvitations) => this.mergePartnerInvitations(partnerInvitations)),
+        tap((partnerInvitations) => {
+          const internalInvitations = this.invitationsSubject.value.filter((invitation) => !invitation.isExternalPartner);
+          this.invitationsSubject.next(this.mergeById([...internalInvitations, ...partnerInvitations]));
+        }),
       );
-
-    return this.withFallback(request$, () => of(this.invitationsSubject.value.filter((item) => item.isExternalPartner)));
   }
 
-  private mergePartnerInvitations(partnerInvitations: Invitation[]): void {
-    const internalInvitations = this.invitationsSubject.value.filter((invitation) => !invitation.isExternalPartner);
-    const merged = new Map<string, Invitation>();
+  private upsertInvitation(invitation: Invitation): void {
+    this.upsertInvitations([invitation]);
+  }
 
-    [...internalInvitations, ...partnerInvitations].forEach((invitation) => {
+  private upsertInvitations(invitations: Invitation[]): void {
+    const current = this.invitationsSubject.value;
+    this.invitationsSubject.next(this.mergeById([...current, ...invitations]));
+  }
+
+  private mergeById(invitations: Invitation[]): Invitation[] {
+    const merged = new Map<string, Invitation>();
+    invitations.forEach((invitation) => {
       merged.set(invitation.id, invitation);
     });
-
-    this.updateInvitations(Array.from(merged.values()));
+    return Array.from(merged.values()).sort((left, right) => right.sentAt.getTime() - left.sentAt.getTime());
   }
 
-  private createLocalInvitation(invitation: Omit<Invitation, 'id' | 'sentAt'>): Observable<Invitation> {
-    const created: Invitation = {
-      ...invitation,
-      id: this.generateId(),
-      sentAt: new Date(),
-      status: InvitationStatus.PENDING,
-      isVerifiedByDsn: invitation.isExternalPartner ? false : true,
+  private mapInternalInvitation(response: BackendEventInvitationResponse): Invitation {
+    return {
+      id: response.id,
+      eventId: response.eventId,
+      eventTitle: response.eventTitle,
+      eventDate: this.toDate(response.eventStartAt),
+      eventEndDate: this.toDate(response.eventEndAt),
+      eventMode: response.eventMode,
+      eventLocation: response.eventLocation || '',
+      onlineMeetingLink: response.onlineMeetingLink || undefined,
+      recipientId: response.invitedUsername,
+      recipientUsername: response.invitedUsername,
+      recipientEmail: response.invitedEmail,
+      recipientName: response.invitedDisplayName,
+      senderId: response.invitedByUsername,
+      senderUsername: response.invitedByUsername,
+      senderName: response.invitedByDisplayName || response.invitedByUsername,
+      status: this.toInvitationStatus(response.status),
+      sentAt: this.toDate(response.createdAt),
+      expiresAt: response.expiresAt ? this.toDate(response.expiresAt) : undefined,
+      respondedAt: response.respondedAt ? this.toDate(response.respondedAt) : undefined,
+      message: response.message || undefined,
+      responseReason: response.responseReason || undefined,
+      isExternalPartner: false,
+      isVerifiedByDsn: true,
+      verifiedBy: undefined,
+      verifiedAt: undefined,
+      partnerOrganization: undefined,
     };
+  }
 
-    this.updateInvitations([...this.invitationsSubject.value, created]);
-    return of(created);
+  private toInvitationStatus(status: BackendEventInvitationResponse['status']): InvitationStatus {
+    if (status === 'ACCEPTED') {
+      return InvitationStatus.ACCEPTED;
+    }
+    if (status === 'DECLINED') {
+      return InvitationStatus.DECLINED;
+    }
+    if (status === 'EXPIRED') {
+      return InvitationStatus.EXPIRED;
+    }
+    if (status === 'CANCELLED') {
+      return InvitationStatus.CANCELLED;
+    }
+    return InvitationStatus.PENDING;
   }
 
   private mapPartnerInvitation(
@@ -262,15 +364,21 @@ export class InvitationService {
       eventId: response.eventId || context.eventId,
       eventTitle: context.eventTitle || 'Event',
       eventDate: context.eventDate,
+      eventEndDate: context.eventEndDate,
+      eventMode: context.eventMode,
       eventLocation: context.eventLocation,
+      onlineMeetingLink: context.onlineMeetingLink,
       recipientId: context.recipientId || response.partnerEmail,
+      recipientUsername: context.recipientUsername,
       recipientEmail: response.partnerEmail || context.recipientEmail,
       recipientName: response.partnerName || context.recipientName,
       senderId: context.senderId,
+      senderUsername: context.senderUsername,
       senderName: context.senderName,
       status: context.status,
       sentAt: this.toDate(response.createdAt),
       respondedAt: context.respondedAt,
+      expiresAt: context.expiresAt,
       message: context.message,
       responseReason: context.responseReason,
       isExternalPartner: true,
@@ -281,62 +389,15 @@ export class InvitationService {
     };
   }
 
-  private toDate(value?: string): Date {
+  private toDate(value?: Date | string): Date {
     if (!value) {
       return new Date();
     }
-
+    if (value instanceof Date) {
+      return value;
+    }
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
-  }
-
-  private withFallback<T>(request$: Observable<T>, fallbackFactory: () => Observable<T>): Observable<T> {
-    return request$.pipe(
-      catchError(() => fallbackFactory()),
-    );
-  }
-
-  private updateInvitations(invitations: Invitation[]): void {
-    this.invitationsSubject.next(invitations);
-    this.persistInvitations(invitations);
-  }
-
-  private restoreInvitationsFromStorage(): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const raw = window.localStorage.getItem(this.storageKey);
-    if (!raw) {
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(raw) as Invitation[];
-      const invitations = parsed.map((item) => ({
-        ...item,
-        eventDate: this.toDate((item as unknown as { eventDate?: string }).eventDate),
-        sentAt: this.toDate((item as unknown as { sentAt?: string }).sentAt),
-        respondedAt: item.respondedAt ? this.toDate(item.respondedAt as unknown as string) : undefined,
-        verifiedAt: item.verifiedAt ? this.toDate(item.verifiedAt as unknown as string) : undefined,
-      }));
-
-      this.invitationsSubject.next(invitations);
-    } catch {
-      window.localStorage.removeItem(this.storageKey);
-    }
-  }
-
-  private persistInvitations(invitations: Invitation[]): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    window.localStorage.setItem(this.storageKey, JSON.stringify(invitations));
-  }
-
-  private generateId(): string {
-    return Math.random().toString(36).slice(2, 11);
   }
 
   private canReadPartnerInvitationsFromBackend(): boolean {

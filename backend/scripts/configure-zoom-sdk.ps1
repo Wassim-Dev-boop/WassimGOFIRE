@@ -4,11 +4,24 @@ param(
     [switch]$SkipRestart,
     [string]$GatewayUrl = "http://localhost:8088",
     [string]$UserIdentifier = "employe.cnstn",
-    [string]$UserPassword = "User@12345"
+    [Security.SecureString]$UserPassword
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+function ConvertTo-PlainText {
+    param(
+        [Parameter(Mandatory = $true)]
+        [Security.SecureString]$SecureValue
+    )
+
+    return [System.Net.NetworkCredential]::new("", $SecureValue).Password
+}
+
+if (-not $PSBoundParameters.ContainsKey("UserPassword")) {
+    $UserPassword = ConvertTo-SecureString -String "User@12345" -AsPlainText -Force
+}
 
 function Invoke-RestWithRetry {
     param(
@@ -77,11 +90,12 @@ if (-not $SkipRestart) {
     }
 }
 
-Write-Host "Authenticating test user to validate signature endpoint..."
+Write-Host "Authenticating verification user to validate signature endpoint..."
 $loginResponse = Invoke-RestWithRetry -OperationName "Auth login" -Action {
+    $plainPassword = ConvertTo-PlainText -SecureValue $UserPassword
     Invoke-RestMethod -Method Post -Uri "$GatewayUrl/api/v1/auth/login" -ContentType "application/json" -Body (@{
         identifier = $UserIdentifier
-        password = $UserPassword
+        password = $plainPassword
     } | ConvertTo-Json -Depth 5)
 }
 

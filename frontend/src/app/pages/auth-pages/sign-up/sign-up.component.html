@@ -1,3 +1,157 @@
-<app-auth-page-layout>
-  <app-signup-form class="flex flex-col flex-1 w-full overflow-y-auto lg:w-1/2 no-scrollbar"/>
-</app-auth-page-layout>
+<div class="min-h-screen bg-gray-50 px-4 py-6 sm:px-6 lg:px-10">
+  <div class="mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-7xl overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-theme-lg lg:grid-cols-2">
+    <section class="flex items-start justify-center px-6 py-8 sm:px-10 lg:px-12">
+      <div class="w-full max-w-xl">
+        <a
+          routerLink="/accueil"
+          class="inline-flex items-center gap-2 text-sm text-gray-500 transition-colors hover:text-gray-700"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M12.7083 5L7.5 10.2083L12.7083 15.4167" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          Retour a l'accueil
+        </a>
+
+        <div class="mt-7 rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-sm sm:p-8">
+          <h1 class="text-3xl font-semibold text-gray-900">Creer un compte</h1>
+          <p class="mt-2 text-sm text-gray-500">
+            Votre compte sera cree en attente d'activation par un administrateur.
+          </p>
+
+          <form (ngSubmit)="onSubmit()" class="mt-6 space-y-5">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700">Nom <span class="text-error-500">*</span></label>
+                <input
+                  [(ngModel)]="lastName"
+                  name="lastName"
+                  required
+                  maxlength="120"
+                  class="cnstn-input"
+                  placeholder="Votre nom"
+                />
+              </div>
+              <div>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700">Prenom <span class="text-error-500">*</span></label>
+                <input
+                  [(ngModel)]="firstName"
+                  name="firstName"
+                  required
+                  maxlength="120"
+                  class="cnstn-input"
+                  placeholder="Votre prenom"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700">Email <span class="text-error-500">*</span></label>
+              <input
+                [(ngModel)]="email"
+                type="email"
+                name="email"
+                required
+                maxlength="190"
+                class="cnstn-input"
+                placeholder="votre.email@domaine.com"
+              />
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700">Telephone</label>
+                <input
+                  [(ngModel)]="phone"
+                  name="phone"
+                  maxlength="32"
+                  class="cnstn-input"
+                  placeholder="Ex: 52XXXXXX"
+                />
+              </div>
+              <div>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700">Service demande</label>
+                <select [(ngModel)]="departmentId" name="departmentId" class="cnstn-select">
+                  <option value="">Selectionnez un service</option>
+                  <option *ngFor="let department of departments" [value]="department.id">
+                    {{ department.name }} ({{ department.code }})
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700">Mot de passe <span class="text-error-500">*</span></label>
+                <input
+                  [(ngModel)]="password"
+                  type="password"
+                  name="password"
+                  required
+                  minlength="8"
+                  maxlength="128"
+                  class="cnstn-input"
+                  placeholder="Creez un mot de passe"
+                />
+              </div>
+              <div>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700">Confirmation <span class="text-error-500">*</span></label>
+                <input
+                  [(ngModel)]="confirmPassword"
+                  type="password"
+                  name="confirmPassword"
+                  required
+                  minlength="8"
+                  maxlength="128"
+                  class="cnstn-input"
+                  placeholder="Confirmez le mot de passe"
+                />
+              </div>
+            </div>
+
+            <div class="rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
+              Votre compte sera soumis a validation. Vous recevrez un email des qu'il sera active par un administrateur.
+            </div>
+
+            <div *ngIf="errorMessage" class="rounded-lg border border-error-300 bg-error-50 px-4 py-2.5 text-sm text-error-700">
+              {{ errorMessage }}
+            </div>
+
+            <div *ngIf="successMessage" class="rounded-lg border border-success-300 bg-success-50 px-4 py-2.5 text-sm text-success-700">
+              {{ successMessage }}
+            </div>
+
+            <button type="submit" [disabled]="isSubmitting" class="cnstn-btn-primary w-full">
+              {{ isSubmitting ? 'Envoi en cours...' : 'Envoyer ma demande de compte' }}
+            </button>
+
+            <a routerLink="/signin" class="block text-center text-sm font-medium text-brand-600 hover:text-brand-700">
+              J'ai deja un compte
+            </a>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <aside class="relative hidden overflow-hidden border-l border-gray-200 bg-gradient-to-br from-brand-50 via-white to-blue-light-50 lg:flex lg:items-center lg:justify-center">
+      <app-grid-shape />
+      <div class="relative z-10 mx-auto flex max-w-md flex-col items-center px-10 text-center">
+        <a routerLink="/accueil" class="mb-5 flex items-center gap-3 rounded-2xl border border-white bg-white/90 px-4 py-3 shadow-theme-md">
+          <span class="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-gray-200 bg-white">
+            <img src="/images/logo/logo1.png" alt="CNSTN Logo" class="h-8 w-8 object-contain" />
+          </span>
+          <span class="text-left">
+            <span class="block text-xl font-semibold tracking-wide text-gray-900">CNSTN</span>
+            <span class="block text-sm text-gray-500">Plateforme interne</span>
+          </span>
+        </a>
+
+        <div class="rounded-2xl border border-gray-200 bg-white/90 p-5 shadow-theme-sm">
+          <p class="text-lg font-semibold text-gray-900">Securise. Fiable. Connecte.</p>
+          <p class="mt-2 text-sm text-gray-600">
+            Vos donnees sont protegees et accessibles uniquement par les personnes autorisees.
+          </p>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>

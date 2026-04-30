@@ -39,7 +39,7 @@ spring:
         - id: auth-user-service
           uri: lb://auth-user-service
           predicates:
-            - Path=/api/v1/admin/**,/api/v1/me/**,/api/v1/auth/**,/api/v1/password/**
+            - Path=/api/v1/admin/**,/api/v1/me/**,/api/v1/auth/**,/api/v1/password/**,/api/v1/public/**,/api/v1/it-equipment/**
         - id: event-service
           uri: lb://event-service
           predicates:

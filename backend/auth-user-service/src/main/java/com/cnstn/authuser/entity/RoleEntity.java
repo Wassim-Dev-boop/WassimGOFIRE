@@ -7,6 +7,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.HashSet;
@@ -43,6 +45,14 @@ public class RoleEntity {
 
     @ManyToMany(mappedBy = "roles")
     private Set<UserEntity> users = new HashSet<>();
+
+    @ManyToMany
+    @JoinTable(
+            name = "role_permissions",
+            joinColumns = @JoinColumn(name = "role_id"),
+            inverseJoinColumns = @JoinColumn(name = "permission_id")
+    )
+    private Set<PermissionEntity> permissions = new HashSet<>();
 
     public UUID getId() {
         return id;
@@ -90,5 +100,13 @@ public class RoleEntity {
 
     public void setUsers(Set<UserEntity> users) {
         this.users = users;
+    }
+
+    public Set<PermissionEntity> getPermissions() {
+        return permissions;
+    }
+
+    public void setPermissions(Set<PermissionEntity> permissions) {
+        this.permissions = permissions;
     }
 }

@@ -42,8 +42,19 @@ interface BackendInterventionValidationRequest {
 
 interface GetInterventionsOptions {
   mine?: boolean;
+  page?: number;
   size?: number;
   sort?: string;
+  search?: string;
+  status?: InterventionStatus;
+  assignedTo?: string;
+}
+
+export interface InterventionPageState {
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
 }
 
 @Injectable({
@@ -52,24 +63,53 @@ interface GetInterventionsOptions {
 export class InterventionService {
   private interventionsSubject = new BehaviorSubject<Intervention[]>([]);
   public interventions$ = this.interventionsSubject.asObservable();
+  private interventionPageStateSubject = new BehaviorSubject<InterventionPageState>({
+    page: 0,
+    size: 200,
+    totalElements: 0,
+    totalPages: 0,
+  });
+  public interventionPageState$ = this.interventionPageStateSubject.asObservable();
 
   constructor(private http: HttpClient) {}
 
   getInterventions(options: GetInterventionsOptions = {}): Observable<Intervention[]> {
     let params = new HttpParams();
+    const requestedPage = options.page ?? 0;
     const requestedSize = options.size ?? 200;
     const requestedSort = options.sort ?? 'createdAt,desc';
 
+    params = params.set('page', String(requestedPage));
     params = params.set('size', String(requestedSize));
     params = params.set('sort', requestedSort);
     if (typeof options.mine === 'boolean') {
       params = params.set('mine', String(options.mine));
     }
+    if (options.search?.trim()) {
+      params = params.set('search', options.search.trim());
+    }
+    if (options.status) {
+      const backendStatus = this.toBackendStatus(options.status);
+      if (backendStatus) {
+        params = params.set('status', backendStatus);
+      }
+    }
+    if (options.assignedTo?.trim()) {
+      params = params.set('assignedTo', options.assignedTo.trim());
+    }
 
     const request$ = this.http
       .get<ApiPageResponse<BackendInterventionResponse>>(buildApiUrl('/api/v1/interventions'), { params })
       .pipe(
-        map((response) => extractPageContent(response).map((item) => this.mapIntervention(item))),
+        map((response) => {
+          this.interventionPageStateSubject.next({
+            page: response.page ?? requestedPage,
+            size: response.size ?? requestedSize,
+            totalElements: response.totalElements ?? 0,
+            totalPages: response.totalPages ?? 0,
+          });
+          return extractPageContent(response).map((item) => this.mapIntervention(item));
+        }),
         tap((interventions) => this.interventionsSubject.next(interventions)),
       );
 

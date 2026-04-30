@@ -1,0 +1,567 @@
+<div class="mx-auto max-w-7xl px-4 py-6">
+  <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900" data-testid="workflows-page-title">Panneau de contrôle des workflows</h1>
+      <p class="mt-1 text-sm text-gray-600">
+        Configurez et suivez les circuits de validation des modules métier.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button
+        type="button"
+        class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+        (click)="refreshPage()"
+      >
+        Actualiser
+      </button>
+      <button
+        type="button"
+        class="rounded-lg border border-brand-300 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100"
+        (click)="openAuditModal()"
+        data-testid="open-workflow-audit"
+      >
+        Voir l'audit
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="!canManageWorkflows()" class="mb-5 rounded-xl border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-700">
+    <p class="font-semibold">Mode lecture seule</p>
+    <p class="mt-1">{{ workflowReadOnlyHint }}</p>
+  </div>
+
+  <div
+    *ngIf="feedbackMessage"
+    class="mb-5 rounded-xl border px-4 py-3 text-sm"
+    [ngClass]="{
+      'border-green-200 bg-green-50 text-green-700': feedbackTone === 'success',
+      'border-red-200 bg-red-50 text-red-700': feedbackTone === 'error',
+      'border-blue-200 bg-blue-50 text-blue-700': feedbackTone === 'info'
+    }"
+  >
+    {{ feedbackMessage }}
+  </div>
+
+  <div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <article class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Workflows actifs</p>
+      <p class="mt-2 text-2xl font-bold text-gray-900">{{ kpiActiveWorkflows }}</p>
+    </article>
+    <article class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Workflows inactifs</p>
+      <p class="mt-2 text-2xl font-bold text-gray-900">{{ kpiInactiveWorkflows }}</p>
+    </article>
+    <article class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Étapes configurées</p>
+      <p class="mt-2 text-2xl font-bold text-gray-900">{{ kpiConfiguredSteps }}</p>
+    </article>
+    <article class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Dernière modification</p>
+      <p class="mt-2 text-sm font-semibold text-gray-800">{{ formatDate(kpiLastModification) }}</p>
+    </article>
+    <article class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Alertes configuration</p>
+      <p class="mt-2 text-2xl font-bold" [ngClass]="kpiAlerts > 0 ? 'text-orange-600' : 'text-green-600'">
+        {{ kpiAlerts }}
+      </p>
+    </article>
+  </div>
+
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-[380px,1fr]">
+    <section class="rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div class="border-b border-gray-200 px-4 py-3">
+        <h2 class="text-base font-semibold text-gray-900">Workflows par module</h2>
+        <p class="text-xs text-gray-500">Sélectionnez un module pour configurer son circuit.</p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-2 border-b border-gray-100 bg-gray-50 px-3 py-3">
+        <input
+          type="text"
+          [(ngModel)]="workflowSearchTerm"
+          placeholder="Rechercher un workflow..."
+          class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-400 focus:outline-hidden"
+        />
+        <select
+          [(ngModel)]="workflowStatusFilter"
+          class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-400 focus:outline-hidden"
+        >
+          <option value="ALL">Tous les statuts</option>
+          <option value="ACTIVE">Actifs</option>
+          <option value="INACTIVE">Inactifs</option>
+        </select>
+      </div>
+
+      <div *ngIf="loadingWorkflows" class="px-4 py-8 text-center text-sm text-gray-500">
+        Chargement des workflows...
+      </div>
+
+      <div *ngIf="!loadingWorkflows && filteredWorkflows.length === 0" class="px-4 py-8 text-center text-sm text-gray-500">
+        Aucun workflow ne correspond aux filtres.
+      </div>
+
+      <div *ngIf="!loadingWorkflows && filteredWorkflows.length > 0" class="space-y-3 p-3">
+        <article
+          *ngFor="let workflow of filteredWorkflows; trackBy: trackByWorkflowId"
+          class="rounded-xl border p-3 transition"
+          [ngClass]="workflow.workflowId === selectedWorkflowId
+            ? 'border-brand-400 bg-brand-50/60'
+            : 'border-gray-200 bg-white hover:border-brand-200 hover:bg-gray-50'"
+          data-testid="workflow-card"
+        >
+          <button
+            type="button"
+            class="w-full text-left"
+            (click)="selectWorkflow(workflow.workflowId)"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <p class="text-sm font-semibold text-gray-900" [attr.data-testid]="'workflow-module-' + workflow.workflowType">{{ workflow.moduleName }}</p>
+                <p class="mt-1 text-xs text-gray-500">{{ workflow.description || '-' }}</p>
+              </div>
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold"
+                [ngClass]="workflow.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'">
+                {{ workflow.active ? 'Actif' : 'Inactif' }}
+              </span>
+            </div>
+
+            <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-600">
+              <p>Étapes: <strong>{{ workflow.stepCount }}</strong></p>
+              <p>Actives: <strong>{{ workflow.activeStepCount }}</strong></p>
+              <p class="col-span-2">Rôles: {{ workflow.involvedRoles.length ? workflow.involvedRoles.join(', ') : '-' }}</p>
+              <p class="col-span-2">Dernière modif: {{ formatDate(workflow.lastModifiedAt) }}</p>
+            </div>
+          </button>
+
+          <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+              [ngClass]="workflow.configurationValid ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'">
+              {{ workflow.configurationStatus }}
+            </span>
+
+            <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                class="rounded-lg border border-brand-300 px-2.5 py-1 text-xs font-semibold text-brand-700 hover:bg-brand-50"
+                (click)="selectWorkflow(workflow.workflowId)"
+              >
+                Configurer
+              </button>
+              <button
+                type="button"
+                class="rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                (click)="selectWorkflow(workflow.workflowId)"
+              >
+                Détails
+              </button>
+              <button
+                type="button"
+                class="rounded-lg border px-2.5 py-1 text-xs font-semibold"
+                [ngClass]="workflow.active
+                  ? 'border-red-200 text-red-600 hover:bg-red-50'
+                  : 'border-green-200 text-green-700 hover:bg-green-50'"
+                (click)="toggleWorkflow(workflow, $event)"
+                [disabled]="!canManageWorkflows()"
+                [attr.title]="!canManageWorkflows() ? workflowReadOnlyHint : null"
+              >
+                {{ workflow.active ? 'Désactiver' : 'Activer' }}
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <ng-container *ngIf="selectedWorkflow; else emptyState">
+        <div *ngIf="loadingDetail" class="px-5 py-10 text-center text-sm text-gray-500">Chargement du détail...</div>
+
+        <div *ngIf="!loadingDetail" class="space-y-6 px-5 py-4">
+          <div class="border-b border-gray-200 pb-4">
+            <h2 class="text-lg font-semibold text-gray-900">{{ selectedWorkflow.workflowLabel }}</h2>
+            <p class="text-xs text-gray-500">
+              Module: {{ selectedWorkflow.moduleName }} • Créé le {{ formatDate(selectedWorkflow.createdAt) }} •
+              Modifié le {{ formatDate(selectedWorkflow.updatedAt) }}
+              <span *ngIf="selectedWorkflow.updatedBy"> par {{ selectedWorkflow.updatedBy }}</span>
+            </p>
+          </div>
+
+          <section class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <div class="mb-3 flex items-center justify-between gap-2">
+              <h3 class="text-sm font-semibold text-gray-900">Informations générales</h3>
+              <span class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                [ngClass]="selectedWorkflow.active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'">
+                {{ selectedWorkflow.active ? 'Actif' : 'Inactif' }}
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div>
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Nom workflow</label>
+                <input
+                  type="text"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  [(ngModel)]="generalForm.workflowLabel"
+                />
+              </div>
+              <div>
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Statut</label>
+                <select class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" [(ngModel)]="generalForm.active">
+                  <option [ngValue]="true">Actif</option>
+                  <option [ngValue]="false">Inactif</option>
+                </select>
+              </div>
+              <div class="md:col-span-2">
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Description</label>
+                <textarea
+                  rows="2"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  [(ngModel)]="generalForm.description"
+                ></textarea>
+              </div>
+            </div>
+
+            <div *ngIf="!selectedWorkflow.configurationValid" class="mt-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-700">
+              <p class="font-semibold">Configuration à vérifier</p>
+              <ul class="mt-1 list-disc pl-5">
+                <li *ngFor="let issue of selectedWorkflow.configurationIssues">{{ issue }}</li>
+              </ul>
+            </div>
+
+            <div class="mt-3 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                (click)="cancelGeneralInfo()"
+                [disabled]="!hasGeneralChanges || savingGeneral"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                class="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+                (click)="saveGeneralInfo()"
+                [disabled]="!hasGeneralChanges || savingGeneral || !canManageWorkflows()"
+                [attr.title]="!canManageWorkflows() ? workflowReadOnlyHint : null"
+              >
+                {{ savingGeneral ? 'Enregistrement...' : 'Enregistrer' }}
+              </button>
+            </div>
+          </section>
+
+          <section>
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h3 class="text-sm font-semibold text-gray-900">Timeline des étapes</h3>
+              <button
+                type="button"
+                class="rounded-lg border border-brand-300 px-3 py-1.5 text-xs font-semibold text-brand-700 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60"
+                (click)="openCreateStepModal()"
+                [disabled]="!canAddStep || !canManageWorkflows()"
+                [title]="!canManageWorkflows() ? workflowReadOnlyHint : (!canAddStep ? addStepDisabledReason : 'Ajouter une étape')"
+                data-testid="add-step-button"
+              >
+                + Ajouter une étape
+              </button>
+            </div>
+
+            <p *ngIf="!canAddStep" class="mb-3 text-xs text-gray-500" data-testid="add-step-disabled-reason">
+              {{ addStepDisabledReason }}
+            </p>
+
+            <div class="space-y-3">
+              <article
+                *ngFor="let step of selectedWorkflow.steps; let index = index; trackBy: trackByStepCode"
+                class="rounded-xl border border-gray-200 bg-white p-4"
+                [attr.data-testid]="'workflow-step-' + step.stepCode"
+              >
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="rounded-lg bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700">#{{ step.stepOrder }}</span>
+                      <h4 class="text-sm font-semibold text-gray-900">{{ step.stepLabel }}</h4>
+                      <span *ngIf="step.critical" class="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">Critique</span>
+                      <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                        [ngClass]="step.active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'">
+                        {{ step.active ? 'Active' : 'Inactive' }}
+                      </span>
+                    </div>
+
+                    <div class="mt-2 flex flex-wrap gap-2 text-xs text-gray-700">
+                      <span class="rounded-full bg-indigo-100 px-2 py-1 font-medium text-indigo-700">{{ step.responsibleRoleLabel }}</span>
+                      <span class="rounded-full bg-amber-100 px-2 py-1 font-medium text-amber-700">{{ labelForCondition(step.conditionType) }}</span>
+                      <span class="rounded-full bg-gray-100 px-2 py-1">Obligatoire: {{ step.required ? 'Oui' : 'Non' }}</span>
+                      <span class="rounded-full bg-gray-100 px-2 py-1">Motif refus: {{ step.refusalReasonRequired ? 'Oui' : 'Non' }}</span>
+                    </div>
+
+                    <p class="mt-2 text-xs text-gray-600">
+                      Actions autorisées: {{ labelsForActions(step.allowedActions).join(', ') || '-' }}
+                    </p>
+                  </div>
+
+                  <div class="flex flex-wrap gap-2 text-xs">
+                    <button
+                      type="button"
+                      class="rounded-md border border-gray-300 px-2 py-1 font-semibold text-gray-700 hover:bg-gray-50"
+                      (click)="moveStep(index, -1)"
+                      [disabled]="index === 0 || !canManageWorkflows()"
+                      [attr.title]="!canManageWorkflows() ? workflowReadOnlyHint : null"
+                    >
+                      Monter
+                    </button>
+                    <button
+                      type="button"
+                      class="rounded-md border border-gray-300 px-2 py-1 font-semibold text-gray-700 hover:bg-gray-50"
+                      (click)="moveStep(index, 1)"
+                      [disabled]="index === selectedWorkflow.steps.length - 1 || !canManageWorkflows()"
+                      [attr.title]="!canManageWorkflows() ? workflowReadOnlyHint : null"
+                    >
+                      Descendre
+                    </button>
+                    <button
+                      type="button"
+                      class="rounded-md border border-brand-300 px-2 py-1 font-semibold text-brand-700 hover:bg-brand-50"
+                      (click)="openEditStepModal(step)"
+                      [disabled]="!canManageWorkflows()"
+                      [attr.title]="!canManageWorkflows() ? workflowReadOnlyHint : null"
+                    >
+                      Modifier
+                    </button>
+                    <button
+                      type="button"
+                      class="rounded-md border px-2 py-1 font-semibold"
+                      [ngClass]="step.active
+                        ? 'border-red-200 text-red-600 hover:bg-red-50'
+                        : 'border-green-200 text-green-700 hover:bg-green-50'"
+                      (click)="toggleStep(step)"
+                      [disabled]="!canManageWorkflows()"
+                      [attr.title]="!canManageWorkflows() ? workflowReadOnlyHint : null"
+                    >
+                      {{ step.active ? 'Désactiver' : 'Activer' }}
+                    </button>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <h3 class="mb-3 text-sm font-semibold text-gray-900">Prévisualisation du circuit</h3>
+
+            <div class="mb-3 flex flex-wrap gap-2">
+              <button
+                *ngFor="let scenario of previewScenarios"
+                type="button"
+                class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                (click)="runPreview(scenario)"
+                [attr.data-testid]="'preview-scenario-' + scenario.key"
+              >
+                Prévisualiser: {{ scenario.label }}
+              </button>
+            </div>
+
+            <div *ngIf="previewLoading" class="text-sm text-gray-500">Calcul de la prévisualisation...</div>
+
+            <div *ngIf="!previewLoading && previewResult" class="rounded-lg border border-brand-100 bg-white px-3 py-3">
+              <p class="text-xs text-gray-500">Scénario: {{ previewResult.scenarioLabel }}</p>
+              <p class="mt-1 text-sm font-semibold text-gray-900">{{ previewResult.previewPath }}</p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <span *ngFor="let step of previewResult.selectedSteps" class="rounded-full bg-brand-100 px-2 py-1 text-[11px] font-semibold text-brand-700">
+                  {{ step.stepOrder }}. {{ step.stepLabel }}
+                </span>
+              </div>
+            </div>
+          </section>
+        </div>
+      </ng-container>
+
+      <ng-template #emptyState>
+        <div class="flex min-h-[420px] items-center justify-center px-4 text-center text-sm text-gray-500">
+          Sélectionnez un workflow pour afficher le panneau de configuration.
+        </div>
+      </ng-template>
+    </section>
+  </div>
+</div>
+
+<div *ngIf="showStepModal" class="fixed inset-0 z-[80] flex items-center justify-center bg-gray-900/45 p-4" data-testid="step-modal">
+  <div class="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+    <div class="border-b border-gray-200 px-5 py-4">
+      <h3 class="text-lg font-semibold text-gray-900">
+        {{ stepModal.mode === 'create' ? 'Ajouter une étape' : 'Modifier une étape' }}
+      </h3>
+    </div>
+
+    <div class="space-y-4 px-5 py-4">
+      <div *ngIf="stepModalError" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        {{ stepModalError }}
+      </div>
+
+      <div *ngIf="stepModal.mode === 'create'">
+        <label class="mb-1 block text-sm font-medium text-gray-700">Modèle d'étape</label>
+        <select
+          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          [(ngModel)]="stepModal.stepCode"
+          (ngModelChange)="onCreateTemplateChanged($event)"
+          data-testid="create-step-template-select"
+        >
+          <option *ngFor="let template of availableTemplates" [ngValue]="template.stepCode">
+            {{ template.label }}
+          </option>
+        </select>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div class="md:col-span-2">
+          <label class="mb-1 block text-sm font-medium text-gray-700">Nom de l'étape</label>
+          <input
+            type="text"
+            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            [(ngModel)]="stepModal.stepLabel"
+            data-testid="step-label-input"
+          />
+        </div>
+
+        <div>
+          <label class="mb-1 block text-sm font-medium text-gray-700">Rôle responsable</label>
+          <select class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" [(ngModel)]="stepModal.responsibleRole">
+            <option *ngFor="let role of (catalog?.roles ?? [])" [ngValue]="role.code">{{ role.label }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-sm font-medium text-gray-700">Condition</label>
+          <select class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" [(ngModel)]="stepModal.conditionType">
+            <option *ngFor="let condition of (catalog?.conditions ?? [])" [ngValue]="condition.code">{{ condition.label }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <p class="mb-2 text-sm font-medium text-gray-700">Actions autorisées</p>
+        <div class="grid grid-cols-2 gap-2 text-sm md:grid-cols-3">
+          <label
+            *ngFor="let action of (catalog?.actions ?? [])"
+            class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-2 py-1.5"
+          >
+            <input
+              type="checkbox"
+              [checked]="isModalActionSelected(action.code)"
+              (change)="toggleModalAction(action.code, $event)"
+            />
+            <span>{{ action.label }}</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
+        <label class="inline-flex items-center gap-2">
+          <input type="checkbox" [(ngModel)]="stepModal.required" />
+          Étape obligatoire
+        </label>
+        <label class="inline-flex items-center gap-2">
+          <input type="checkbox" [(ngModel)]="stepModal.refusalReasonRequired" />
+          Motif refus obligatoire
+        </label>
+        <label class="inline-flex items-center gap-2">
+          <input type="checkbox" [(ngModel)]="stepModal.active" data-testid="step-active-input" />
+          Étape active
+        </label>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap justify-end gap-2 border-t border-gray-200 px-5 py-4">
+      <button
+        type="button"
+        class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+        (click)="closeStepModal()"
+      >
+        Annuler
+      </button>
+      <button
+        type="button"
+        class="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+        (click)="submitStepModal()"
+        [disabled]="savingStep || !canManageWorkflows()"
+        [attr.title]="!canManageWorkflows() ? workflowReadOnlyHint : null"
+        data-testid="save-step-modal-button"
+      >
+        {{ savingStep ? 'Enregistrement...' : 'Appliquer' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showAuditModal" class="fixed inset-0 z-[90] flex items-center justify-center bg-gray-900/45 p-4">
+  <div class="w-full max-w-6xl rounded-2xl bg-white shadow-xl">
+    <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+      <h3 class="text-lg font-semibold text-gray-900">Historique d'audit workflows</h3>
+      <button
+        type="button"
+        class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+        (click)="closeAuditModal()"
+      >
+        Fermer
+      </button>
+    </div>
+
+    <div class="space-y-4 px-5 py-4">
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div>
+          <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Workflow</label>
+          <select class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" [(ngModel)]="auditWorkflowFilter" data-testid="audit-workflow-filter">
+            <option value="">Tous les workflows</option>
+            <option *ngFor="let workflow of workflows" [value]="workflow.workflowId">{{ workflow.workflowLabel }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Action</label>
+          <select class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" [(ngModel)]="auditActionFilter" data-testid="audit-action-filter">
+            <option *ngFor="let action of auditActionOptions" [ngValue]="action.value">{{ action.label }}</option>
+          </select>
+        </div>
+        <div class="md:col-span-2 flex items-end justify-end">
+          <button
+            type="button"
+            class="rounded-lg border border-brand-300 px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50"
+            (click)="loadAudits()"
+            data-testid="refresh-audit-button"
+          >
+            Actualiser audit
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="loadingAudit" class="text-sm text-gray-500">Chargement audit...</div>
+
+      <div *ngIf="!loadingAudit" class="max-h-[55vh] overflow-auto rounded-xl border border-gray-200">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50">
+            <tr class="text-left text-xs uppercase tracking-wide text-gray-500">
+              <th class="px-3 py-2">Date</th>
+              <th class="px-3 py-2">Admin</th>
+              <th class="px-3 py-2">Workflow</th>
+              <th class="px-3 py-2">Action</th>
+              <th class="px-3 py-2">Détail</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let audit of audits" class="border-t border-gray-100">
+              <td class="px-3 py-2 text-gray-700">{{ formatDate(audit.createdAt) }}</td>
+              <td class="px-3 py-2 text-gray-700">{{ audit.actorUsername }}</td>
+              <td class="px-3 py-2 text-gray-700">{{ workflowLabelFromType(audit.workflowType) }}</td>
+              <td class="px-3 py-2">
+                <span class="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
+                  {{ audit.actionType }}
+                </span>
+              </td>
+              <td class="px-3 py-2 text-gray-700">{{ jsonDiff(audit) }}</td>
+            </tr>
+            <tr *ngIf="audits.length === 0">
+              <td colspan="5" class="px-3 py-6 text-center text-sm text-gray-500">Aucun audit trouvé.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

@@ -29,6 +29,12 @@ public class ZoomSignatureService {
         return normalize(zoomSdkProperties.getKey());
     }
 
+    public boolean isSdkConfigured() {
+        String key = normalize(zoomSdkProperties.getKey());
+        String secret = normalize(zoomSdkProperties.getSecret());
+        return !key.isEmpty() && !secret.isEmpty();
+    }
+
     public String generateSignature(String meetingNumber, int role) {
         String sdkKey = getSdkKey();
         String sdkSecret = normalize(zoomSdkProperties.getSecret());
@@ -51,7 +57,7 @@ public class ZoomSignatureService {
         ));
 
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("sdkKey", sdkKey);
+        payload.put("appKey", sdkKey);
         payload.put("mn", safeMeetingNumber);
         payload.put("role", role);
         payload.put("iat", issuedAt);
@@ -62,6 +68,21 @@ public class ZoomSignatureService {
         String signingInput = header + "." + payloadPart;
         String signature = sign(signingInput, sdkSecret);
         return signingInput + "." + signature;
+    }
+
+    public String generateWebClientUrl(String meetingNumber, String passcode) {
+        String safeMeetingNumber = normalize(meetingNumber);
+        if (safeMeetingNumber.isEmpty()) {
+            throw new BadRequestException("Zoom meeting number is required for web client fallback");
+        }
+
+        // Format: https://zoom.us/wc/join/{meetingNumber}?pwd={passcode}
+        // Passcode must be base64url encoded without padding (Zoom requirement)
+        if (!passcode.isEmpty()) {
+            String encodedPasscode = Base64.getUrlEncoder().withoutPadding().encodeToString(passcode.getBytes(StandardCharsets.UTF_8));
+            return "https://zoom.us/wc/join/" + safeMeetingNumber + "?pwd=" + encodedPasscode;
+        }
+        return "https://zoom.us/wc/join/" + safeMeetingNumber;
     }
 
     private String toBase64UrlJson(Map<String, Object> payload) {
@@ -90,3 +111,4 @@ public class ZoomSignatureService {
         return value == null ? "" : value.trim();
     }
 }
+

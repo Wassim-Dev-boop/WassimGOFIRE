@@ -17,7 +17,9 @@ public final class ReservationMapper {
                 entity.getId(),
                 entity.getName(),
                 entity.getLocation(),
+                entity.getDescription(),
                 entity.getCapacity(),
+                entity.getStatus(),
                 entity.isActive(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
@@ -30,6 +32,11 @@ public final class ReservationMapper {
                 entity.getName(),
                 entity.getSerialNumber(),
                 entity.getDescription(),
+                entity.getType(),
+                entity.getLocation(),
+                entity.getTotalQuantity(),
+                entity.getAvailableQuantity(),
+                entity.getStatus(),
                 entity.isActive(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
@@ -39,8 +46,13 @@ public final class ReservationMapper {
     public static ReservationResponse toResponse(ReservationEntity entity) {
         return new ReservationResponse(
                 entity.getId(),
+                entity.getEventId(),
+                entity.getEventMode(),
+                entity.getReferenceCode(),
+                entity.getBusinessVersion(),
                 entity.getRoom() == null ? null : entity.getRoom().getId(),
                 entity.getEquipment() == null ? null : entity.getEquipment().getId(),
+                entity.getQuantityRequested(),
                 entity.getRequesterUsername(),
                 entity.getStartAt(),
                 entity.getEndAt(),
@@ -48,6 +60,9 @@ public final class ReservationMapper {
                 entity.getStatus(),
                 entity.isSecurityConflict(),
                 entity.getSecurityCheckedBy(),
+                entity.getSecurityCheckedAt(),
+                entity.getSecurityDecisionComment(),
+                entity.getRejectionReason(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );

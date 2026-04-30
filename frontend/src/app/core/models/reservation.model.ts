@@ -5,6 +5,7 @@ export interface Room {
   description: string;
   capacity: number;
   location: string;
+  status?: 'DISPONIBLE' | 'OCCUPEE' | 'MAINTENANCE' | 'INACTIVE';
   amenities: string[];
   imageUrl?: string;
   isActive: boolean;
@@ -13,6 +14,8 @@ export interface Room {
 
 export interface RoomReservation {
   id: string;
+  referenceCode?: string;
+  businessVersion?: number;
   roomId: string;
   roomName: string;
   userId: string;
@@ -34,8 +37,12 @@ export interface Equipment {
   name: string;
   description: string;
   category: 'PROJECTOR' | 'LAPTOP' | 'CAMERA' | 'MICROPHONE' | 'SCREEN' | 'OTHER';
+  type?: string;
   serialNumber: string;
   status: 'AVAILABLE' | 'IN_USE' | 'MAINTENANCE' | 'RETIRED';
+  totalQuantity?: number;
+  availableQuantity?: number;
+  isActive?: boolean;
   location: string;
   imageUrl?: string;
   createdAt: Date;
@@ -43,8 +50,11 @@ export interface Equipment {
 
 export interface EquipmentReservation {
   id: string;
+  referenceCode?: string;
+  businessVersion?: number;
   equipmentId: string;
   equipmentName: string;
+  quantityRequested?: number;
   userId: string;
   userName: string;
   purpose: string;

@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, catchError, map, of, switchMap, tap, throwError } from 'rxjs';
+import { BehaviorSubject, EMPTY, Observable, catchError, expand, map, of, reduce, switchMap, tap, throwError } from 'rxjs';
 import { ApiPageResponse, buildApiUrl, extractPageContent } from '../config/backend-api.config';
 import { AuthService } from './auth.service';
 import {
@@ -8,7 +8,9 @@ import {
   AuditLog,
   SystemConfig,
   UserStatistics,
+  AdminRole,
   RolePermission,
+  RolePermissionMatrix,
   Department,
   PermissionDefinition,
   UserPermissionMatrix,
@@ -29,6 +31,7 @@ interface BackendRoleResponse {
   id: string;
   name: string;
   description?: string;
+  systemRole?: boolean;
 }
 
 interface BackendUserResponse {
@@ -61,6 +64,15 @@ interface BackendUserPermissionsResponse {
   assignedPermissions: string[];
   roleDerivedPermissions: string[];
   effectivePermissions: string[];
+}
+
+interface BackendRolePermissionsResponse {
+  roleId: string;
+  roleName: string;
+  assignedPermissions: string[];
+  usersInRole: number;
+  usersUsingRoleDefaults: number;
+  usersCustomized: number;
 }
 
 interface BackendUserCreateRequest {
@@ -101,6 +113,31 @@ interface BackendDepartmentUpdateRequest {
   active: boolean;
 }
 
+export interface UserQueryOptions {
+  page?: number;
+  size?: number;
+  sort?: string;
+  search?: string;
+  enabled?: boolean;
+  departmentId?: string;
+  role?: string;
+}
+
+export interface DepartmentQueryOptions {
+  page?: number;
+  size?: number;
+  sort?: string;
+  search?: string;
+  active?: boolean;
+}
+
+export interface AdminPageState {
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -118,15 +155,56 @@ export class AdminService {
 
   private departmentsSubject = new BehaviorSubject<Department[]>([]);
   public departments$ = this.departmentsSubject.asObservable();
+  private usersPageStateSubject = new BehaviorSubject<AdminPageState>({
+    page: 0,
+    size: 200,
+    totalElements: 0,
+    totalPages: 0,
+  });
+  public usersPageState$ = this.usersPageStateSubject.asObservable();
+
+  private departmentsPageStateSubject = new BehaviorSubject<AdminPageState>({
+    page: 0,
+    size: 200,
+    totalElements: 0,
+    totalPages: 0,
+  });
+  public departmentsPageState$ = this.departmentsPageStateSubject.asObservable();
 
   constructor(private http: HttpClient, private authService: AuthService) {}
 
   // User Management
-  getUsers(): Observable<User[]> {
+  getUsers(options: UserQueryOptions = {}): Observable<User[]> {
+    const params: Record<string, string> = {
+      page: String(options.page ?? 0),
+      size: String(options.size ?? 200),
+      sort: options.sort || 'createdAt,desc',
+    };
+    if (options.search?.trim()) {
+      params['search'] = options.search.trim();
+    }
+    if (typeof options.enabled === 'boolean') {
+      params['enabled'] = String(options.enabled);
+    }
+    if (options.departmentId) {
+      params['departmentId'] = options.departmentId;
+    }
+    if (options.role) {
+      params['role'] = options.role;
+    }
+
     return this.http
-      .get<ApiPageResponse<BackendUserResponse>>(buildApiUrl('/api/v1/admin/users'))
+      .get<ApiPageResponse<BackendUserResponse>>(buildApiUrl('/api/v1/admin/users'), { params })
       .pipe(
-        map((response) => extractPageContent(response).map((item) => this.mapUser(item))),
+        map((response) => {
+          this.usersPageStateSubject.next({
+            page: response.page ?? options.page ?? 0,
+            size: response.size ?? options.size ?? 200,
+            totalElements: response.totalElements ?? 0,
+            totalPages: response.totalPages ?? 0,
+          });
+          return extractPageContent(response).map((item) => this.mapUser(item));
+        }),
         tap((users) => this.usersSubject.next(users)),
         catchError((error) => throwError(() => new Error(this.toBackendErrorMessage(error, 'Chargement des utilisateurs impossible.')))),
       );
@@ -245,7 +323,7 @@ export class AdminService {
   }
 
   getUserStatistics(): Observable<UserStatistics> {
-    return this.getUsers().pipe(
+    return this.fetchAllUsersForStats().pipe(
       map((users) => {
         const activeUsers = users.filter((user) => user.isActive);
         const inactiveUsers = users.filter((user) => !user.isActive);
@@ -309,6 +387,36 @@ export class AdminService {
   }
 
   // Role Permissions
+  getAdminRoles(): Observable<AdminRole[]> {
+    return this.http
+      .get<ApiPageResponse<BackendRoleResponse>>(buildApiUrl('/api/v1/admin/roles'))
+      .pipe(
+        map((response) => extractPageContent(response).map((item) => this.mapAdminRole(item))),
+        catchError((error) => throwError(() => new Error(this.toBackendErrorMessage(error, 'Chargement des roles impossible.')))),
+      );
+  }
+
+  getRolePermissionMatrix(roleId: string): Observable<RolePermissionMatrix> {
+    return this.http
+      .get<BackendRolePermissionsResponse>(buildApiUrl(`/api/v1/admin/roles/${roleId}/permissions`))
+      .pipe(
+        map((response) => this.mapRolePermissionMatrix(response)),
+        catchError((error) => throwError(() => new Error(this.toBackendErrorMessage(error, 'Chargement des permissions role impossible.')))),
+      );
+  }
+
+  updateRolePermissionMatrix(roleId: string, permissionCodes: string[], applyToUsers: boolean): Observable<RolePermissionMatrix> {
+    return this.http
+      .put<BackendRolePermissionsResponse>(buildApiUrl(`/api/v1/admin/roles/${roleId}/permissions`), {
+        permissionCodes,
+        applyToUsers,
+      })
+      .pipe(
+        map((response) => this.mapRolePermissionMatrix(response)),
+        catchError((error) => throwError(() => new Error(this.toBackendErrorMessage(error, 'Mise a jour des permissions role impossible.')))),
+      );
+  }
+
   getRolePermissions(): Observable<RolePermission[]> {
     if (!this.authService.hasRole('ADMIN')) {
       this.rolePermissionsSubject.next([]);
@@ -380,11 +488,31 @@ export class AdminService {
   }
 
   // Departments / Services Management
-  getDepartments(): Observable<Department[]> {
+  getDepartments(options: DepartmentQueryOptions = {}): Observable<Department[]> {
+    const params: Record<string, string> = {
+      page: String(options.page ?? 0),
+      size: String(options.size ?? 200),
+      sort: options.sort || 'name,asc',
+    };
+    if (options.search?.trim()) {
+      params['search'] = options.search.trim();
+    }
+    if (typeof options.active === 'boolean') {
+      params['active'] = String(options.active);
+    }
+
     return this.http
-      .get<ApiPageResponse<BackendDepartmentResponse>>(buildApiUrl('/api/v1/admin/departments'))
+      .get<ApiPageResponse<BackendDepartmentResponse>>(buildApiUrl('/api/v1/admin/departments'), { params })
       .pipe(
-        map((response) => extractPageContent(response).map((item) => this.mapDepartment(item))),
+        map((response) => {
+          this.departmentsPageStateSubject.next({
+            page: response.page ?? options.page ?? 0,
+            size: response.size ?? options.size ?? 200,
+            totalElements: response.totalElements ?? 0,
+            totalPages: response.totalPages ?? 0,
+          });
+          return extractPageContent(response).map((item) => this.mapDepartment(item));
+        }),
         tap((departments) => this.departmentsSubject.next(departments)),
         catchError((error) => throwError(() => new Error(this.toBackendErrorMessage(error, 'Chargement des services impossible.')))),
       );
@@ -458,6 +586,26 @@ export class AdminService {
       );
   }
 
+  private mapAdminRole(response: BackendRoleResponse): AdminRole {
+    return {
+      id: response.id,
+      name: response.name,
+      description: response.description,
+      systemRole: response.systemRole ?? true,
+    };
+  }
+
+  private mapRolePermissionMatrix(response: BackendRolePermissionsResponse): RolePermissionMatrix {
+    return {
+      roleId: response.roleId,
+      roleName: response.roleName,
+      assignedPermissions: Array.from(new Set(response.assignedPermissions ?? [])),
+      usersInRole: response.usersInRole ?? 0,
+      usersUsingRoleDefaults: response.usersUsingRoleDefaults ?? 0,
+      usersCustomized: response.usersCustomized ?? 0,
+    };
+  }
+
   private mapUser(response: BackendUserResponse): User {
     return {
       id: response.id,
@@ -525,6 +673,35 @@ export class AdminService {
     );
 
     return found?.id || available[0].id;
+  }
+
+  private fetchAllUsersForStats(pageSize = 200): Observable<User[]> {
+    const firstPage = 0;
+    return this.requestUsersPageForStats(firstPage, pageSize).pipe(
+      expand((response) => {
+        const currentPage = response.page ?? 0;
+        const isLastPage = currentPage + 1 >= (response.totalPages ?? 1);
+
+        if (isLastPage) {
+          return EMPTY;
+        }
+
+        return this.requestUsersPageForStats(currentPage + 1, pageSize);
+      }),
+      map((response) => extractPageContent(response).map((item) => this.mapUser(item))),
+      reduce((allUsers, pageUsers) => [...allUsers, ...pageUsers], [] as User[]),
+      catchError((error) => throwError(() => new Error(this.toBackendErrorMessage(error, 'Chargement statistiques utilisateurs impossible.')))),
+    );
+  }
+
+  private requestUsersPageForStats(page: number, size: number): Observable<ApiPageResponse<BackendUserResponse>> {
+    const params: Record<string, string> = {
+      page: String(page),
+      size: String(size),
+      sort: 'createdAt,asc',
+    };
+
+    return this.http.get<ApiPageResponse<BackendUserResponse>>(buildApiUrl('/api/v1/admin/users'), { params });
   }
 
   private replaceUser(updated: User): void {

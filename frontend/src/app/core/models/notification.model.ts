@@ -19,6 +19,9 @@ export interface Notification {
   type: NotificationType;
   title: string;
   message: string;
+  emailDeliveryStatus?: 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED' | null;
+  emailDeliveryError?: string | null;
+  emailLastAttemptAt?: Date | null;
   data?: {
     relatedId?: string;
     relatedType?: string;
@@ -43,4 +46,17 @@ export interface NotificationPreference {
   notificationType: NotificationType;
   isEnabled: boolean;
   channel: 'IN_APP' | 'EMAIL' | 'SMS' | 'PUSH';
+}
+
+export interface NotificationEmailLog {
+  id: string;
+  notificationId: string;
+  recipientUsername: string;
+  recipientEmail?: string | null;
+  notificationType?: string | null;
+  emailSubject?: string | null;
+  status: 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED';
+  failureReason?: string | null;
+  attemptedAt?: Date | null;
+  createdAt: Date;
 }

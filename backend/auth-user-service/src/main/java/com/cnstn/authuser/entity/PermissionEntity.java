@@ -42,6 +42,9 @@ public class PermissionEntity {
     @ManyToMany(mappedBy = "permissions")
     private Set<UserEntity> users = new HashSet<>();
 
+    @ManyToMany(mappedBy = "permissions")
+    private Set<RoleEntity> roles = new HashSet<>();
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -112,6 +115,14 @@ public class PermissionEntity {
 
     public void setUsers(Set<UserEntity> users) {
         this.users = users;
+    }
+
+    public Set<RoleEntity> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Set<RoleEntity> roles) {
+        this.roles = roles;
     }
 
     public Instant getCreatedAt() {

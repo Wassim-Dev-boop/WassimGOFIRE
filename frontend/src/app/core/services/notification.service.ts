@@ -1,9 +1,10 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, Subject, catchError, forkJoin, map, of, tap, throwError } from 'rxjs';
-import { buildApiUrl } from '../config/backend-api.config';
+import { ApiPageResponse, buildApiUrl, extractPageContent } from '../config/backend-api.config';
 import {
   Notification,
+  NotificationEmailLog,
   NotificationPreference,
   NotificationType,
 } from '../models';
@@ -14,6 +15,9 @@ interface BackendNotificationResponse {
   title: string;
   message: string;
   read: boolean;
+  emailDeliveryStatus?: 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED' | null;
+  emailDeliveryError?: string | null;
+  emailLastAttemptAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -22,6 +26,53 @@ interface BackendNotificationCreateRequest {
   recipientUsername: string;
   title: string;
   message: string;
+}
+
+interface BackendUnreadCountResponse {
+  unreadCount: number;
+}
+
+interface BackendNotificationEmailLogResponse {
+  id: string;
+  notificationId: string;
+  recipientUsername: string;
+  recipientEmail?: string | null;
+  notificationType?: string | null;
+  emailSubject?: string | null;
+  status: 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED';
+  failureReason?: string | null;
+  attemptedAt?: string | null;
+  createdAt: string;
+}
+
+interface BackendEmailStatusResponse {
+  notificationId: string;
+  emailDeliveryStatus?: 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED' | null;
+  emailDeliveryError?: string | null;
+  emailLastAttemptAt?: string | null;
+}
+
+export interface NotificationQueryOptions {
+  userId?: string;
+  page?: number;
+  size?: number;
+  unread?: boolean;
+  search?: string;
+  sort?: string;
+}
+
+export interface NotificationPageState {
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface NotificationEmailLogQueryOptions {
+  page?: number;
+  size?: number;
+  notificationId?: string;
+  status?: 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED';
 }
 
 @Injectable({
@@ -37,6 +88,14 @@ export class NotificationService implements OnDestroy {
   private notificationPreferencesSubject = new BehaviorSubject<NotificationPreference[]>([]);
   public notificationPreferences$ = this.notificationPreferencesSubject.asObservable();
 
+  private notificationPageStateSubject = new BehaviorSubject<NotificationPageState>({
+    page: 0,
+    size: 20,
+    totalElements: 0,
+    totalPages: 0,
+  });
+  public notificationPageState$ = this.notificationPageStateSubject.asObservable();
+
   private sseSubject = new Subject<Notification>();
   public sseNotifications$ = this.sseSubject.asObservable();
 
@@ -51,17 +110,41 @@ export class NotificationService implements OnDestroy {
     this.eventSource?.close();
   }
 
-  getNotifications(userId?: string): Observable<Notification[]> {
-    const recipient = (userId || this.currentRecipient || '').trim();
+  getNotifications(optionsOrUserId?: NotificationQueryOptions | string): Observable<Notification[]> {
+    const options = typeof optionsOrUserId === 'string'
+      ? { userId: optionsOrUserId } satisfies NotificationQueryOptions
+      : optionsOrUserId ?? {};
+
+    const recipient = (options.userId || this.currentRecipient || '').trim();
     this.currentRecipient = recipient;
 
+    let params = new HttpParams()
+      .set('page', String(options.page ?? 0))
+      .set('size', String(options.size ?? 20))
+      .set('sort', options.sort || 'createdAt,desc');
+
+    if (typeof options.unread === 'boolean') {
+      params = params.set('unread', String(options.unread));
+    }
+    if (options.search?.trim()) {
+      params = params.set('search', options.search.trim());
+    }
+
     const request$ = this.http
-      .get<BackendNotificationResponse[]>(buildApiUrl('/api/v1/notifications'))
+      .get<ApiPageResponse<BackendNotificationResponse>>(buildApiUrl('/api/v1/notifications'), { params })
       .pipe(
-        map((items) => items.map((item) => this.mapNotification(item))),
+        map((response) => {
+          this.notificationPageStateSubject.next({
+            page: response.page ?? options.page ?? 0,
+            size: response.size ?? options.size ?? 20,
+            totalElements: response.totalElements ?? 0,
+            totalPages: response.totalPages ?? 0,
+          });
+          return extractPageContent(response).map((item) => this.mapNotification(item));
+        }),
         tap((notifications) => {
           this.notificationsSubject.next(notifications);
-          this.updateUnreadCount();
+          this.refreshUnreadCountFromBackend();
         }),
       );
 
@@ -83,8 +166,18 @@ export class NotificationService implements OnDestroy {
     if (recipient) {
       this.currentRecipient = recipient;
     }
-    this.updateUnreadCount();
-    return this.unreadCountSubject.asObservable();
+
+    const request$ = this.http
+      .get<BackendUnreadCountResponse>(buildApiUrl('/api/v1/notifications/unread-count'))
+      .pipe(
+        map((response) => Number(response.unreadCount ?? 0)),
+        tap((count) => this.unreadCountSubject.next(count)),
+      );
+
+    return this.withFallback(request$, () => {
+      this.updateUnreadCount();
+      return this.unreadCountSubject.asObservable();
+    });
   }
 
   markAsRead(notificationId: string): Observable<Notification | null> {
@@ -105,7 +198,7 @@ export class NotificationService implements OnDestroy {
       notification.isRead = true;
       notification.readAt = new Date();
       this.notificationsSubject.next([...notifications]);
-      this.updateUnreadCount();
+      this.refreshUnreadCountFromBackend();
       return of(notification);
     });
   }
@@ -129,22 +222,49 @@ export class NotificationService implements OnDestroy {
         }
       });
       this.notificationsSubject.next([...notifications]);
-      this.updateUnreadCount();
+      this.refreshUnreadCountFromBackend();
       return of(true);
     });
   }
 
   markAllAsRead(userId?: string): Observable<boolean> {
-    const unreadIds = this.notificationsSubject.value
-      .filter((item) => !item.isRead)
-      .map((item) => item.id);
+    const recipient = (userId || '').trim();
+    if (recipient) {
+      this.currentRecipient = recipient;
+    }
 
-    return this.markMultipleAsRead(unreadIds);
+    const request$ = this.http
+      .put<void>(buildApiUrl('/api/v1/notifications/read-all'), {})
+      .pipe(
+        map(() => true),
+        tap(() => {
+          this.notificationsSubject.next(
+            this.notificationsSubject.value.map((notification) => ({
+              ...notification,
+              isRead: true,
+              readAt: notification.readAt || new Date(),
+            })),
+          );
+          this.unreadCountSubject.next(0);
+        }),
+      );
+
+    return this.withFallback(request$, () => {
+      this.notificationsSubject.next(
+        this.notificationsSubject.value.map((notification) => ({
+          ...notification,
+          isRead: true,
+          readAt: notification.readAt || new Date(),
+        })),
+      );
+      this.unreadCountSubject.next(0);
+      return of(true);
+    });
   }
 
   deleteNotification(notificationId: string): Observable<boolean> {
     this.notificationsSubject.next(this.notificationsSubject.value.filter((item) => item.id !== notificationId));
-    this.updateUnreadCount();
+    this.refreshUnreadCountFromBackend();
     return of(true);
   }
 
@@ -152,7 +272,7 @@ export class NotificationService implements OnDestroy {
     this.notificationsSubject.next(
       this.notificationsSubject.value.filter((item) => !notificationIds.includes(item.id)),
     );
-    this.updateUnreadCount();
+    this.refreshUnreadCountFromBackend();
     return of(true);
   }
 
@@ -170,7 +290,7 @@ export class NotificationService implements OnDestroy {
         tap((created) => {
           this.notificationsSubject.next([created, ...this.notificationsSubject.value]);
           this.sseSubject.next(created);
-          this.updateUnreadCount();
+          this.refreshUnreadCountFromBackend();
         }),
       );
 
@@ -183,9 +303,55 @@ export class NotificationService implements OnDestroy {
       };
       this.notificationsSubject.next([created, ...this.notificationsSubject.value]);
       this.sseSubject.next(created);
-      this.updateUnreadCount();
+      this.refreshUnreadCountFromBackend();
       return of(created);
     });
+  }
+
+  getEmailLogs(options: NotificationEmailLogQueryOptions = {}): Observable<ApiPageResponse<NotificationEmailLog>> {
+    let params = new HttpParams()
+      .set('page', String(options.page ?? 0))
+      .set('size', String(options.size ?? 20))
+      .set('sort', 'attemptedAt,desc');
+
+    if (options.notificationId) {
+      params = params.set('notificationId', options.notificationId);
+    }
+    if (options.status) {
+      params = params.set('status', options.status);
+    }
+
+    return this.http
+      .get<ApiPageResponse<BackendNotificationEmailLogResponse>>(buildApiUrl('/api/v1/notifications/email-logs'), { params })
+      .pipe(
+        map((response) => ({
+          ...response,
+          content: extractPageContent(response).map((item) => this.mapEmailLog(item)),
+        })),
+      );
+  }
+
+  resendEmail(notificationId: string): Observable<Notification | null> {
+    return this.http
+      .post<BackendEmailStatusResponse>(buildApiUrl(`/api/v1/notifications/${notificationId}/resend-email`), {})
+      .pipe(
+        map((response) => {
+          const notifications = this.notificationsSubject.value;
+          const target = notifications.find((item) => item.id === notificationId);
+          if (!target) {
+            return null;
+          }
+
+          const updated: Notification = {
+            ...target,
+            emailDeliveryStatus: response.emailDeliveryStatus ?? null,
+            emailDeliveryError: response.emailDeliveryError ?? null,
+            emailLastAttemptAt: this.toOptionalDate(response.emailLastAttemptAt),
+          };
+          this.upsertNotification(updated);
+          return updated;
+        }),
+      );
   }
 
   getNotificationPreferences(userId?: string): Observable<NotificationPreference[]> {
@@ -226,7 +392,7 @@ export class NotificationService implements OnDestroy {
           const notification = this.mapNotification(payload);
           this.notificationsSubject.next([notification, ...this.notificationsSubject.value]);
           this.sseSubject.next(notification);
-          this.updateUnreadCount();
+          this.refreshUnreadCountFromBackend();
         } catch {
           // Ignore malformed SSE payloads.
         }
@@ -251,9 +417,27 @@ export class NotificationService implements OnDestroy {
       type: this.inferNotificationType(response.title, response.message),
       title: response.title,
       message: response.message || '',
+      emailDeliveryStatus: response.emailDeliveryStatus ?? null,
+      emailDeliveryError: response.emailDeliveryError ?? null,
+      emailLastAttemptAt: this.toOptionalDate(response.emailLastAttemptAt),
       createdAt,
       isRead,
       readAt: isRead ? updatedAt : undefined,
+    };
+  }
+
+  private mapEmailLog(response: BackendNotificationEmailLogResponse): NotificationEmailLog {
+    return {
+      id: response.id,
+      notificationId: response.notificationId,
+      recipientUsername: response.recipientUsername,
+      recipientEmail: response.recipientEmail ?? null,
+      notificationType: response.notificationType ?? null,
+      emailSubject: response.emailSubject ?? null,
+      status: response.status,
+      failureReason: response.failureReason ?? null,
+      attemptedAt: this.toOptionalDate(response.attemptedAt),
+      createdAt: this.toDate(response.createdAt),
     };
   }
 
@@ -313,6 +497,16 @@ export class NotificationService implements OnDestroy {
     this.unreadCountSubject.next(unreadCount);
   }
 
+  private refreshUnreadCountFromBackend(): void {
+    this.http
+      .get<BackendUnreadCountResponse>(buildApiUrl('/api/v1/notifications/unread-count'))
+      .pipe(
+        map((response) => Number(response.unreadCount ?? 0)),
+        catchError(() => of(this.notificationsSubject.value.filter((item) => !item.isRead).length)),
+      )
+      .subscribe((count) => this.unreadCountSubject.next(count));
+  }
+
   private toDate(value?: string, fallback = new Date()): Date {
     if (!value) {
       return fallback;
@@ -320,6 +514,14 @@ export class NotificationService implements OnDestroy {
 
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? fallback : parsed;
+  }
+
+  private toOptionalDate(value?: string | null): Date | null {
+    if (!value) {
+      return null;
+    }
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
   private withFallback<T>(request$: Observable<T>, fallbackFactory: () => Observable<T>): Observable<T> {

@@ -20,6 +20,9 @@ public class DocumentEntity {
     @GeneratedValue
     private UUID id;
 
+    @Column(name = "reference_code", length = 24, unique = true)
+    private String referenceCode;
+
     @Column(name = "title", nullable = false, length = 180)
     private String title;
 
@@ -29,15 +32,34 @@ public class DocumentEntity {
     @Column(name = "sub_category", length = 80)
     private String subCategory;
 
-    @Column(name = "content", nullable = false, length = 10000)
+    @Column(name = "description", length = 2000)
+    private String description;
+
+    @Column(name = "content")
     private String content;
 
-    @Column(name = "created_by", nullable = false, length = 120)
-    private String createdBy;
+    @Column(name = "folder_id")
+    private UUID folderId;
+
+    @Column(name = "owner_service", length = 120)
+    private String ownerService;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "confidentiality_level", nullable = false, length = 20)
+    private DocumentConfidentialityLevel confidentialityLevel = DocumentConfidentialityLevel.INTERNAL;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private DocumentStatus status = DocumentStatus.DRAFT;
+
+    @Column(name = "archived", nullable = false)
+    private boolean archived = false;
+
+    @Column(name = "current_version_number", nullable = false)
+    private int currentVersionNumber = 1;
+
+    @Column(name = "created_by", nullable = false, length = 120)
+    private String createdBy;
 
     @Column(name = "approved_by", length = 120)
     private String approvedBy;
@@ -61,6 +83,14 @@ public class DocumentEntity {
         this.id = id;
     }
 
+    public String getReferenceCode() {
+        return referenceCode;
+    }
+
+    public void setReferenceCode(String referenceCode) {
+        this.referenceCode = referenceCode;
+    }
+
     public String getTitle() {
         return title;
     }
@@ -77,10 +107,6 @@ public class DocumentEntity {
         this.category = category;
     }
 
-    public String getContent() {
-        return content;
-    }
-
     public String getSubCategory() {
         return subCategory;
     }
@@ -89,16 +115,44 @@ public class DocumentEntity {
         this.subCategory = subCategory;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
     public void setContent(String content) {
         this.content = content;
     }
 
-    public String getCreatedBy() {
-        return createdBy;
+    public UUID getFolderId() {
+        return folderId;
     }
 
-    public void setCreatedBy(String createdBy) {
-        this.createdBy = createdBy;
+    public void setFolderId(UUID folderId) {
+        this.folderId = folderId;
+    }
+
+    public String getOwnerService() {
+        return ownerService;
+    }
+
+    public void setOwnerService(String ownerService) {
+        this.ownerService = ownerService;
+    }
+
+    public DocumentConfidentialityLevel getConfidentialityLevel() {
+        return confidentialityLevel;
+    }
+
+    public void setConfidentialityLevel(DocumentConfidentialityLevel confidentialityLevel) {
+        this.confidentialityLevel = confidentialityLevel;
     }
 
     public DocumentStatus getStatus() {
@@ -107,6 +161,30 @@ public class DocumentEntity {
 
     public void setStatus(DocumentStatus status) {
         this.status = status;
+    }
+
+    public boolean isArchived() {
+        return archived;
+    }
+
+    public void setArchived(boolean archived) {
+        this.archived = archived;
+    }
+
+    public int getCurrentVersionNumber() {
+        return currentVersionNumber;
+    }
+
+    public void setCurrentVersionNumber(int currentVersionNumber) {
+        this.currentVersionNumber = currentVersionNumber;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
     }
 
     public String getApprovedBy() {

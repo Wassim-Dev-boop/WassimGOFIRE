@@ -52,6 +52,13 @@ export interface RolePermission {
   }[];
 }
 
+export interface AdminRole {
+  id: string;
+  name: string;
+  description?: string;
+  systemRole: boolean;
+}
+
 export interface UserStatistics {
   totalUsers: number;
   activeUsers: number;
@@ -92,4 +99,13 @@ export interface UserPermissionMatrix {
   assignedPermissions: string[];
   roleDerivedPermissions: string[];
   effectivePermissions: string[];
+}
+
+export interface RolePermissionMatrix {
+  roleId: string;
+  roleName: string;
+  assignedPermissions: string[];
+  usersInRole: number;
+  usersUsingRoleDefaults: number;
+  usersCustomized: number;
 }

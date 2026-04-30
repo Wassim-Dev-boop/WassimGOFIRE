@@ -39,3 +39,9 @@ app:
   intervention:
     room-manager-recipients:
       - ${INTERVENTION_ROOM_MANAGER_USERNAME:salle.cnstn}
+    it-manager-recipients:
+      - ${INTERVENTION_MANAGER_USERNAME:chef.cnstn}
+    dsn-recipients:
+      - ${INTERVENTION_DSN_USERNAME:directeur.cnstn}
+    it-responsible-recipients:
+      - ${INTERVENTION_RESPONSABLE_IT_USERNAME:it.cnstn}

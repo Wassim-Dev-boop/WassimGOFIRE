@@ -6,6 +6,7 @@ import com.cnstn.intervention.dto.InterventionStatusUpdateRequest;
 import com.cnstn.intervention.dto.InterventionUpdateRequest;
 import com.cnstn.intervention.dto.InterventionValidationRequest;
 import com.cnstn.intervention.dto.PageResponse;
+import com.cnstn.intervention.entity.InterventionStatus;
 import com.cnstn.intervention.service.InterventionService;
 import com.cnstn.intervention.service.PermissionGuardService;
 import jakarta.validation.Valid;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/interventions")
 public class InterventionController {
 
+    private static final String VIEW_INTERVENTIONS_MODULE_PERMISSION = "VIEW_INTERVENTIONS_MODULE";
     private static final String CHANGE_INTERVENTION_STATUS_PERMISSION = "CHANGE_INTERVENTION_STATUS";
 
     private final InterventionService interventionService;
@@ -48,24 +50,35 @@ public class InterventionController {
     public PageResponse<InterventionResponse> list(
             Pageable pageable,
             @RequestParam(name = "mine", defaultValue = "false") boolean mine,
-            Principal principal
+            @RequestParam(name = "search", required = false) String search,
+            @RequestParam(name = "status", required = false) InterventionStatus status,
+            @RequestParam(name = "assignedTo", required = false) String assignedTo,
+            Principal principal,
+            Authentication authentication
     ) {
+        permissionGuardService.check(authentication, VIEW_INTERVENTIONS_MODULE_PERMISSION);
         if (mine) {
-            return interventionService.listMine(pageable, principal.getName());
+            return interventionService.listMine(pageable, principal.getName(), search, status, assignedTo);
         }
-        return interventionService.list(pageable);
+        return interventionService.list(pageable, search, status, assignedTo);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
-    public InterventionResponse getById(@PathVariable UUID id) {
+    public InterventionResponse getById(@PathVariable UUID id, Authentication authentication) {
+        permissionGuardService.check(authentication, VIEW_INTERVENTIONS_MODULE_PERMISSION);
         return interventionService.getById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_QUALITE')")
-    public InterventionResponse create(@Valid @RequestBody InterventionCreateRequest request, Principal principal) {
+    public InterventionResponse create(
+            @Valid @RequestBody InterventionCreateRequest request,
+            Principal principal,
+            Authentication authentication
+    ) {
+        permissionGuardService.check(authentication, VIEW_INTERVENTIONS_MODULE_PERMISSION);
         return interventionService.create(request, principal.getName());
     }
 
@@ -76,6 +89,7 @@ public class InterventionController {
             @Valid @RequestBody InterventionUpdateRequest request,
             Authentication authentication
     ) {
+        permissionGuardService.check(authentication, VIEW_INTERVENTIONS_MODULE_PERMISSION);
         return interventionService.updateOwnRequest(
                 id,
                 request,
@@ -88,6 +102,7 @@ public class InterventionController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE')")
     public void deleteOwnRequest(@PathVariable UUID id, Authentication authentication) {
+        permissionGuardService.check(authentication, VIEW_INTERVENTIONS_MODULE_PERMISSION);
         interventionService.deleteOwnRequest(
                 id,
                 authentication.getName(),
@@ -103,6 +118,7 @@ public class InterventionController {
             Principal principal,
             Authentication authentication
     ) {
+        permissionGuardService.check(authentication, VIEW_INTERVENTIONS_MODULE_PERMISSION);
         permissionGuardService.check(authentication, CHANGE_INTERVENTION_STATUS_PERMISSION);
         return interventionService.updateStatus(id, request, principal.getName());
     }
@@ -115,6 +131,7 @@ public class InterventionController {
             Principal principal,
             Authentication authentication
     ) {
+        permissionGuardService.check(authentication, VIEW_INTERVENTIONS_MODULE_PERMISSION);
         permissionGuardService.check(authentication, CHANGE_INTERVENTION_STATUS_PERMISSION);
         return interventionService.validate(id, request, principal.getName());
     }

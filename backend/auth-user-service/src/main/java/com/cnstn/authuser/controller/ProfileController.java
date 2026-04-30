@@ -27,19 +27,19 @@ public class ProfileController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE','RESPONSABLE_IT')")
     public UserResponse me(Authentication authentication) {
         return profileService.getCurrentUser(authentication.getName());
     }
 
     @GetMapping("/permissions")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE','RESPONSABLE_IT')")
     public MyPermissionsResponse myPermissions(Authentication authentication) {
         return userPermissionService.getCurrentUserPermissions(authentication.getName());
     }
 
     @PatchMapping("/profile")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE','RESPONSABLE_IT')")
     public UserResponse updateProfile(Authentication authentication, @Valid @RequestBody ProfileUpdateRequest request) {
         return profileService.updateCurrentUser(authentication.getName(), request);
     }

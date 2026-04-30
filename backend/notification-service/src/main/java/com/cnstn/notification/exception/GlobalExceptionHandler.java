@@ -4,6 +4,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.stream.Collectors;
 import java.net.URI;
 import java.util.Objects;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
@@ -38,6 +41,21 @@ public class GlobalExceptionHandler {
                 .map(this::formatFieldError)
                 .collect(Collectors.joining("; "));
         return buildProblem(HttpStatus.BAD_REQUEST, detail, request.getRequestURI());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        return buildProblem(HttpStatus.FORBIDDEN, "Acces refuse", request.getRequestURI());
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ProblemDetail handleAuthorizationDenied(AuthorizationDeniedException ex, HttpServletRequest request) {
+        return buildProblem(HttpStatus.FORBIDDEN, "Acces refuse", request.getRequestURI());
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ProblemDetail handleAuthentication(AuthenticationException ex, HttpServletRequest request) {
+        return buildProblem(HttpStatus.UNAUTHORIZED, "Authentification requise", request.getRequestURI());
     }
 
     @ExceptionHandler(Exception.class)

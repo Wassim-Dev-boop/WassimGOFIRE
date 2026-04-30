@@ -9,6 +9,9 @@ public record NotificationResponse(
         String title,
         String message,
         boolean read,
+        String emailDeliveryStatus,
+        String emailDeliveryError,
+        Instant emailLastAttemptAt,
         Instant createdAt,
         Instant updatedAt
 ) {

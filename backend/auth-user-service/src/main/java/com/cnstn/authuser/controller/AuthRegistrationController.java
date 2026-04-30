@@ -1,9 +1,11 @@
 package com.cnstn.authuser.controller;
 
 import com.cnstn.authuser.dto.RegistrationRequest;
+import com.cnstn.authuser.dto.PublicSignupRequest;
 import com.cnstn.authuser.dto.LoginRequest;
 import com.cnstn.authuser.dto.LoginResponse;
 import com.cnstn.authuser.dto.LogoutRequest;
+import com.cnstn.authuser.dto.SignupResponse;
 import com.cnstn.authuser.dto.UserResponse;
 import com.cnstn.authuser.service.AuthenticationService;
 import com.cnstn.authuser.service.RegistrationService;
@@ -48,5 +50,12 @@ public class AuthRegistrationController {
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse register(@Valid @RequestBody RegistrationRequest request) {
         return registrationService.register(request);
+    }
+
+    @PostMapping("/signup")
+    @ResponseStatus(HttpStatus.CREATED)
+    public SignupResponse signup(@Valid @RequestBody PublicSignupRequest request) {
+        registrationService.signup(request);
+        return new SignupResponse("Votre demande de compte a ete envoyee. Elle doit etre validee par un administrateur.");
     }
 }

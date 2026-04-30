@@ -60,17 +60,21 @@ public final class UserPermissionPolicy {
         ));
 
         defaults.put(RoleName.RESPONSABLE_SALLE, Set.of(
+                VIEW_GED_MODULE,
                 VIEW_INTERVENTIONS_MODULE,
                 VIEW_REPORTS_MODULE,
                 CHANGE_INTERVENTION_STATUS
         ));
 
         defaults.put(RoleName.RESPONSABLE_SECURITE, Set.of(
+                VIEW_GED_MODULE,
                 VIEW_REPORTS_MODULE
         ));
 
         defaults.put(RoleName.DIRECTEUR_DSN, Set.of(
                 VIEW_EVENTS_MODULE,
+                VIEW_GED_MODULE,
+                VIEW_INTERVENTIONS_MODULE,
                 VIEW_REPORTS_MODULE,
                 VALIDATE_EVENT
         ));
@@ -81,6 +85,11 @@ public final class UserPermissionPolicy {
                 VIEW_REPORTS_MODULE,
                 CREATE_EVENT,
                 PUBLISH_DOCUMENT
+        ));
+
+        defaults.put(RoleName.RESPONSABLE_IT, Set.of(
+                VIEW_INTERVENTIONS_MODULE,
+                VIEW_REPORTS_MODULE
         ));
 
         ROLE_DEFAULTS = Collections.unmodifiableMap(defaults);

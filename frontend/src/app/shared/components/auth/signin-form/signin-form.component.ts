@@ -32,21 +32,14 @@ export class SigninFormComponent implements OnInit {
   identifier = '';
   password = '';
   signInError = '';
-  infoMessage = '';
 
   constructor(
     private authService: AuthService,
-    private router: Router,
     private route: ActivatedRoute,
+    private router: Router,
   ) {}
 
-  ngOnInit(): void {
-    this.route.queryParamMap.subscribe((params) => {
-      this.infoMessage = params.get('registered') === '1'
-        ? 'Compte cree avec succes. Vous pouvez maintenant vous connecter.'
-        : '';
-    });
-  }
+  ngOnInit(): void {}
 
   togglePasswordVisibility() {
     this.showPassword = !this.showPassword;
@@ -78,6 +71,11 @@ export class SigninFormComponent implements OnInit {
       .subscribe({
         next: () => {
           this.isSubmitting = false;
+          const redirectTo = this.resolveRedirectTarget();
+          if (redirectTo && redirectTo.startsWith('/')) {
+            void this.router.navigateByUrl(redirectTo);
+            return;
+          }
           void this.router.navigate(['/dashboard']);
         },
         error: (error: Error) => {
@@ -85,5 +83,21 @@ export class SigninFormComponent implements OnInit {
           this.signInError = error.message || 'Echec de connexion.';
         },
       });
+  }
+
+  private resolveRedirectTarget(): string | null {
+    const routeRedirect = this.route.snapshot.queryParamMap.get('redirectTo')?.trim();
+    if (routeRedirect && routeRedirect.startsWith('/')) {
+      return routeRedirect;
+    }
+
+    const parsedUrl = this.router.parseUrl(this.router.url);
+    const rawRedirect = parsedUrl.queryParams?.['redirectTo'];
+    if (typeof rawRedirect !== 'string') {
+      return null;
+    }
+
+    const safeRedirect = rawRedirect.trim();
+    return safeRedirect.startsWith('/') ? safeRedirect : null;
   }
 }

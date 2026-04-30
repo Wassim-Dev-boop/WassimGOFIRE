@@ -11,8 +11,8 @@ import flatpickr from 'flatpickr';
 export class TimePickerComponent {
 
   @Input() id!: string;
-  @Input() label: string = 'Time Select Input';
-  @Input() placeholder: string = 'Select time';
+  @Input() label: string = "Saisie de l'heure";
+  @Input() placeholder: string = "Choisir l'heure";
   @Input() defaultTime?: string | Date;
 
   @Output() timeChange = new EventEmitter<string>();

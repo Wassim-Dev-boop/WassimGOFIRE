@@ -1,0 +1,45 @@
+{
+  "status": "ok",
+  "report": {
+    "dataset": {
+      "equipmentId": "21c01c99-076d-4b8d-b2fb-3ce2f4e86ee3",
+      "equipmentName": "PC Portable Dell DSI-001"
+    },
+    "api": {
+      "createInterventionError": "Verification de l'equipement IT impossible.",
+      "workflowSkipped": true
+    },
+    "ui": {
+      "roomManager": {
+        "roomsPageLoaded": true,
+        "applyFilters": true,
+        "resetFilters": true,
+        "viewPlanning": true,
+        "planningModal": true,
+        "reserveActionVisible": true,
+        "tabEquipements": true,
+        "equipmentReservationsLoaded": true,
+        "equipmentPlanning": true,
+        "equipmentPlanningModal": true
+      },
+      "itManager": {
+        "itEquipmentLoaded": true,
+        "categoryKpiVisible": true,
+        "filterButton": true,
+        "resetButton": true,
+        "detailsButton": true,
+        "detailsModal": true,
+        "openInterventions": true,
+        "itInterventionsLoaded": true,
+        "interventionsFilters": true,
+        "interventionsReset": true
+      },
+      "employee": {
+        "itInterventionsLoaded": true,
+        "newRequestButton": true,
+        "createFormVisible": true,
+        "itEquipmentForbidden": true
+      }
+    }
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "name": "ng-tailadmin",
+  "name": "cnstn-intranet-frontend",
   "version": "1.0.3",
   "scripts": {
     "ng": "ng",
@@ -45,6 +45,7 @@
     "@angular/build": "^21.2.2",
     "@angular/cli": "^21.2.2",
     "@angular/compiler-cli": "^21.2.4",
+    "@playwright/test": "^1.55.0",
     "@types/jasmine": "~5.1.0",
     "jasmine-core": "~5.6.0",
     "karma": "~6.4.0",

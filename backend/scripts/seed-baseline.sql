@@ -1,7 +1,52 @@
+\connect auth_user_db
+BEGIN;
+
+INSERT INTO departments (code, name, description, active, created_at, updated_at)
+VALUES
+    ('DSI', 'DSI', 'Direction des Systemes d Information', TRUE, NOW(), NOW()),
+    ('ADMIN', 'Administration', 'Service administratif general', TRUE, NOW(), NOW()),
+    ('QUAL', 'Qualite', 'Service qualite et conformite', TRUE, NOW(), NOW()),
+    ('SEC', 'Securite', 'Service securite operationnelle', TRUE, NOW(), NOW())
+ON CONFLICT (code) DO UPDATE
+SET name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    active = EXCLUDED.active,
+    updated_at = NOW();
+
+UPDATE users
+SET department_id = d.id,
+    updated_at = NOW()
+FROM departments d
+WHERE users.username IN ('admin.cnstn', 'directeur.cnstn', 'it.cnstn')
+  AND d.code = 'DSI';
+
+UPDATE users
+SET department_id = d.id,
+    updated_at = NOW()
+FROM departments d
+WHERE users.username IN ('employe.cnstn', 'chef.cnstn')
+  AND d.code = 'ADMIN';
+
+UPDATE users
+SET department_id = d.id,
+    updated_at = NOW()
+FROM departments d
+WHERE users.username = 'qualite.cnstn'
+  AND d.code = 'QUAL';
+
+UPDATE users
+SET department_id = d.id,
+    updated_at = NOW()
+FROM departments d
+WHERE users.username IN ('securite.cnstn', 'salle.cnstn')
+  AND d.code = 'SEC';
+
+COMMIT;
+
 \connect reservation_db
 BEGIN;
 
-INSERT INTO rooms (id, name, location, capacity, active, created_at, updated_at)
+INSERT INTO rooms (id, name, location, capacity, active, created_at, updated_at, description, status)
 SELECT
   '11111111-1111-1111-1111-111111111001'::uuid,
   'Salle Atlas',
@@ -9,12 +54,14 @@ SELECT
   30,
   TRUE,
   NOW(),
-  NOW()
+  NOW(),
+  'Salle de reunion principale pour comites',
+  'DISPONIBLE'
 WHERE NOT EXISTS (
   SELECT 1 FROM rooms WHERE name = 'Salle Atlas'
 );
 
-INSERT INTO rooms (id, name, location, capacity, active, created_at, updated_at)
+INSERT INTO rooms (id, name, location, capacity, active, created_at, updated_at, description, status)
 SELECT
   '11111111-1111-1111-1111-111111111002'::uuid,
   'Salle Orion',
@@ -22,12 +69,27 @@ SELECT
   18,
   TRUE,
   NOW(),
-  NOW()
+  NOW(),
+  'Salle collaborative pour ateliers et formations',
+  'DISPONIBLE'
 WHERE NOT EXISTS (
   SELECT 1 FROM rooms WHERE name = 'Salle Orion'
 );
 
-INSERT INTO equipments (id, name, serial_number, description, active, created_at, updated_at)
+INSERT INTO equipments (
+  id,
+  name,
+  serial_number,
+  description,
+  active,
+  created_at,
+  updated_at,
+  type,
+  location,
+  total_quantity,
+  available_quantity,
+  status
+)
 SELECT
   '11111111-1111-1111-1111-111111112001'::uuid,
   'Projecteur Laser Epson',
@@ -35,12 +97,30 @@ SELECT
   'Projecteur principal pour salles de reunion',
   TRUE,
   NOW(),
-  NOW()
+  NOW(),
+  'Materiel audiovisuel',
+  'Batiment A - Stock audiovisuel',
+  2,
+  1,
+  'DISPONIBLE'
 WHERE NOT EXISTS (
   SELECT 1 FROM equipments WHERE serial_number = 'EPS-LZR-9001'
 );
 
-INSERT INTO equipments (id, name, serial_number, description, active, created_at, updated_at)
+INSERT INTO equipments (
+  id,
+  name,
+  serial_number,
+  description,
+  active,
+  created_at,
+  updated_at,
+  type,
+  location,
+  total_quantity,
+  available_quantity,
+  status
+)
 SELECT
   '11111111-1111-1111-1111-111111112002'::uuid,
   'Kit Visioconference Logitech',
@@ -48,13 +128,23 @@ SELECT
   'Camera, micro et haut-parleur pour reunions hybrides',
   TRUE,
   NOW(),
-  NOW()
+  NOW(),
+  'Materiel IT',
+  'Batiment B - Salle multimedia',
+  1,
+  0,
+  'OCCUPE'
 WHERE NOT EXISTS (
   SELECT 1 FROM equipments WHERE serial_number = 'LOG-VC-3100'
 );
 
 INSERT INTO reservations (
   id,
+  event_id,
+  event_mode,
+  reference_code,
+  business_version,
+  quantity_requested,
   created_at,
   end_at,
   purpose,
@@ -69,6 +159,11 @@ INSERT INTO reservations (
 )
 SELECT
   '11111111-1111-1111-1111-111111113001'::uuid,
+  '22222222-2222-2222-2222-222222221001'::uuid,
+  'PRESENTIEL',
+  'RES-2026-0001',
+  1,
+  1,
   NOW(),
   NOW() + INTERVAL '1 day 2 hours',
   'Comite technique hebdomadaire',
@@ -78,7 +173,7 @@ SELECT
   NOW() + INTERVAL '1 day',
   'APPROVED',
   NOW(),
-  (SELECT id FROM equipments WHERE serial_number = 'EPS-LZR-9001' LIMIT 1),
+  NULL,
   (SELECT id FROM rooms WHERE name = 'Salle Atlas' LIMIT 1)
 WHERE NOT EXISTS (
   SELECT 1 FROM reservations WHERE id = '11111111-1111-1111-1111-111111113001'::uuid
@@ -86,6 +181,11 @@ WHERE NOT EXISTS (
 
 INSERT INTO reservations (
   id,
+  event_id,
+  event_mode,
+  reference_code,
+  business_version,
+  quantity_requested,
   created_at,
   end_at,
   purpose,
@@ -100,6 +200,11 @@ INSERT INTO reservations (
 )
 SELECT
   '11111111-1111-1111-1111-111111113002'::uuid,
+  '22222222-2222-2222-2222-222222221002'::uuid,
+  'HYBRIDE',
+  'RES-2026-0002',
+  1,
+  1,
   NOW(),
   NOW() + INTERVAL '2 days 1 hour',
   'Atelier securite operationnelle',
@@ -110,7 +215,7 @@ SELECT
   'PENDING',
   NOW(),
   (SELECT id FROM equipments WHERE serial_number = 'LOG-VC-3100' LIMIT 1),
-  (SELECT id FROM rooms WHERE name = 'Salle Orion' LIMIT 1)
+  NULL
 WHERE NOT EXISTS (
   SELECT 1 FROM reservations WHERE id = '11111111-1111-1111-1111-111111113002'::uuid
 );
@@ -122,6 +227,12 @@ BEGIN;
 
 INSERT INTO events (
   id,
+  reference_code,
+  event_type,
+  event_mode,
+  workflow_step,
+  business_version,
+  has_external_partners,
   created_at,
   decided_by,
   decision_comment,
@@ -139,6 +250,12 @@ INSERT INTO events (
 )
 SELECT
   '22222222-2222-2222-2222-222222221001'::uuid,
+  'EVT-2026-0001',
+  'REUNION',
+  'PRESENTIEL',
+  'TERMINE',
+  1,
+  FALSE,
   NOW(),
   'chef.cnstn',
   'Plan valide',
@@ -159,6 +276,12 @@ WHERE NOT EXISTS (
 
 INSERT INTO events (
   id,
+  reference_code,
+  event_type,
+  event_mode,
+  workflow_step,
+  business_version,
+  has_external_partners,
   created_at,
   decided_by,
   decision_comment,
@@ -176,6 +299,12 @@ INSERT INTO events (
 )
 SELECT
   '22222222-2222-2222-2222-222222221002'::uuid,
+  'EVT-2026-0002',
+  'FORMATION',
+  'EN_LIGNE',
+  'VALIDATION_MANAGER',
+  1,
+  TRUE,
   NOW(),
   NULL,
   NULL,

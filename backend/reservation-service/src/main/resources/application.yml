@@ -12,9 +12,12 @@ spring:
     password: ${DB_PASSWORD:postgres}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
   flyway:
-    enabled: false
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
   security:
     oauth2:
       resourceserver:
@@ -33,6 +36,11 @@ management:
         include: health,info
 
 app:
+  internal:
+    api-key: ${RESERVATION_INTERNAL_API_KEY:${NOTIFICATION_INTERNAL_API_KEY:change-me}}
+  event:
+    base-url: ${EVENT_SERVICE_URL:http://event-service:8082}
+    internal-api-key: ${EVENT_INTERNAL_API_KEY:${NOTIFICATION_INTERNAL_API_KEY:change-me}}
   notification:
-    base-url: ${NOTIFICATION_SERVICE_URL:http://localhost:8086}
+    base-url: ${NOTIFICATION_SERVICE_URL:http://notification-service:8086}
     internal-api-key: ${NOTIFICATION_INTERNAL_API_KEY:change-me}

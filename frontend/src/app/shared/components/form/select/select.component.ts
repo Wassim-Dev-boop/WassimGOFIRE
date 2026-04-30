@@ -25,7 +25,7 @@ export interface Option {
 })
 export class SelectComponent implements ControlValueAccessor {
   @Input() options: Option[] = [];
-  @Input() placeholder = 'Select an option';
+  @Input() placeholder = 'Selectionner une option';
   @Input() className = '';
   @Input() dropdownClassName = '';
   @Input() defaultValue: any = '';
@@ -71,7 +71,7 @@ export class SelectComponent implements ControlValueAccessor {
         return selectedOptions.map((option) => option.label).join(', ');
       }
 
-      return `${selectedOptions.length} selected`;
+      return `${selectedOptions.length} selectionnes`;
     }
 
     const selectedOption = this.options.find((option) => this.isSelected(option));

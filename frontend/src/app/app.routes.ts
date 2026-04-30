@@ -1,39 +1,42 @@
 import { Routes } from '@angular/router';
 import { ProfileComponent } from './pages/profile/profile.component';
-import { FormElementsComponent } from './pages/forms/form-elements/form-elements.component';
-import { BasicTablesComponent } from './pages/tables/basic-tables/basic-tables.component';
-import { BlankComponent } from './pages/blank/blank.component';
 import { NotFoundComponent } from './pages/other-page/not-found/not-found.component';
 import { AppLayoutComponent } from './shared/layout/app-layout/app-layout.component';
-import { InvoicesComponent } from './pages/invoices/invoices.component';
-import { LineChartComponent } from './pages/charts/line-chart/line-chart.component';
-import { BarChartComponent } from './pages/charts/bar-chart/bar-chart.component';
-import { AlertsComponent } from './pages/ui-elements/alerts/alerts.component';
-import { AvatarElementComponent } from './pages/ui-elements/avatar-element/avatar-element.component';
-import { BadgesComponent } from './pages/ui-elements/badges/badges.component';
-import { ButtonsComponent } from './pages/ui-elements/buttons/buttons.component';
-import { ImagesComponent } from './pages/ui-elements/images/images.component';
-import { VideosComponent } from './pages/ui-elements/videos/videos.component';
 import { SignInComponent } from './pages/auth-pages/sign-in/sign-in.component';
 import { SignUpComponent } from './pages/auth-pages/sign-up/sign-up.component';
 import { ForgotPasswordComponent } from './pages/auth-pages/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './pages/auth-pages/reset-password/reset-password.component';
-import { CalenderComponent } from './pages/calender/calender.component';
+import { PublicHomeComponent } from './pages/public-home/public-home.component';
 
-// Enterprise Modules
+// Modules metier
 import { EnterpriseDashboardComponent } from './pages/dashboard/enterprise-dashboard/enterprise-dashboard.component';
 import { GedListComponent } from './modules/ged/components/ged-list.component';
 import { EventsListComponent } from './modules/events/components/events-list.component';
+import { EventAlbumComponent } from './modules/events/components/event-album.component';
 import { InvitationsComponent } from './modules/events/components/invitations.component';
 import { RoomReservationsComponent } from './modules/reservations/components/room-reservations.component';
 import { EquipmentReservationsComponent } from './modules/reservations/components/equipment-reservations.component';
 import { NotificationsComponent } from './modules/notifications/components/notifications.component';
 import { InterventionsComponent } from './modules/interventions/components/interventions.component';
+import { ItEquipmentComponent } from './modules/it/components/it-equipment.component';
+import { ItInterventionsComponent } from './modules/it/components/it-interventions.component';
 import { AdminPanelComponent } from './modules/admin/components/admin-panel.component';
+import { AdminWorkflowsComponent } from './modules/admin/components/admin-workflows.component';
 import { authGuard, roleGuard } from './core/guards/auth.guard';
 import { AppRole } from './core/models';
 
 const allBusinessRoles: AppRole[] = [
+  'ADMIN',
+  'EMPLOYEE',
+  'MANAGER',
+  'ROOM_MANAGER',
+  'IT_MANAGER',
+  'SECURITY_MANAGER',
+  'DSN_DIRECTOR',
+  'QUALITY_MANAGER'
+];
+
+const reservationBusinessRoles: AppRole[] = [
   'ADMIN',
   'EMPLOYEE',
   'MANAGER',
@@ -44,197 +47,192 @@ const allBusinessRoles: AppRole[] = [
 ];
 
 export const routes: Routes = [
-  // auth pages
   {
-    path:'signin',
-    component:SignInComponent,
-    title:'Angular Sign In Dashboard | TailAdmin - Angular Admin Dashboard Template'
+    path: '',
+    redirectTo: 'accueil',
+    pathMatch: 'full'
   },
   {
-    path:'signup',
-    component:SignUpComponent,
-    title:'Angular Sign Up Dashboard | TailAdmin - Angular Admin Dashboard Template'
+    path: 'accueil',
+    component: PublicHomeComponent,
+    title: 'Accueil | CNSTN'
+  },
+  // Pages d'authentification
+  {
+    path: 'login',
+    redirectTo: 'signin',
+    pathMatch: 'full'
   },
   {
-    path:'forgot-password',
-    component:ForgotPasswordComponent,
-    title:'Angular Forgot Password | TailAdmin - Angular Admin Dashboard Template'
+    path: 'signin',
+    component: SignInComponent,
+    title: 'Connexion | CNSTN'
   },
   {
-    path:'reset-password',
-    component:ResetPasswordComponent,
-    title:'Angular Reset Password | TailAdmin - Angular Admin Dashboard Template'
+    path: 'signup',
+    component: SignUpComponent,
+    title: 'Inscription | CNSTN'
   },
   {
-    path:'',
-    component:AppLayoutComponent,
+    path: 'inscription',
+    redirectTo: 'signup',
+    pathMatch: 'full'
+  },
+  {
+    path: 'forgot-password',
+    component: ForgotPasswordComponent,
+    title: 'Mot de passe oublie | CNSTN'
+  },
+  {
+    path: 'reset-password',
+    component: ResetPasswordComponent,
+    title: 'Reinitialisation du mot de passe | CNSTN'
+  },
+  {
+    path: '',
+    component: AppLayoutComponent,
     canActivate: [authGuard],
-    children:[
+    children: [
       {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full',
       },
       {
-        path:'dashboard',
+        path: 'dashboard',
         component: EnterpriseDashboardComponent,
         canActivate: [roleGuard],
         data: { roles: allBusinessRoles, permissions: ['VIEW_REPORTS_MODULE'] },
-        title: 'Enterprise Dashboard | Enterprise Management System',
+        title: 'Tableau de bord | CNSTN',
       },
       {
-        path:'calendar',
-        component:CalenderComponent,
-        title:'Angular Calender | TailAdmin - Angular Admin Dashboard Template'
-      },
-      {
-        path:'profile',
-        component:ProfileComponent,
-        title:'Angular Profile Dashboard | TailAdmin - Angular Admin Dashboard Template'
-      },
-      {
-        path:'form-elements',
-        component:FormElementsComponent,
-        title:'Angular Form Elements Dashboard | TailAdmin - Angular Admin Dashboard Template'
-      },
-      {
-        path:'basic-tables',
-        component:BasicTablesComponent,
-        title:'Angular Basic Tables Dashboard | TailAdmin - Angular Admin Dashboard Template'
-      },
-      {
-        path:'blank',
-        component:BlankComponent,
-        title:'Angular Blank Dashboard | TailAdmin - Angular Admin Dashboard Template'
-      },
-      // support tickets
-      {
-        path:'invoice',
-        component:InvoicesComponent,
-        title:'Angular Invoice Details Dashboard | TailAdmin - Angular Admin Dashboard Template'
-      },
-      {
-        path:'line-chart',
-        component:LineChartComponent,
-        title:'Angular Line Chart Dashboard | TailAdmin - Angular Admin Dashboard Template'
-      },
-      {
-        path:'bar-chart',
-        component:BarChartComponent,
+        path: 'reporting',
+        component: EnterpriseDashboardComponent,
         canActivate: [roleGuard],
         data: { roles: allBusinessRoles, permissions: ['VIEW_REPORTS_MODULE'] },
-        title:'Angular Bar Chart Dashboard | TailAdmin - Angular Admin Dashboard Template'
+        title: 'Reporting | CNSTN',
       },
       {
-        path:'alerts',
-        component:AlertsComponent,
-        title:'Angular Alerts Dashboard | TailAdmin - Angular Admin Dashboard Template'
-      },
-      {
-        path:'avatars',
-        component:AvatarElementComponent,
-        title:'Angular Avatars Dashboard | TailAdmin - Angular Admin Dashboard Template'
-      },
-      {
-        path:'badge',
-        component:BadgesComponent,
-        title:'Angular Badges Dashboard | TailAdmin - Angular Admin Dashboard Template'
-      },
-      {
-        path:'buttons',
-        component:ButtonsComponent,
-        title:'Angular Buttons Dashboard | TailAdmin - Angular Admin Dashboard Template'
-      },
-      {
-        path:'images',
-        component:ImagesComponent,
-        title:'Angular Images Dashboard | TailAdmin - Angular Admin Dashboard Template'
-      },
-      {
-        path:'videos',
-        component:VideosComponent,
-        title:'Angular Videos Dashboard | TailAdmin - Angular Admin Dashboard Template'
+        path: 'profile',
+        component: ProfileComponent,
+        canActivate: [roleGuard],
+        data: { roles: allBusinessRoles },
+        title: 'Mon profil | CNSTN'
       },
 
-      // Enterprise Modules
-      // Document Management (GED)
+      // Modules metier
+      // Gestion documentaire (GED)
       {
-        path:'documents',
-        component:GedListComponent,
+        path: 'documents',
+        component: GedListComponent,
         canActivate: [roleGuard],
         data: { roles: allBusinessRoles, permissions: ['VIEW_GED_MODULE'] },
-        title:'Document Management | Enterprise System',
+        title: 'Gestion documentaire | CNSTN',
       },
 
-      // Events Management
+      // Gestion des evenements
       {
-        path:'events',
-        component:EventsListComponent,
+        path: 'events',
+        component: EventsListComponent,
         canActivate: [roleGuard],
         data: { roles: allBusinessRoles, permissions: ['VIEW_EVENTS_MODULE'] },
-        title:'Events Management | Enterprise System',
+        title: 'Gestion des evenements | CNSTN',
       },
       {
-        path:'invitations',
-        component:InvitationsComponent,
+        path: 'events/:id/album',
+        component: EventAlbumComponent,
         canActivate: [roleGuard],
-        data: { roles: ['ADMIN', 'EMPLOYEE', 'MANAGER', 'DSN_DIRECTOR'] as AppRole[], permissions: ['VIEW_EVENTS_MODULE'] },
-        title:'Event Invitations | Enterprise System',
+        data: { roles: allBusinessRoles, permissions: ['VIEW_EVENTS_MODULE'] },
+        title: 'Album photos evenement | CNSTN',
+      },
+      {
+        path: 'invitations',
+        component: InvitationsComponent,
+        canActivate: [roleGuard],
+        data: {
+          roles: ['ADMIN', 'EMPLOYEE', 'MANAGER', 'DSN_DIRECTOR', 'QUALITY_MANAGER', 'SECURITY_MANAGER'] as AppRole[],
+          permissions: ['VIEW_EVENTS_MODULE'],
+        },
+        title: 'Invitations | CNSTN',
       },
 
       // Reservations
       {
-        path:'reservations',
-        redirectTo:'reservations/salles',
+        path: 'reservations',
+        redirectTo: 'reservations/salles',
         pathMatch: 'full',
       },
       {
-        path:'reservations/salles',
-        component:RoomReservationsComponent,
+        path: 'reservations/salles',
+        component: RoomReservationsComponent,
         canActivate: [roleGuard],
-        data: { roles: allBusinessRoles },
-        title:'Reservations Salles | Enterprise System',
+        data: { roles: reservationBusinessRoles },
+        title: 'Reservations des salles | CNSTN',
       },
       {
-        path:'reservations/equipements',
-        component:EquipmentReservationsComponent,
+        path: 'reservations/equipements',
+        component: EquipmentReservationsComponent,
         canActivate: [roleGuard],
-        data: { roles: allBusinessRoles },
-        title:'Reservations Equipements | Enterprise System',
+        data: { roles: reservationBusinessRoles },
+        title: 'Reservations des equipements | CNSTN',
       },
 
-      // Technical Interventions
+      // Interventions techniques
       {
-        path:'interventions',
-        component:InterventionsComponent,
+        path: 'it/equipements',
+        component: ItEquipmentComponent,
         canActivate: [roleGuard],
-        data: { roles: allBusinessRoles, permissions: ['VIEW_INTERVENTIONS_MODULE'] },
-        title:'Technical Interventions | Enterprise System',
+        data: { roles: ['ADMIN', 'IT_MANAGER'] as AppRole[] },
+        title: 'Parc équipements IT | CNSTN',
+      },
+      {
+        path: 'it/interventions',
+        component: ItInterventionsComponent,
+        canActivate: [roleGuard],
+        data: {
+          roles: ['ADMIN', 'EMPLOYEE', 'MANAGER', 'DSN_DIRECTOR', 'IT_MANAGER'] as AppRole[],
+          permissions: ['VIEW_INTERVENTIONS_MODULE'],
+        },
+        title: 'Interventions IT | CNSTN',
+      },
+      {
+        path: 'interventions',
+        component: InterventionsComponent,
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'ROOM_MANAGER'] as AppRole[], permissions: ['VIEW_INTERVENTIONS_MODULE'] },
+        title: 'Interventions logistiques | CNSTN',
       },
 
       // Notifications
       {
-        path:'notifications',
-        component:NotificationsComponent,
+        path: 'notifications',
+        component: NotificationsComponent,
         canActivate: [roleGuard],
         data: { roles: allBusinessRoles },
-        title:'Notifications | Enterprise System',
+        title: 'Notifications | CNSTN',
       },
 
       // Administration
       {
-        path:'admin',
-        component:AdminPanelComponent,
+        path: 'admin/workflows',
+        component: AdminWorkflowsComponent,
         canActivate: [roleGuard],
         data: { roles: ['ADMIN'] as AppRole[], permissions: ['VIEW_USERS_MODULE'] },
-        title:'Administration Panel | Enterprise System',
+        title: 'Administration des workflows | CNSTN',
+      },
+      {
+        path: 'admin',
+        component: AdminPanelComponent,
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] as AppRole[], permissions: ['VIEW_USERS_MODULE'] },
+        title: 'Administration | CNSTN',
       },
     ]
   },
-  // error pages
+  // Page d'erreur
   {
-    path:'**',
-    component:NotFoundComponent,
-    title:'Angular NotFound Dashboard | TailAdmin - Angular Admin Dashboard Template'
+    path: '**',
+    component: NotFoundComponent,
+    title: 'Page introuvable | CNSTN'
   },
 ];

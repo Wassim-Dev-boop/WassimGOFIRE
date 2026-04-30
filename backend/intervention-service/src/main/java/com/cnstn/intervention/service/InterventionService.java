@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,8 +48,16 @@ public class InterventionService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<InterventionResponse> list(Pageable pageable) {
-        Page<InterventionEntity> page = interventionRepository.findAll(Objects.requireNonNull(pageable));
+    public PageResponse<InterventionResponse> list(
+            Pageable pageable,
+            String search,
+            InterventionStatus status,
+            String assignedTo
+    ) {
+        Page<InterventionEntity> page = interventionRepository.findAll(
+                buildListSpecification(search, status, assignedTo, null),
+                Objects.requireNonNull(pageable)
+        );
         return new PageResponse<>(
                 page.map(InterventionMapper::toResponse).getContent(),
                 page.getNumber(),
@@ -59,12 +68,21 @@ public class InterventionService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<InterventionResponse> listMine(Pageable pageable, String username) {
+    public PageResponse<InterventionResponse> listMine(
+            Pageable pageable,
+            String username,
+            String search,
+            InterventionStatus status,
+            String assignedTo
+    ) {
         Pageable safePageable = Objects.requireNonNull(pageable);
         String safeUsername = normalize(username);
         Page<InterventionEntity> page = safeUsername.isEmpty()
                 ? new PageImpl<>(java.util.List.of(), safePageable, 0)
-                : interventionRepository.findByRequestedByIgnoreCase(safeUsername, safePageable);
+                : interventionRepository.findAll(
+                        buildListSpecification(search, status, assignedTo, safeUsername),
+                        safePageable
+                );
         return new PageResponse<>(
                 page.map(InterventionMapper::toResponse).getContent(),
                 page.getNumber(),
@@ -327,5 +345,50 @@ public class InterventionService {
 
     private String normalize(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private String normalizeOrNull(String value) {
+        String normalized = normalize(value);
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private Specification<InterventionEntity> buildListSpecification(
+            String search,
+            InterventionStatus status,
+            String assignedTo,
+            String requestedBy
+    ) {
+        Specification<InterventionEntity> specification = (root, query, cb) -> cb.conjunction();
+        String normalizedSearch = normalizeOrNull(search);
+        String normalizedAssignedTo = normalizeOrNull(assignedTo);
+        String normalizedRequestedBy = normalizeOrNull(requestedBy);
+
+        if (normalizedSearch != null) {
+            specification = specification.and((root, query, cb) -> {
+                String pattern = "%" + normalizedSearch.toLowerCase() + "%";
+                return cb.or(
+                        cb.like(cb.lower(root.get("title")), pattern),
+                        cb.like(cb.lower(root.get("description")), pattern),
+                        cb.like(cb.lower(root.get("requestedBy")), pattern),
+                        cb.like(cb.lower(root.get("assignedTo")), pattern)
+                );
+            });
+        }
+
+        if (status != null) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("status"), status));
+        }
+
+        if (normalizedAssignedTo != null) {
+            specification = specification.and((root, query, cb) ->
+                    cb.like(cb.lower(root.get("assignedTo")), "%" + normalizedAssignedTo.toLowerCase() + "%"));
+        }
+
+        if (normalizedRequestedBy != null) {
+            specification = specification.and((root, query, cb) ->
+                    cb.equal(cb.lower(root.get("requestedBy")), normalizedRequestedBy.toLowerCase()));
+        }
+
+        return specification;
     }
 }

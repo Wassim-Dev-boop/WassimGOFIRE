@@ -1,11 +1,98 @@
-<app-page-breadcrumb pageTitle="Profile" />
+<app-page-breadcrumb pageTitle="Mon profil" />
 <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
-  <h3 class="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90 lg:mb-7">
-    Profile
-  </h3>
-  <div class="space-y-6">
-    <div><app-user-meta-card/></div>
-    <div><app-user-info-card/></div>
-    <div><app-user-address-card/></div>
+  <div class="mb-6">
+    <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90 lg:text-xl">
+      Informations personnelles
+    </h3>
+    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+      Les champs modifies sont enregistres dans votre profil utilisateur.
+    </p>
   </div>
+
+  <div *ngIf="loading" class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:border-gray-800 dark:bg-gray-900/40 dark:text-gray-300">
+    Chargement du profil...
+  </div>
+
+  <form *ngIf="!loading" class="space-y-5" (ngSubmit)="saveProfile()">
+    <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+      <div>
+        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Prenom <span class="text-error-500">*</span></label>
+        <input
+          type="text"
+          [(ngModel)]="form.firstName"
+          name="firstName"
+          required
+          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+          placeholder="Votre prenom"
+        />
+      </div>
+      <div>
+        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Nom <span class="text-error-500">*</span></label>
+        <input
+          type="text"
+          [(ngModel)]="form.lastName"
+          name="lastName"
+          required
+          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+          placeholder="Votre nom"
+        />
+      </div>
+      <div>
+        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Email <span class="text-error-500">*</span></label>
+        <input
+          type="email"
+          [(ngModel)]="form.email"
+          name="email"
+          required
+          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+          placeholder="nom@cnstn.tn"
+        />
+      </div>
+      <div>
+        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Telephone</label>
+        <input
+          type="text"
+          [(ngModel)]="form.phone"
+          name="phone"
+          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+          placeholder="+216 ..."
+        />
+      </div>
+      <div>
+        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Identifiant</label>
+        <input
+          type="text"
+          [value]="form.username || 'Non defini'"
+          readonly
+          class="h-11 w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-300"
+        />
+      </div>
+      <div>
+        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Role actif</label>
+        <input
+          type="text"
+          [value]="form.role"
+          readonly
+          class="h-11 w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-300"
+        />
+      </div>
+    </div>
+
+    <div *ngIf="errorMessage" class="rounded-lg border border-error-300 bg-error-50 px-3 py-2 text-sm text-error-700 dark:border-error-500/40 dark:bg-error-500/10 dark:text-error-300">
+      {{ errorMessage }}
+    </div>
+    <div *ngIf="successMessage" class="rounded-lg border border-success-300 bg-success-50 px-3 py-2 text-sm text-success-700 dark:border-success-500/40 dark:bg-success-500/10 dark:text-success-300">
+      {{ successMessage }}
+    </div>
+
+    <div class="pt-1">
+      <button
+        type="submit"
+        [disabled]="saving"
+        class="inline-flex items-center justify-center rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-brand-300"
+      >
+        {{ saving ? 'Mise a jour...' : 'Enregistrer les modifications' }}
+      </button>
+    </div>
+  </form>
 </div>

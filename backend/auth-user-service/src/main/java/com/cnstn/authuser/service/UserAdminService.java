@@ -3,6 +3,7 @@ package com.cnstn.authuser.service;
 import com.cnstn.authuser.client.keycloak.KeycloakAdminClient;
 import com.cnstn.authuser.client.keycloak.KeycloakCreateUserRequest;
 import com.cnstn.authuser.client.keycloak.KeycloakUpdateUserRequest;
+import com.cnstn.authuser.client.notification.NotificationAppClient;
 import com.cnstn.authuser.dto.AssignRolesRequest;
 import com.cnstn.authuser.dto.PageResponse;
 import com.cnstn.authuser.dto.UserCreateRequest;
@@ -22,34 +23,49 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserAdminService {
 
+    private static final Logger log = LoggerFactory.getLogger(UserAdminService.class);
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final DepartmentService departmentService;
     private final KeycloakAdminClient keycloakAdminClient;
+    private final NotificationAppClient notificationAppClient;
 
     public UserAdminService(
             UserRepository userRepository,
             RoleRepository roleRepository,
             DepartmentService departmentService,
-            KeycloakAdminClient keycloakAdminClient
+            KeycloakAdminClient keycloakAdminClient,
+            NotificationAppClient notificationAppClient
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.departmentService = departmentService;
         this.keycloakAdminClient = keycloakAdminClient;
+        this.notificationAppClient = notificationAppClient;
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<UserResponse> list(Pageable pageable) {
-        Page<UserEntity> page = userRepository.findAll(Objects.requireNonNull(pageable));
+    public PageResponse<UserResponse> list(
+            Pageable pageable,
+            String search,
+            Boolean enabled,
+            UUID departmentId,
+            RoleName role
+    ) {
+        Specification<UserEntity> specification = buildListSpecification(search, enabled, departmentId, role);
+        Page<UserEntity> page = userRepository.findAll(specification, Objects.requireNonNull(pageable));
         return PageMapper.fromPage(page, page.map(UserMapper::toResponse).getContent());
     }
 
@@ -97,7 +113,9 @@ public class UserAdminService {
             user.setPermissionsCustomized(false);
             user.getPermissions().clear();
 
-            return UserMapper.toResponse(userRepository.save(user));
+            UserEntity saved = userRepository.save(user);
+            notifyAccountStatus(saved, true, "Votre compte est active.");
+            return UserMapper.toResponse(saved);
         } catch (RuntimeException ex) {
             keycloakAdminClient.deleteUser(keycloakId);
             throw ex;
@@ -107,6 +125,7 @@ public class UserAdminService {
     @Transactional
     public UserResponse update(UUID id, UserUpdateRequest request) {
         UserEntity user = fetchUser(Objects.requireNonNull(id));
+        boolean previousEnabled = user.isEnabled();
 
         if (!user.getEmail().equalsIgnoreCase(request.email())
                 && userRepository.existsByEmailIgnoreCase(request.email())) {
@@ -132,7 +151,17 @@ public class UserAdminService {
             ));
         }
 
-        return UserMapper.toResponse(userRepository.save(user));
+        UserEntity saved = userRepository.save(user);
+        if (previousEnabled != saved.isEnabled()) {
+            notifyAccountStatus(
+                    saved,
+                    saved.isEnabled(),
+                    saved.isEnabled()
+                            ? "Votre compte a ete active."
+                            : "Votre compte a ete desactive."
+            );
+        }
+        return UserMapper.toResponse(saved);
     }
 
     @Transactional
@@ -174,5 +203,68 @@ public class UserAdminService {
             throw new ResourceNotFoundException("One or many roles are missing in local database");
         }
         return roles;
+    }
+
+    private void notifyAccountStatus(UserEntity user, boolean active, String message) {
+        String recipient = normalize(user.getUsername());
+        if (recipient.isEmpty()) {
+            return;
+        }
+
+        String title = active ? "Compte active" : "Compte desactive";
+
+        try {
+            notificationAppClient.sendInAppNotification(recipient, title, message);
+        } catch (Exception ex) {
+            log.warn("Failed to send account status notification to {}", recipient, ex);
+        }
+    }
+
+    private String normalize(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private String normalizeOrNull(String value) {
+        String normalized = normalize(value);
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private Specification<UserEntity> buildListSpecification(
+            String search,
+            Boolean enabled,
+            UUID departmentId,
+            RoleName role
+    ) {
+        Specification<UserEntity> specification = (root, query, cb) -> cb.conjunction();
+        String normalizedSearch = normalizeOrNull(search);
+
+        if (normalizedSearch != null) {
+            specification = specification.and((root, query, cb) -> {
+                String pattern = "%" + normalizedSearch.toLowerCase() + "%";
+                return cb.or(
+                        cb.like(cb.lower(root.get("username")), pattern),
+                        cb.like(cb.lower(root.get("email")), pattern),
+                        cb.like(cb.lower(root.get("firstName")), pattern),
+                        cb.like(cb.lower(root.get("lastName")), pattern)
+                );
+            });
+        }
+
+        if (enabled != null) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("enabled"), enabled));
+        }
+
+        if (departmentId != null) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("department").get("id"), departmentId));
+        }
+
+        if (role != null) {
+            specification = specification.and((root, query, cb) -> {
+                query.distinct(true);
+                return cb.equal(root.join("roles").get("name"), role);
+            });
+        }
+
+        return specification;
     }
 }

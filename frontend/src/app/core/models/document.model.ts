@@ -29,6 +29,7 @@ export interface DocumentVersion {
 
 export interface Document {
   id: string;
+  folderId?: string;
   title: string;
   description?: string;
   category: Category;
@@ -48,6 +49,9 @@ export interface Document {
     | 'Archive'
     | 'Obsolete';
   referenceCode?: string;
+  confidentialityLevel?: 'PUBLIC' | 'INTERNAL' | 'RESTRICTED' | 'CONFIDENTIAL';
+  currentVersionNumber?: number;
+  ownerService?: string;
   versions: DocumentVersion[];
   currentVersion: DocumentVersion;
   author: string;

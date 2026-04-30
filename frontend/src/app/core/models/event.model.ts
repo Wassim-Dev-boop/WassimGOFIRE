@@ -1,10 +1,21 @@
 // Events Management Models
 export enum EventStatus {
   DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
   PUBLISHED = 'PUBLISHED',
   CANCELLED = 'CANCELLED',
   COMPLETED = 'COMPLETED'
 }
+
+export type EventWorkflowStep =
+  | 'BROUILLON'
+  | 'VALIDATION_MANAGER'
+  | 'VALIDATION_SECURITE'
+  | 'VALIDATION_DSN'
+  | 'TERMINE'
+  | 'REFUSE';
+
+export type EventMode = 'PRESENTIEL' | 'EN_LIGNE' | 'HYBRIDE';
 
 export interface EventParticipant {
   id: string;
@@ -22,12 +33,20 @@ export interface Event {
   startDate: Date;
   endDate: Date;
   location: string;
+  eventMode?: EventMode;
   onlineEvent?: boolean;
+  onlineMeetingUrl?: string;
+  onlineMeetingProvider?: string;
   zoomMeetingNumber?: string;
   zoomPasscode?: string;
   organiserId: string;
   organiserName: string;
   status: EventStatus;
+  workflowStep?: EventWorkflowStep;
+  businessVersion?: number;
+  referenceCode?: string;
+  rejectionReason?: string;
+  hasExternalPartners?: boolean;
   participants: EventParticipant[];
   maxParticipants?: number;
   createdAt: Date;
@@ -54,4 +73,16 @@ export interface ZoomMeetingCredentials {
   passcode: string;
   userName: string;
   role: number;
+  fallbackWebUrl: string;
+  sdkConfigured: boolean;
+}
+
+export interface EventPhoto {
+  id: string;
+  eventId: string;
+  fileName: string;
+  contentType: string;
+  fileSize: number;
+  uploadedBy: string;
+  uploadedAt: Date;
 }

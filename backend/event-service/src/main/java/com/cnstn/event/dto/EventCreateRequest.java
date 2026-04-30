@@ -1,5 +1,7 @@
 package com.cnstn.event.dto;
 
+import com.cnstn.event.entity.EventMode;
+import com.cnstn.event.entity.EventType;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -12,8 +14,14 @@ public record EventCreateRequest(
         @NotNull @Future Instant startAt,
         @NotNull @Future Instant endAt,
         @Size(max = 150) String location,
+        EventType eventType,
+        EventMode eventMode,
         Boolean onlineEvent,
         @Size(max = 30) String zoomMeetingNumber,
-        @Size(max = 100) String zoomPasscode
+        @Size(max = 100) String zoomPasscode,
+        @Size(max = 60) String onlineMeetingProvider,
+        @Size(max = 500) String onlineMeetingLink,
+        @Size(max = 80) String onlineMeetingId,
+        @Size(max = 120) String onlineMeetingPassword
 ) {
 }

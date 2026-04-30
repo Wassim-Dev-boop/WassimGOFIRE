@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -31,8 +32,13 @@ public class RoomController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
-    public PageResponse<RoomResponse> list(Pageable pageable) {
-        return roomService.list(pageable);
+    public PageResponse<RoomResponse> list(
+            Pageable pageable,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) Integer minCapacity
+    ) {
+        return roomService.list(pageable, search, active, minCapacity);
     }
 
     @GetMapping("/{id}")

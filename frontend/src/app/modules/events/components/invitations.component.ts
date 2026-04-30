@@ -1,11 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { InvitationService } from '../../../core/services/invitation.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AppRole, Invitation, InvitationStatus } from '../../../core/models';
 
-type InvitationTab = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'PARTNER_ACCESS';
+type InvitationTab = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED';
+type InvitationDirectionFilter = 'ALL' | 'RECEIVED' | 'SENT';
 
 @Component({
   selector: 'app-invitations',
@@ -18,17 +20,20 @@ type InvitationTab = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'PARTNER_ACCESS';
           <div>
             <h1 class="mb-1 text-2xl font-bold text-gray-900 dark:text-white/90 lg:text-3xl">Invitations</h1>
             <p class="max-w-2xl text-sm text-gray-600 dark:text-gray-400">
-              Suivi des invitations aux evenements et verification des acces partenaires.
+              Suivi des invitations aux événements et réponses attendues.
             </p>
             <div class="mt-3 flex flex-wrap items-center gap-2">
               <span class="inline-flex rounded-full bg-brand-500/10 px-3 py-1 text-xs font-semibold text-brand-700 dark:text-brand-300">
                 {{ roleLabels[currentRole] }}
               </span>
               <span class="inline-flex rounded-full bg-success-500/10 px-3 py-1 text-xs font-semibold text-success-700 dark:text-success-300">
-                Controle invitations actif
+                Contrôle invitations actif
               </span>
             </div>
           </div>
+          <span class="inline-flex w-fit rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+            Total invitations: {{ invitations.length }}
+          </span>
         </div>
 
         <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-4">
@@ -39,34 +44,51 @@ type InvitationTab = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'PARTNER_ACCESS';
 
           <article class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
             <p class="text-3xl font-semibold text-gray-900 dark:text-white/90">{{ getTabCount('ACCEPTED') }}</p>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Acceptees</p>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Acceptées</p>
           </article>
 
           <article class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
             <p class="text-3xl font-semibold text-gray-900 dark:text-white/90">{{ getTabCount('DECLINED') }}</p>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Refusees</p>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Refusées</p>
           </article>
 
           <article class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
-            <p class="text-3xl font-semibold text-gray-900 dark:text-white/90">{{ getPendingPartnerVerificationCount() }}</p>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Partenaires a verifier</p>
+            <p class="text-3xl font-semibold text-gray-900 dark:text-white/90">{{ getTabCount('EXPIRED') }}</p>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Expirées</p>
           </article>
         </div>
 
-        <div class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto]">
+        <div class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_240px_auto_auto]">
           <input
             type="text"
             [(ngModel)]="searchTerm"
-            placeholder="Rechercher un evenement, expediteur, partenaire..."
+            placeholder="Rechercher par événement, expéditeur ou partenaire..."
             class="h-11 w-full rounded-xl border border-gray-300 bg-transparent px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
           />
+
+          <select
+            [(ngModel)]="directionFilter"
+            class="h-11 rounded-xl border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+          >
+            <option value="ALL">Toutes les directions</option>
+            <option value="RECEIVED">Reçues</option>
+            <option value="SENT">Envoyées</option>
+          </select>
+
+          <button
+            type="button"
+            (click)="applyFilters()"
+            class="h-11 rounded-xl border border-brand-300 px-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-brand-500/50 dark:text-brand-300 dark:hover:bg-brand-500/10"
+          >
+            Appliquer
+          </button>
 
           <button
             type="button"
             (click)="resetSearch()"
             class="h-11 rounded-xl border border-gray-300 px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
           >
-            Reinitialiser
+            Réinitialiser
           </button>
         </div>
       </section>
@@ -96,52 +118,12 @@ type InvitationTab = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'PARTNER_ACCESS';
           {{ actionFeedback }}
         </div>
 
-        <div *ngIf="activeTab === 'PARTNER_ACCESS'" class="space-y-3">
-          <div *ngIf="filteredPartnerInvitations.length === 0" class="rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-            Aucune invitation partenaire trouvee pour ce contexte.
+        <div class="space-y-3">
+          <div *ngIf="isLoadingInvitations" class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-10 text-center text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+            Chargement des invitations...
           </div>
 
-          <article
-            *ngFor="let invitation of filteredPartnerInvitations"
-            class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900"
-          >
-            <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <h3 class="text-base font-semibold text-gray-900 dark:text-white/90">{{ invitation.eventTitle }}</h3>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                  Partenaire: {{ invitation.recipientName }} ({{ invitation.recipientEmail }})
-                </p>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Organisation: {{ invitation.partnerOrganization || 'N/A' }}</p>
-                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                  Envoyee par {{ invitation.senderName }} le {{ invitation.sentAt | date:'short' }}
-                </p>
-                <p *ngIf="invitation.isVerifiedByDsn" class="mt-1 text-xs text-success-600 dark:text-success-300">
-                  Verifiee par {{ invitation.verifiedBy || 'DSN' }} le {{ invitation.verifiedAt | date:'short' }}
-                </p>
-              </div>
-
-              <div class="flex flex-wrap items-center gap-2">
-                <span
-                  *ngIf="invitation.isVerifiedByDsn"
-                  class="inline-flex rounded-full bg-success-500/10 px-3 py-1 text-xs font-semibold text-success-700 dark:text-success-300"
-                >
-                  Verifie
-                </span>
-
-                <button
-                  *ngIf="!invitation.isVerifiedByDsn && canVerifyPartnerAccess()"
-                  (click)="verifyPartnerAccess(invitation.id)"
-                  class="rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-brand-600"
-                >
-                  Verifier acces
-                </button>
-              </div>
-            </div>
-          </article>
-        </div>
-
-        <div *ngIf="activeTab !== 'PARTNER_ACCESS'" class="space-y-3">
-          <div *ngIf="filteredInvitations.length === 0" class="rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+          <div *ngIf="!isLoadingInvitations && filteredInvitations.length === 0" class="rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
             Aucune invitation dans cet onglet.
           </div>
 
@@ -149,14 +131,22 @@ type InvitationTab = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'PARTNER_ACCESS';
             *ngFor="let invitation of filteredInvitations"
             class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900"
           >
-            <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div class="min-w-0 flex-1">
                 <h3 class="truncate text-base font-semibold text-gray-900 dark:text-white/90">{{ invitation.eventTitle }}</h3>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Expediteur: {{ invitation.senderName }}</p>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Organisateur: {{ invitation.senderName }}</p>
 
                 <div class="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-600 sm:grid-cols-2 dark:text-gray-300">
-                  <p><span class="font-semibold">Date:</span> {{ invitation.eventDate | date:'short' }}</p>
-                  <p><span class="font-semibold">Lieu:</span> {{ invitation.eventLocation }}</p>
+                  <p><span class="font-semibold">Date/heure:</span> {{ invitation.eventDate | date:'short' }}</p>
+                  <p><span class="font-semibold">Mode:</span> {{ getEventModeLabel(invitation) }}</p>
+                  <p>
+                    <span class="font-semibold">{{ isOnlineInvitation(invitation) ? 'Lien' : 'Salle' }}:</span>
+                    {{ (isOnlineInvitation(invitation) ? (invitation.onlineMeetingLink || invitation.eventLocation) : invitation.eventLocation) || 'Non précisé' }}
+                  </p>
+                  <p *ngIf="isExpiredInvitation(invitation)">
+                    <span class="font-semibold">Date limite:</span>
+                    {{ invitation.eventDate | date:'shortDate' }}
+                  </p>
                 </div>
 
                 <p *ngIf="invitation.message" class="mt-2 text-sm italic text-gray-500 dark:text-gray-400">
@@ -164,17 +154,17 @@ type InvitationTab = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'PARTNER_ACCESS';
                 </p>
 
                 <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                  Envoyee le {{ invitation.sentAt | date:'short' }}
-                  <span *ngIf="invitation.respondedAt">- Reponse le {{ invitation.respondedAt | date:'short' }}</span>
+                  Envoyée le {{ invitation.sentAt | date:'short' }}
+                  <span *ngIf="invitation.respondedAt">- Réponse le {{ invitation.respondedAt | date:'short' }}</span>
                 </p>
               </div>
 
-              <div class="flex min-w-[140px] flex-col gap-2">
-                <span class="rounded-full px-3 py-1 text-center text-xs font-semibold" [ngClass]="getInvitationStatusBadgeClass(invitation.status)">
-                  {{ getInvitationStatusLabel(invitation.status) }}
+              <div class="flex min-w-[180px] flex-col gap-2">
+                <span class="rounded-full px-3 py-1 text-center text-xs font-semibold" [ngClass]="getInvitationStatusBadgeClass(invitation.status, invitation)">
+                  {{ getInvitationStatusLabel(invitation) }}
                 </span>
 
-                <div *ngIf="invitation.status === 'PENDING'" class="grid grid-cols-1 gap-2">
+                <div *ngIf="canRespondToInvitation(invitation)" class="grid grid-cols-1 gap-2">
                   <button
                     (click)="acceptInvitation(invitation.id)"
                     class="rounded-lg bg-success-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-success-600"
@@ -182,51 +172,150 @@ type InvitationTab = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'PARTNER_ACCESS';
                     Accepter
                   </button>
                   <button
-                    (click)="declineInvitation(invitation.id)"
+                    (click)="openDeclineModal(invitation)"
                     class="rounded-lg bg-error-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-error-600"
                   >
                     Refuser
                   </button>
                 </div>
+                <p *ngIf="!canRespondToInvitation(invitation)" class="text-[11px] text-gray-500 dark:text-gray-400">
+                  {{ getResponseUnavailableReason(invitation) }}
+                </p>
+
+                <button
+                  type="button"
+                  (click)="openInvitationDetails(invitation)"
+                  class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+                >
+                  Détails
+                </button>
+                <button
+                  type="button"
+                  (click)="openEvent(invitation.eventId)"
+                  [disabled]="!invitation.eventId"
+                  class="rounded-lg border border-brand-300 px-3 py-2 text-xs font-semibold text-brand-700 transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/50 dark:text-brand-300 dark:hover:bg-brand-500/10"
+                >
+                  Voir evenement
+                </button>
               </div>
             </div>
           </article>
         </div>
       </section>
     </div>
+
+    <div *ngIf="selectedInvitation" class="fixed inset-0 z-[130000] flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm">
+      <div class="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
+        <div class="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white/90">{{ selectedInvitation.eventTitle }}</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Détails de l'invitation</p>
+          </div>
+          <button
+            type="button"
+            (click)="closeInvitationDetails()"
+            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+          >
+            Fermer
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 text-sm text-gray-700 dark:text-gray-300 sm:grid-cols-2">
+          <p><span class="font-semibold">Organisateur:</span> {{ selectedInvitation.senderName }}</p>
+          <p><span class="font-semibold">Destinataire:</span> {{ selectedInvitation.recipientName }}</p>
+          <p><span class="font-semibold">Date/heure:</span> {{ selectedInvitation.eventDate | date:'full' }}</p>
+          <p><span class="font-semibold">Mode:</span> {{ getEventModeLabel(selectedInvitation) }}</p>
+          <p class="sm:col-span-2"><span class="font-semibold">{{ isOnlineInvitation(selectedInvitation) ? 'Lien' : 'Salle' }}:</span> {{ (isOnlineInvitation(selectedInvitation) ? (selectedInvitation.onlineMeetingLink || selectedInvitation.eventLocation) : selectedInvitation.eventLocation) || 'Non précisé' }}</p>
+          <p class="sm:col-span-2"><span class="font-semibold">Statut:</span> {{ getInvitationStatusLabel(selectedInvitation) }}</p>
+          <p *ngIf="selectedInvitation.message" class="sm:col-span-2">
+            <span class="font-semibold">Message:</span> {{ selectedInvitation.message }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="declineModalInvitation" class="fixed inset-0 z-[135000] flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm">
+      <div class="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white/90">Refuser l invitation</h3>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          {{ declineModalInvitation.eventTitle }}
+        </p>
+
+        <label class="mt-4 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Motif (optionnel)
+        </label>
+        <textarea
+          [(ngModel)]="declineReason"
+          rows="3"
+          placeholder="Indiquez un motif de refus..."
+          class="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+        ></textarea>
+
+        <div class="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            (click)="closeDeclineModal()"
+            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            (click)="confirmDeclineInvitation()"
+            class="rounded-lg bg-error-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-error-600"
+          >
+            Confirmer le refus
+          </button>
+        </div>
+      </div>
+    </div>
   `,
   styles: []
 })
 export class InvitationsComponent implements OnInit {
   invitations: Invitation[] = [];
-  partnerInvitations: Invitation[] = [];
   activeTab: InvitationTab = 'PENDING';
-  isLoading = false;
+  selectedInvitation: Invitation | null = null;
 
   currentRole: AppRole = 'EMPLOYEE';
   currentUserId = '';
-  currentUserName = '';
+  currentUsername = '';
+  currentEmail = '';
+  routeInvitationId = '';
 
   searchTerm = '';
+  directionFilter: InvitationDirectionFilter = 'ALL';
   actionFeedback = '';
   actionFeedbackTone: 'success' | 'error' = 'success';
+  isLoadingInvitations = false;
+
+  declineModalInvitation: Invitation | null = null;
+  declineReason = '';
 
   readonly roleLabels: Record<AppRole, string> = {
     ADMIN: 'Administrateur',
-    EMPLOYEE: 'Employe',
-    MANAGER: 'Chef hierarchique',
+    EMPLOYEE: 'Employé',
+    MANAGER: 'Chef hiérarchique',
     ROOM_MANAGER: 'Responsable salle',
-    SECURITY_MANAGER: 'Responsable securite',
+    IT_MANAGER: 'Responsable IT',
+    SECURITY_MANAGER: 'Responsable sécurité',
     DSN_DIRECTOR: 'Directeur DSN',
-    QUALITY_MANAGER: 'Responsable qualite'
+    QUALITY_MANAGER: 'Responsable qualité'
   };
 
   constructor(
     private invitationService: InvitationService,
-    private authService: AuthService
+    private authService: AuthService,
+    private route: ActivatedRoute,
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
+    this.route.queryParamMap.subscribe((params) => {
+      this.routeInvitationId = params.get('invitationId')?.trim() || '';
+      this.tryOpenInvitationFromRoute();
+    });
+
     this.authService.currentUser$.subscribe(user => {
       if (!user) {
         return;
@@ -234,133 +323,131 @@ export class InvitationsComponent implements OnInit {
 
       this.currentRole = user.role;
       this.currentUserId = user.id;
-      this.currentUserName = `${user.firstName} ${user.lastName}`.trim();
+      this.currentUsername = (user.username || '').trim();
+      this.currentEmail = (user.email || '').trim().toLowerCase();
       this.loadInvitations();
-      if (this.canVerifyPartnerAccess()) {
-        this.loadPartnerInvitations();
-      } else {
-        this.partnerInvitations = [];
-      }
     });
   }
 
   get visibleTabs(): Array<{ label: string; value: InvitationTab }> {
-    const baseTabs: Array<{ label: string; value: InvitationTab }> = [
+    return [
       { label: 'En attente', value: 'PENDING' },
-      { label: 'Acceptees', value: 'ACCEPTED' },
-      { label: 'Refusees', value: 'DECLINED' }
+      { label: 'Acceptées', value: 'ACCEPTED' },
+      { label: 'Refusées', value: 'DECLINED' },
+      { label: 'Expirées', value: 'EXPIRED' },
     ];
-
-    if (this.canVerifyPartnerAccess()) {
-      baseTabs.push({ label: 'Acces partenaires', value: 'PARTNER_ACCESS' });
-    }
-
-    return baseTabs;
   }
 
   get filteredInvitations(): Invitation[] {
     return this.invitations
-      .filter(invitation => invitation.status === this.activeTab)
-      .filter(invitation => this.matchesSearch(invitation));
-  }
-
-  get filteredPartnerInvitations(): Invitation[] {
-    return this.partnerInvitations.filter(invitation => this.matchesSearch(invitation));
+      .filter(invitation => this.getInvitationBucket(invitation) === this.activeTab)
+      .filter(invitation => this.matchesDirectionFilter(invitation))
+      .filter(invitation => this.matchesSearch(invitation))
+      .sort((left, right) => right.sentAt.getTime() - left.sentAt.getTime());
   }
 
   loadInvitations(): void {
-    this.isLoading = true;
-    this.invitationService.getInvitationsByUser(this.currentUserId).subscribe({
+    this.isLoadingInvitations = true;
+    this.invitationService.getInvitations().subscribe({
       next: (invitations) => {
         this.invitations = invitations;
-        this.isLoading = false;
+        this.isLoadingInvitations = false;
+        this.tryOpenInvitationFromRoute();
       },
       error: () => {
         this.invitations = [];
+        this.isLoadingInvitations = false;
         this.actionFeedbackTone = 'error';
         this.actionFeedback = 'Impossible de charger les invitations pour le moment.';
-        this.isLoading = false;
       }
     });
   }
 
-  loadPartnerInvitations(): void {
-    if (!this.canVerifyPartnerAccess()) {
-      this.partnerInvitations = [];
-      return;
-    }
-
-    this.invitationService.getPartnerInvitations().subscribe(invitations => {
-      this.partnerInvitations = invitations;
-    }, () => {
-      this.partnerInvitations = [];
-      this.actionFeedbackTone = 'error';
-      this.actionFeedback = 'Impossible de charger les invitations partenaires.';
-    });
-  }
-
-  canVerifyPartnerAccess(): boolean {
-    return this.currentRole === 'ADMIN' || this.currentRole === 'DSN_DIRECTOR';
-  }
-
   acceptInvitation(id: string): void {
-    this.invitationService.acceptInvitation(id).subscribe(() => {
-      this.actionFeedbackTone = 'success';
-      this.actionFeedback = 'Invitation acceptee.';
-      this.loadInvitations();
+    this.invitationService.acceptInvitation(id).subscribe({
+      next: (updated) => {
+        if (!updated) {
+          this.actionFeedbackTone = 'error';
+          this.actionFeedback = 'Réponse impossible (invitation non autorisée ou expirée).';
+          return;
+        }
+        this.actionFeedbackTone = 'success';
+        this.actionFeedback = 'Invitation acceptée.';
+        this.loadInvitations();
+      },
+      error: () => {
+        this.actionFeedbackTone = 'error';
+        this.actionFeedback = 'Réponse refusée par le serveur (403 ou état invalide).';
+      },
     });
   }
 
-  declineInvitation(id: string): void {
-    const reason = prompt('Motif du refus (optionnel):');
-    this.invitationService.declineInvitation(id, reason || undefined).subscribe(() => {
-      this.actionFeedbackTone = 'success';
-      this.actionFeedback = 'Invitation refusee.';
-      this.loadInvitations();
+  declineInvitation(id: string, reason?: string): void {
+    this.invitationService.declineInvitation(id, reason || undefined).subscribe({
+      next: (updated) => {
+        if (!updated) {
+          this.actionFeedbackTone = 'error';
+          this.actionFeedback = 'Réponse impossible (invitation non autorisée ou expirée).';
+          return;
+        }
+        this.actionFeedbackTone = 'success';
+        this.actionFeedback = 'Invitation refusée.';
+        this.closeDeclineModal();
+        this.loadInvitations();
+      },
+      error: () => {
+        this.actionFeedbackTone = 'error';
+        this.actionFeedback = 'Réponse refusée par le serveur (403 ou état invalide).';
+      },
     });
   }
 
-  verifyPartnerAccess(id: string): void {
-    if (!this.canVerifyPartnerAccess()) {
-      this.actionFeedbackTone = 'error';
-      this.actionFeedback = 'Votre role ne peut pas verifier les acces partenaires.';
+  openDeclineModal(invitation: Invitation): void {
+    this.declineModalInvitation = invitation;
+    this.declineReason = '';
+  }
+
+  closeDeclineModal(): void {
+    this.declineModalInvitation = null;
+    this.declineReason = '';
+  }
+
+  confirmDeclineInvitation(): void {
+    if (!this.declineModalInvitation) {
       return;
     }
-
-    this.invitationService.verifyPartnerAccess(id, this.currentUserName).subscribe(() => {
-      this.actionFeedbackTone = 'success';
-      this.actionFeedback = 'Acces partenaire verifie avec succes.';
-      this.loadPartnerInvitations();
-    });
+    this.declineInvitation(this.declineModalInvitation.id, this.declineReason.trim() || undefined);
   }
 
   getTabCount(tab: InvitationTab): number {
-    if (tab === 'PARTNER_ACCESS') {
-      return this.partnerInvitations.length;
+    return this.invitations.filter(invitation => this.getInvitationBucket(invitation) === tab).length;
+  }
+
+  getInvitationStatusLabel(invitation: Invitation): string {
+    if (this.isExpiredInvitation(invitation)) {
+      return 'EXPIRÉE';
     }
 
-    return this.invitations.filter(invitation => invitation.status === tab).length;
-  }
-
-  getPendingPartnerVerificationCount(): number {
-    return this.partnerInvitations.filter(invitation => !invitation.isVerifiedByDsn).length;
-  }
-
-  getInvitationStatusLabel(status: InvitationStatus): string {
     const labelMap: Record<InvitationStatus, string> = {
       PENDING: 'EN ATTENTE',
-      ACCEPTED: 'ACCEPTEE',
-      DECLINED: 'REFUSEE',
-      CANCELLED: 'ANNULEE'
+      ACCEPTED: 'ACCEPTÉE',
+      DECLINED: 'REFUSÉE',
+      EXPIRED: 'EXPIRÉE',
+      CANCELLED: 'ANNULÉE'
     };
-    return labelMap[status];
+    return labelMap[invitation.status];
   }
 
-  getInvitationStatusBadgeClass(status: InvitationStatus): string {
+  getInvitationStatusBadgeClass(status: InvitationStatus, invitation: Invitation): string {
+    if (this.isExpiredInvitation(invitation)) {
+      return 'bg-slate-500/10 text-slate-700 dark:text-slate-300';
+    }
+
     const classMap: Record<InvitationStatus, string> = {
       PENDING: 'bg-warning-500/10 text-warning-700 dark:text-warning-300',
       ACCEPTED: 'bg-success-500/10 text-success-700 dark:text-success-300',
       DECLINED: 'bg-error-500/10 text-error-700 dark:text-error-300',
+      EXPIRED: 'bg-slate-500/10 text-slate-700 dark:text-slate-300',
       CANCELLED: 'bg-slate-500/10 text-slate-700 dark:text-slate-300'
     };
     return classMap[status];
@@ -368,6 +455,158 @@ export class InvitationsComponent implements OnInit {
 
   resetSearch(): void {
     this.searchTerm = '';
+    this.directionFilter = 'ALL';
+  }
+
+  applyFilters(): void {
+    // UI intentionnellement simple: les filtres sont appliqués en temps réel via les getters.
+    this.actionFeedback = '';
+  }
+
+  isExpiredInvitation(invitation: Invitation): boolean {
+    if (invitation.status === InvitationStatus.EXPIRED) {
+      return true;
+    }
+
+    if (invitation.status !== InvitationStatus.PENDING) {
+      return false;
+    }
+
+    const expirationDate = invitation.expiresAt || invitation.eventDate;
+    const eventDate = expirationDate instanceof Date ? expirationDate : new Date(expirationDate);
+    return eventDate.getTime() < Date.now();
+  }
+
+  getEventModeLabel(invitation: Invitation): string {
+    if (invitation.eventMode === 'EN_LIGNE') {
+      return 'En ligne';
+    }
+    if (invitation.eventMode === 'HYBRIDE') {
+      return 'Hybride';
+    }
+
+    if (this.isOnlineInvitation(invitation)) {
+      return 'En ligne';
+    }
+
+    return 'Présentiel';
+  }
+
+  isOnlineInvitation(invitation: Invitation): boolean {
+    if (invitation.eventMode === 'EN_LIGNE' || invitation.eventMode === 'HYBRIDE') {
+      return true;
+    }
+    const link = (invitation.onlineMeetingLink || '').toLowerCase();
+    const location = (invitation.eventLocation || '').toLowerCase();
+    return link.startsWith('https://') || location.includes('http') || location.includes('zoom') || location.includes('teams') || location.includes('meet');
+  }
+
+  openInvitationDetails(invitation: Invitation): void {
+    this.selectedInvitation = invitation;
+  }
+
+  closeInvitationDetails(): void {
+    this.selectedInvitation = null;
+  }
+
+  openEvent(eventId: string): void {
+    if (!eventId) {
+      this.actionFeedbackTone = 'error';
+      this.actionFeedback = 'Impossible d ouvrir l evenement: identifiant manquant.';
+      return;
+    }
+    void this.router.navigate(['/events'], { queryParams: { eventId } });
+  }
+
+  private getInvitationBucket(invitation: Invitation): InvitationTab {
+    if (invitation.status === InvitationStatus.EXPIRED || this.isExpiredInvitation(invitation)) {
+      return 'EXPIRED';
+    }
+
+    if (invitation.status === InvitationStatus.ACCEPTED) {
+      return 'ACCEPTED';
+    }
+    if (invitation.status === InvitationStatus.DECLINED || invitation.status === InvitationStatus.CANCELLED) {
+      return 'DECLINED';
+    }
+    return 'PENDING';
+  }
+
+  private matchesDirectionFilter(invitation: Invitation): boolean {
+    if (this.directionFilter === 'ALL') {
+      return true;
+    }
+
+    const invitationRecipient = (invitation.recipientUsername || invitation.recipientId || '').trim().toLowerCase();
+    const invitationRecipientEmail = (invitation.recipientEmail || '').trim().toLowerCase();
+    const invitationSender = (invitation.senderUsername || invitation.senderId || '').trim().toLowerCase();
+
+    const currentCandidates = [
+      this.currentUserId,
+      this.currentUsername,
+      this.currentEmail,
+    ]
+      .map((value) => (value || '').trim().toLowerCase())
+      .filter((value) => !!value);
+
+    const isRecipient = currentCandidates.some((candidate) =>
+      candidate === invitationRecipient || candidate === invitationRecipientEmail,
+    );
+    const isSender = currentCandidates.some((candidate) => candidate === invitationSender);
+
+    if (this.directionFilter === 'RECEIVED') {
+      return isRecipient;
+    }
+
+    return isSender;
+  }
+
+  canRespondToInvitation(invitation: Invitation): boolean {
+    if (invitation.status !== InvitationStatus.PENDING || this.isExpiredInvitation(invitation)) {
+      return false;
+    }
+
+    const invitationRecipient = (invitation.recipientUsername || invitation.recipientId || '').trim().toLowerCase();
+    const invitationRecipientEmail = (invitation.recipientEmail || '').trim().toLowerCase();
+    const currentCandidates = [
+      this.currentUserId,
+      this.currentUsername,
+      this.currentEmail,
+    ]
+      .map((value) => (value || '').trim().toLowerCase())
+      .filter((value) => !!value);
+
+    return currentCandidates.some((candidate) =>
+      candidate === invitationRecipient || candidate === invitationRecipientEmail,
+    );
+  }
+
+  getResponseUnavailableReason(invitation: Invitation): string {
+    if (invitation.status !== InvitationStatus.PENDING) {
+      return 'Invitation deja traitee.';
+    }
+
+    if (this.isExpiredInvitation(invitation)) {
+      return 'Invitation expiree.';
+    }
+
+    return 'Reponse reservee au destinataire.';
+  }
+
+  private tryOpenInvitationFromRoute(): void {
+    if (!this.routeInvitationId || this.invitations.length === 0) {
+      return;
+    }
+
+    const target = this.invitations.find((invitation) => invitation.id === this.routeInvitationId);
+    if (!target) {
+      this.actionFeedbackTone = 'error';
+      this.actionFeedback = 'Invitation introuvable ou non autorisee pour ce compte.';
+      return;
+    }
+
+    this.openInvitationDetails(target);
+    this.routeInvitationId = '';
   }
 
   private matchesSearch(invitation: Invitation): boolean {

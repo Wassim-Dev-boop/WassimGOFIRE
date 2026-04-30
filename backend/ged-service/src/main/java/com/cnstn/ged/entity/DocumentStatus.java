@@ -5,5 +5,6 @@ public enum DocumentStatus {
     IN_REVIEW,
     APPROVED,
     PUBLISHED,
-    REJECTED
+    REJECTED,
+    ARCHIVED
 }

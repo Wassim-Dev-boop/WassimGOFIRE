@@ -3,16 +3,24 @@ package com.cnstn.reservation.controller;
 import com.cnstn.reservation.dto.ConflictCheckResponse;
 import com.cnstn.reservation.dto.PageResponse;
 import com.cnstn.reservation.dto.ReservationCreateRequest;
+import com.cnstn.reservation.dto.ReservationDocumentContent;
+import com.cnstn.reservation.dto.ReservationDocumentResponse;
 import com.cnstn.reservation.dto.ReservationResponse;
 import com.cnstn.reservation.dto.SecurityValidationRequest;
+import com.cnstn.reservation.entity.EventMode;
+import com.cnstn.reservation.entity.ReservationStatus;
 import com.cnstn.reservation.service.ReservationService;
 import jakarta.validation.Valid;
 import java.security.Principal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,8 +44,17 @@ public class ReservationController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
-    public PageResponse<ReservationResponse> list(Pageable pageable) {
-        return reservationService.list(pageable);
+    public PageResponse<ReservationResponse> list(
+            Pageable pageable,
+            @RequestParam(required = false) UUID eventId,
+            @RequestParam(required = false) ReservationStatus status,
+            @RequestParam(required = false) String requesterUsername,
+            @RequestParam(required = false) UUID roomId,
+            @RequestParam(required = false) UUID equipmentId,
+            @RequestParam(required = false) EventMode eventMode,
+            @RequestParam(required = false) String search
+    ) {
+        return reservationService.list(pageable, eventId, status, requesterUsername, roomId, equipmentId, eventMode, search);
     }
 
     @GetMapping("/{id}")
@@ -46,22 +63,49 @@ public class ReservationController {
         return reservationService.getById(id);
     }
 
+    @GetMapping("/events/{eventId}")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
+    public List<ReservationResponse> listByEvent(@PathVariable UUID eventId) {
+        return reservationService.listByEventId(eventId);
+    }
+
+    @GetMapping("/{id}/documents")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
+    public List<ReservationDocumentResponse> listDocuments(@PathVariable UUID id) {
+        return reservationService.listDocuments(id);
+    }
+
+    @GetMapping("/{id}/documents/latest/download")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
+    public ResponseEntity<byte[]> downloadLatestDocument(@PathVariable UUID id) {
+        ReservationDocumentContent content = reservationService.downloadLatestDocument(id);
+        return toPdfResponse(content);
+    }
+
+    @GetMapping("/{id}/documents/{documentId}/download")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
+    public ResponseEntity<byte[]> downloadDocument(@PathVariable UUID id, @PathVariable UUID documentId) {
+        ReservationDocumentContent content = reservationService.downloadDocument(id, documentId);
+        return toPdfResponse(content);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_QUALITE')")
+    @PreAuthorize("hasAnyRole('EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_QUALITE','RESPONSABLE_SALLE','ADMIN')")
     public ReservationResponse create(@Valid @RequestBody ReservationCreateRequest request, Principal principal) {
         return reservationService.create(request, principal.getName());
     }
 
     @GetMapping("/conflicts")
-    @PreAuthorize("hasRole('RESPONSABLE_SECURITE')")
+    @PreAuthorize("hasAnyRole('RESPONSABLE_SECURITE','RESPONSABLE_SALLE','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_QUALITE','ADMIN')")
     public ConflictCheckResponse conflicts(
             @RequestParam(required = false) UUID roomId,
             @RequestParam(required = false) UUID equipmentId,
+            @RequestParam(required = false) Integer quantityRequested,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startAt,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endAt
     ) {
-        return reservationService.checkConflict(roomId, equipmentId, startAt, endAt);
+        return reservationService.checkConflict(roomId, equipmentId, startAt, endAt, quantityRequested);
     }
 
     @PutMapping("/{id}/security-validation")
@@ -71,6 +115,16 @@ public class ReservationController {
             @Valid @RequestBody SecurityValidationRequest request,
             Principal principal
     ) {
-        return reservationService.securityValidation(id, request.approved(), principal.getName());
+        return reservationService.securityValidation(id, request.approved(), principal.getName(), request.decisionComment());
+    }
+
+    private ResponseEntity<byte[]> toPdfResponse(ReservationDocumentContent content) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(content.mimeType()))
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + content.fileName() + "\""
+                )
+                .body(content.content());
     }
 }

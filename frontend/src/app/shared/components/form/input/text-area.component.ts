@@ -28,7 +28,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 })
 export class TextAreaComponent {
 
-  @Input() placeholder = 'Enter your message';
+  @Input() placeholder = 'Saisissez votre message';
   @Input() rows = 3;
   @Input() value = '';
   @Input() className = '';

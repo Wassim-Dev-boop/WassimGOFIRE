@@ -1,12 +1,16 @@
 package com.cnstn.notification.controller;
 
+import com.cnstn.notification.dto.EmailDeliveryLogResponse;
+import com.cnstn.notification.dto.EmailDeliveryStatusResponse;
 import com.cnstn.notification.dto.NotificationCreateRequest;
 import com.cnstn.notification.dto.NotificationResponse;
+import com.cnstn.notification.dto.PageResponse;
+import com.cnstn.notification.dto.UnreadCountResponse;
 import com.cnstn.notification.service.NotificationService;
 import jakarta.validation.Valid;
 import java.security.Principal;
-import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -30,9 +35,14 @@ public class NotificationController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
-    public List<NotificationResponse> myNotifications(Principal principal) {
-        return notificationService.myNotifications(principal.getName());
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE','RESPONSABLE_IT')")
+    public PageResponse<NotificationResponse> myNotifications(
+            Principal principal,
+            Pageable pageable,
+            @RequestParam(required = false) Boolean unread,
+            @RequestParam(required = false) String search
+    ) {
+        return notificationService.myNotifications(principal.getName(), pageable, unread, search);
     }
 
     @PostMapping
@@ -43,14 +53,49 @@ public class NotificationController {
     }
 
     @PutMapping("/{id}/read")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE','RESPONSABLE_IT')")
     public NotificationResponse markRead(@PathVariable UUID id, Principal principal) {
         return notificationService.markRead(id, principal.getName());
     }
 
+    @PutMapping("/read-all")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE','RESPONSABLE_IT')")
+    public void markAllRead(Principal principal) {
+        notificationService.markAllRead(principal.getName());
+    }
+
+    @GetMapping("/unread-count")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE','RESPONSABLE_IT')")
+    public UnreadCountResponse unreadCount(Principal principal) {
+        return new UnreadCountResponse(notificationService.unreadCount(principal.getName()));
+    }
+
     @GetMapping("/stream")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_SALLE','RESPONSABLE_SECURITE','DIRECTEUR_DSN','RESPONSABLE_QUALITE','RESPONSABLE_IT')")
     public SseEmitter stream(Principal principal) {
         return notificationService.subscribe(principal.getName());
+    }
+
+    @GetMapping("/email-logs")
+    @PreAuthorize("hasAnyRole('ADMIN','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
+    public PageResponse<EmailDeliveryLogResponse> emailLogs(
+            @RequestParam(required = false) UUID notificationId,
+            @RequestParam(required = false) String status,
+            Pageable pageable
+    ) {
+        return notificationService.emailLogs(notificationId, status, pageable);
+    }
+
+    @GetMapping("/{id}/email-status")
+    @PreAuthorize("hasAnyRole('ADMIN','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
+    public EmailDeliveryStatusResponse emailStatus(@PathVariable UUID id) {
+        return notificationService.emailStatus(id);
+    }
+
+    @PostMapping("/{id}/resend-email")
+    @PreAuthorize("hasAnyRole('ADMIN','DIRECTEUR_DSN','RESPONSABLE_QUALITE')")
+    public EmailDeliveryStatusResponse resendEmail(@PathVariable UUID id) {
+        return notificationService.resendEmail(id);
     }
 }

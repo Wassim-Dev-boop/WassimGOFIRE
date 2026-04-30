@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/password")
+@RequestMapping({"/api/v1/password", "/api/v1/auth"})
 public class PasswordRecoveryController {
 
     private final PasswordRecoveryService passwordRecoveryService;
@@ -22,15 +22,14 @@ public class PasswordRecoveryController {
         this.passwordRecoveryService = passwordRecoveryService;
     }
 
-    @PostMapping("/forgot")
+    @PostMapping({"/forgot", "/forgot-password"})
     @ResponseStatus(HttpStatus.ACCEPTED)
     public PasswordResetResponse forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         return passwordRecoveryService.forgotPassword(request);
     }
 
-    @PostMapping("/reset")
+    @PostMapping({"/reset", "/reset-password"})
     public PasswordResetResponse resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         return passwordRecoveryService.resetPassword(request);
     }
 }
-

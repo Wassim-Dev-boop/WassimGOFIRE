@@ -17,6 +17,22 @@ services:
       timeout: 5s
       retries: 10
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: cnstn-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@cnstn.tn}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-Admin@123}
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./infra/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   keycloak:
     image: quay.io/keycloak/keycloak:24.0
     container_name: cnstn-keycloak
@@ -118,6 +134,8 @@ services:
       KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/cnstn-intranet
       NOTIFICATION_SERVICE_URL: http://notification-service:8086
       NOTIFICATION_INTERNAL_API_KEY: cnstn-internal-api-key-change-me
+      AUTH_USER_SERVICE_URL: http://auth-user-service:8081
+      AUTH_USER_INTERNAL_API_KEY: cnstn-internal-api-key-change-me
       ZOOM_SDK_KEY: ${ZOOM_SDK_KEY:-}
       ZOOM_SDK_SECRET: ${ZOOM_SDK_SECRET:-}
     ports:
@@ -163,6 +181,7 @@ services:
     environment:
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: intervention-service
       DB_URL: jdbc:postgresql://postgres:5432/intervention_db
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
@@ -192,6 +211,8 @@ services:
       DB_USERNAME: postgres
       NOTIFICATION_SERVICE_URL: http://notification-service:8086
       NOTIFICATION_INTERNAL_API_KEY: cnstn-internal-api-key-change-me
+      AUTH_USER_SERVICE_URL: http://auth-user-service:8081
+      AUTH_USER_INTERNAL_API_KEY: cnstn-internal-api-key-change-me
       DB_PASSWORD: postgres
       KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/cnstn-intranet
     ports:
@@ -218,14 +239,16 @@ services:
       DB_PASSWORD: postgres
       KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/cnstn-intranet
       NOTIFICATION_INTERNAL_API_KEY: cnstn-internal-api-key-change-me
-      MAIL_HOST: ${MAIL_HOST:-mailpit}
-      MAIL_PORT: ${MAIL_PORT:-1025}
+      AUTH_USER_SERVICE_URL: http://auth-user-service:8081
+      MAIL_ENABLED: ${MAIL_ENABLED:-true}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-no-reply@cnstn.local}
-      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
-      MAIL_SMTP_STARTTLS_ENABLE: ${MAIL_SMTP_STARTTLS_ENABLE:-false}
-      MAIL_SMTP_STARTTLS_REQUIRED: ${MAIL_SMTP_STARTTLS_REQUIRED:-false}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-true}
+      MAIL_SMTP_STARTTLS_ENABLE: ${MAIL_SMTP_STARTTLS_ENABLE:-true}
+      MAIL_SMTP_STARTTLS_REQUIRED: ${MAIL_SMTP_STARTTLS_REQUIRED:-true}
     ports:
       - "8086:8086"
     depends_on:
@@ -233,14 +256,6 @@ services:
       - discovery-server
       - keycloak
       - postgres
-      - mailpit
-
-  mailpit:
-    image: axllent/mailpit:latest
-    container_name: cnstn-mailpit
-    ports:
-      - "1025:1025"
-      - "8025:8025"
 
   reporting-service:
     build:
@@ -257,6 +272,8 @@ services:
       DB_PASSWORD: postgres
       KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/cnstn-intranet
       NOTIFICATION_INTERNAL_API_KEY: cnstn-internal-api-key-change-me
+      AUTH_USER_SERVICE_URL: http://auth-user-service:8081
+      AUTH_USER_INTERNAL_API_KEY: cnstn-internal-api-key-change-me
     ports:
       - "8087:8087"
     depends_on:
@@ -296,3 +313,4 @@ services:
 
 volumes:
   postgres_data:
+  pgadmin_data:

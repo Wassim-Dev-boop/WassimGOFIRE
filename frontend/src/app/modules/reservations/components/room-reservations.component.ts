@@ -1,14 +1,18 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AppRole, Room, RoomReservation } from '../../../core/models';
+import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { AppRole, Event, Room, RoomReservation } from '../../../core/models';
 import { AuthService } from '../../../core/services/auth.service';
+import { EventService } from '../../../core/services/event.service';
 import { ReservationService } from '../../../core/services/reservation.service';
 import { Option, SelectComponent } from '../../../shared/components/form/select/select.component';
 
 type RoomVisualStatus = 'LIBRE' | 'OCCUPEE' | 'MAINTENANCE';
 type RoomStatusFilter = 'all' | 'available' | 'occupied' | 'maintenance';
 type CapacityFilter = 'all' | 'small' | 'medium' | 'large';
+type RoomBusinessStatus = 'DISPONIBLE' | 'OCCUPEE' | 'MAINTENANCE' | 'INACTIVE';
 
 @Component({
   selector: 'app-room-reservations',
@@ -33,14 +37,43 @@ type CapacityFilter = 'all' | 'small' | 'medium' | 'large';
             </div>
           </div>
 
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              *ngIf="canManageInventory()"
+              type="button"
+              data-testid="rooms-create-button-header"
+              (click)="openCreateRoomModal()"
+              class="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-brand-300 px-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-brand-500/50 dark:text-brand-300 dark:hover:bg-brand-500/10"
+            >
+              <span class="text-lg leading-none">+</span>
+              Nouvelle salle
+            </button>
+
+            <button
+              type="button"
+              (click)="openNewReservationModal()"
+              [disabled]="!canCreateReservations()"
+              class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-success-500 px-4 text-sm font-semibold text-white transition hover:bg-success-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span class="text-lg leading-none">+</span>
+              Nouvelle reservation
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-5 inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-900">
           <button
             type="button"
-            (click)="openNewReservationModal()"
-            [disabled]="!canCreateReservations()"
-            class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-success-500 px-4 text-sm font-semibold text-white transition hover:bg-success-600 disabled:cursor-not-allowed disabled:opacity-50"
+            class="h-9 rounded-lg bg-white px-4 text-sm font-semibold text-brand-700 shadow-theme-xs dark:bg-white/[0.03] dark:text-brand-300"
           >
-            <span class="text-lg leading-none">+</span>
-            Nouvelle reservation
+            Salles
+          </button>
+          <button
+            type="button"
+            (click)="goToEquipmentManagement()"
+            class="h-9 rounded-lg px-4 text-sm font-semibold text-gray-600 transition hover:bg-white hover:text-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03] dark:hover:text-white/90"
+          >
+            Equipements logistiques
           </button>
         </div>
 
@@ -66,7 +99,7 @@ type CapacityFilter = 'all' | 'small' | 'medium' | 'large';
           </article>
         </div>
 
-        <div class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_220px_220px_auto] lg:items-center">
+        <div class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_220px_220px_auto_auto] lg:items-center">
           <input
             type="text"
             [(ngModel)]="searchTerm"
@@ -88,15 +121,129 @@ type CapacityFilter = 'all' | 'small' | 'medium' | 'large';
 
           <button
             type="button"
+            (click)="applyFilters()"
+            class="h-11 rounded-xl bg-brand-500 px-4 text-sm font-semibold text-white transition hover:bg-brand-600"
+          >
+            Appliquer
+          </button>
+
+          <button
+            type="button"
             (click)="resetFilters()"
             class="h-11 rounded-xl border border-gray-300 px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
           >
             Reinitialiser
           </button>
         </div>
+
+        <div
+          *ngIf="canManageInventory()"
+          class="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900"
+        >
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 class="text-base font-semibold text-gray-900 dark:text-white/90">Espace Responsable salle</h2>
+              <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                Gestion metier complete: salles, disponibilites, equipements et verification de chevauchement.
+              </p>
+            </div>
+            <button
+              type="button"
+              (click)="goToEquipmentManagement()"
+              class="inline-flex h-10 items-center justify-center rounded-xl border border-brand-300 px-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-brand-500/50 dark:text-brand-300 dark:hover:bg-brand-500/10"
+            >
+              Gerer les equipements
+            </button>
+          </div>
+
+          <div class="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-2">
+            <article class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-white/[0.03]">
+              <h3 class="text-sm font-semibold text-gray-900 dark:text-white/90">CRUD salles</h3>
+              <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                Ajouter, modifier, desactiver ou archiver une salle avec historique preserve.
+              </p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  data-testid="rooms-create-button-crud-card"
+                  (click)="openCreateRoomModal()"
+                  class="h-10 rounded-lg border border-brand-300 px-3 text-xs font-semibold text-brand-700 hover:bg-brand-50 dark:border-brand-500/50 dark:text-brand-300 dark:hover:bg-brand-500/10"
+                >
+                  + Nouvelle salle
+                </button>
+                <button
+                  type="button"
+                  (click)="focusRoomInventory()"
+                  class="h-10 rounded-lg border border-gray-300 px-3 text-xs font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+                >
+                  Voir disponibilite
+                </button>
+              </div>
+            </article>
+
+            <article class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-white/[0.03]">
+              <h3 class="text-sm font-semibold text-gray-900 dark:text-white/90">Verifier chevauchement</h3>
+              <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                Controle en temps reel des conflits de reservation avant enregistrement.
+              </p>
+              <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <app-select
+                  [(ngModel)]="overlapCheck.roomId"
+                  [options]="roomManagerRoomOptions"
+                  placeholder="Salle"
+                ></app-select>
+                <input
+                  type="datetime-local"
+                  [(ngModel)]="overlapCheck.startDate"
+                  class="h-10 rounded-lg border border-gray-300 bg-transparent px-3 text-xs text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                />
+                <input
+                  type="datetime-local"
+                  [(ngModel)]="overlapCheck.endDate"
+                  class="h-10 rounded-lg border border-gray-300 bg-transparent px-3 text-xs text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                />
+              </div>
+              <div class="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  (click)="runOverlapCheck()"
+                  [disabled]="isCheckingOverlap"
+                  class="h-10 rounded-lg bg-brand-500 px-4 text-xs font-semibold text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {{ isCheckingOverlap ? 'Verification...' : 'Verifier le creneau' }}
+                </button>
+                <p
+                  *ngIf="overlapCheckMessage"
+                  class="text-xs font-semibold"
+                  [ngClass]="overlapCheckTone === 'success'
+                    ? 'text-success-700 dark:text-success-300'
+                    : overlapCheckTone === 'error'
+                      ? 'text-error-700 dark:text-error-300'
+                      : 'text-gray-600 dark:text-gray-300'"
+                >
+                  {{ overlapCheckMessage }}
+                </p>
+              </div>
+            </article>
+          </div>
+        </div>
       </div>
 
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div
+        *ngIf="roomsLoading"
+        class="rounded-2xl border border-gray-200 bg-white px-6 py-8 text-center text-sm text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300"
+      >
+        Chargement des salles...
+      </div>
+
+      <div
+        *ngIf="!roomsLoading && roomsLoadError"
+        class="rounded-2xl border border-error-200 bg-error-50 px-6 py-4 text-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300"
+      >
+        {{ roomsLoadError }}
+      </div>
+
+      <div id="rooms-inventory-grid" class="grid max-h-[68vh] grid-cols-1 gap-4 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3">
         <article
           *ngFor="let room of filteredRooms"
           class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]"
@@ -132,7 +279,7 @@ type CapacityFilter = 'all' | 'small' | 'medium' | 'large';
             </div>
           </div>
 
-          <div class="mb-4 flex flex-wrap gap-2">
+          <div *ngIf="hasAmenities(room)" class="mb-4 flex flex-wrap gap-2">
             <span
               *ngFor="let amenity of room.amenities"
               class="inline-flex rounded-full border border-gray-200 bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
@@ -140,21 +287,126 @@ type CapacityFilter = 'all' | 'small' | 'medium' | 'large';
               {{ amenity }}
             </span>
           </div>
+          <p *ngIf="!hasAmenities(room)" class="mb-4 text-xs text-gray-500 dark:text-gray-400">
+            Aucun equipement logistique renseigne.
+          </p>
 
+          <div class="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+            <div class="flex items-center justify-between gap-2">
+              <span>Statut metier</span>
+              <span class="font-semibold">{{ getBusinessRoomStatusLabel(room) }}</span>
+            </div>
+            <div class="mt-1 line-clamp-2 text-gray-500 dark:text-gray-400">{{ room.description || 'Aucune description' }}</div>
+            <div class="mt-1 text-gray-500 dark:text-gray-400">Prochaine reservation: {{ getNextRoomReservationLabel(room.id) }}</div>
+          </div>
+
+          <div class="mb-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              (click)="openReservationModal(room)"
+              [disabled]="isRoomReservationDisabled(room)"
+              class="h-10 rounded-lg border border-gray-300 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700"
+              [ngClass]="
+                !isRoomReservationDisabled(room)
+                  ? 'text-gray-800 hover:bg-gray-100 dark:text-white/90 dark:hover:bg-white/[0.03]'
+                  : 'text-gray-500 dark:text-gray-400'
+              "
+            >
+              {{ getRoomReservationActionLabel(room) }}
+            </button>
+            <button
+              type="button"
+              (click)="openRoomPlanning(room)"
+              class="h-10 rounded-lg border border-gray-300 text-xs font-semibold text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+            >
+              Voir planning
+            </button>
+          </div>
+
+          <div *ngIf="canManageInventory()" class="mb-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              (click)="openRoomDetails(room)"
+              class="h-10 rounded-lg border border-gray-300 text-xs font-semibold text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+            >
+              Details
+            </button>
+            <button
+              type="button"
+              (click)="openEditRoomModal(room)"
+              class="h-10 rounded-lg border border-gray-300 text-xs font-semibold text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+            >
+              Modifier
+            </button>
+            <button
+              type="button"
+              (click)="setRoomBusinessStatus(room, 'MAINTENANCE')"
+              [disabled]="room.status === 'MAINTENANCE'"
+              class="h-10 rounded-lg border border-warning-300 text-xs font-semibold text-warning-700 transition hover:bg-warning-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-warning-500/50 dark:text-warning-300 dark:hover:bg-warning-500/10"
+            >
+              Maintenance
+            </button>
+            <button
+              type="button"
+              (click)="toggleRoomActive(room)"
+              class="h-10 rounded-lg border border-brand-300 text-xs font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-brand-500/50 dark:text-brand-300 dark:hover:bg-brand-500/10"
+            >
+              {{ room.isActive ? 'Desactiver' : 'Reactiver' }}
+            </button>
+            <button
+              type="button"
+              (click)="openArchiveRoomModal(room)"
+              class="h-10 rounded-lg border border-error-300 text-xs font-semibold text-error-700 transition hover:bg-error-50 dark:border-error-500/50 dark:text-error-300 dark:hover:bg-error-500/10"
+              >
+                Supprimer (archiver)
+              </button>
+          </div>
+        </article>
+      </div>
+
+      <div
+        *ngIf="!roomsLoading && filteredRooms.length === 0 && !roomsLoadError"
+        class="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-white/[0.03] dark:text-gray-400"
+      >
+        Aucune salle ne correspond aux filtres appliques.
+      </div>
+
+      <div
+        *ngIf="!roomsLoading && roomsTotalElements > 0"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-white/[0.03]"
+      >
+        <p class="text-sm text-gray-600 dark:text-gray-300">
+          Affichage {{ getPaginationStart(roomsPage, roomsPageSize, roomsTotalElements) }}-{{ getPaginationEnd(roomsPage, roomsPageSize, roomsTotalElements) }} sur {{ roomsTotalElements }} éléments
+        </p>
+        <div class="flex items-center gap-2">
           <button
             type="button"
-            (click)="openReservationModal(room)"
-            [disabled]="getRoomStatus(room) !== 'LIBRE' || !canCreateReservations()"
-            class="h-11 w-full rounded-lg border border-gray-300 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700"
-            [ngClass]="
-              getRoomStatus(room) === 'LIBRE'
-                ? 'text-gray-800 hover:bg-gray-100 dark:text-white/90 dark:hover:bg-white/[0.03]'
-                : 'text-gray-500 dark:text-gray-400'
-            "
+            (click)="previousRoomsPage()"
+            [disabled]="roomsPage === 0"
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300"
           >
-            {{ getRoomStatus(room) === 'LIBRE' ? 'Reserver' : 'Indisponible' }}
+            Precedent
           </button>
-        </article>
+          <button
+            *ngFor="let page of getVisiblePages(roomsPage, roomsTotalPages)"
+            type="button"
+            (click)="goToRoomsPage(page)"
+            class="rounded-lg border px-3 py-2 text-sm font-semibold transition dark:border-gray-700"
+            [ngClass]="page === roomsPage
+              ? 'border-brand-500 bg-brand-500 text-white'
+              : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.03]'"
+          >
+            {{ page + 1 }}
+          </button>
+          <button
+            type="button"
+            (click)="nextRoomsPage()"
+            [disabled]="roomsPage + 1 >= roomsTotalPages"
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300"
+          >
+            Suivant
+          </button>
+        </div>
       </div>
 
       <div
@@ -165,6 +417,16 @@ type CapacityFilter = 'all' | 'small' | 'medium' | 'large';
           : 'border-error-200 bg-error-50 text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300'"
       >
         {{ feedbackMessage }}
+      </div>
+
+      <div *ngIf="lastCreatedReservationId" class="flex justify-end">
+        <button
+          type="button"
+          (click)="downloadLatestReservationPdf()"
+          class="h-10 rounded-lg border border-brand-300 px-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-brand-500/50 dark:text-brand-300 dark:hover:bg-brand-500/10"
+        >
+          Telecharger PDF reservation
+        </button>
       </div>
 
       <div
@@ -187,6 +449,15 @@ type CapacityFilter = 'all' | 'small' | 'medium' | 'large';
           </div>
 
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="sm:col-span-2">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Evenement lie</label>
+              <app-select
+                [(ngModel)]="selectedEventId"
+                [options]="eventSelectOptions"
+                placeholder="Choisir un evenement"
+              ></app-select>
+            </div>
+
             <div class="sm:col-span-2">
               <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Salle</label>
               <app-select
@@ -263,10 +534,187 @@ type CapacityFilter = 'all' | 'small' | 'medium' | 'large';
           </div>
         </div>
       </div>
+
+      <div
+        *ngIf="isRoomFormModalOpen"
+        class="fixed inset-0 z-[110100] flex items-center justify-center bg-gray-950/60 p-4"
+      >
+        <div class="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 sm:p-6">
+          <div class="mb-5 flex items-start justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-semibold text-gray-900 dark:text-white/90">
+                {{ roomFormMode === 'create' ? 'Nouvelle salle' : 'Modifier salle' }}
+              </h2>
+              <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Gestion metier responsable salle</p>
+            </div>
+            <button
+              type="button"
+              (click)="closeRoomFormModal()"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+            >
+              x
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Nom</label>
+              <input
+                type="text"
+                [(ngModel)]="roomForm.name"
+                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Localisation</label>
+              <input
+                type="text"
+                [(ngModel)]="roomForm.location"
+                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Capacite</label>
+              <input
+                type="number"
+                min="1"
+                [(ngModel)]="roomForm.capacity"
+                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Statut</label>
+              <app-select
+                [(ngModel)]="roomForm.status"
+                [options]="roomStatusOptions"
+                placeholder="Choisir un statut"
+              ></app-select>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Description</label>
+              <textarea
+                rows="3"
+                [(ngModel)]="roomForm.description"
+                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              ></textarea>
+            </div>
+          </div>
+
+          <p *ngIf="roomFormError" class="mt-4 text-sm text-error-600 dark:text-error-300">{{ roomFormError }}</p>
+
+          <div class="mt-5 flex justify-end gap-2">
+            <button
+              type="button"
+              (click)="closeRoomFormModal()"
+              class="h-11 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              (click)="saveRoom()"
+              [disabled]="roomFormSaving"
+              class="h-11 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {{ roomFormSaving ? 'Enregistrement...' : 'Enregistrer' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        *ngIf="isRoomDetailsModalOpen && selectedRoomDetails"
+        class="fixed inset-0 z-[110050] flex items-center justify-center bg-gray-950/60 p-4"
+      >
+        <div class="w-full max-w-3xl rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 sm:p-6">
+          <div class="mb-4 flex items-center justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-semibold text-gray-900 dark:text-white/90">{{ selectedRoomDetails.name }}</h2>
+              <p class="text-sm text-gray-600 dark:text-gray-400">{{ selectedRoomDetails.location }} - {{ selectedRoomDetails.capacity }} places</p>
+            </div>
+            <button
+              type="button"
+              (click)="closeRoomDetailsModal()"
+              class="h-10 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+            >
+              Fermer
+            </button>
+          </div>
+
+          <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm dark:border-gray-700 dark:bg-gray-900">
+            <p class="font-medium text-gray-800 dark:text-gray-100">Description</p>
+            <p class="mt-1 text-gray-600 dark:text-gray-300">{{ selectedRoomDetails.description || 'Aucune description' }}</p>
+            <p class="mt-3 text-gray-600 dark:text-gray-300">
+              Statut actuel: <span class="font-semibold">{{ getBusinessRoomStatusLabel(selectedRoomDetails) }}</span>
+            </p>
+          </div>
+
+          <div class="mt-4">
+            <h3 class="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Reservations liees
+            </h3>
+            <div class="max-h-60 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700">
+              <table class="min-w-full">
+                <thead>
+                  <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Demandeur</th>
+                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Debut</th>
+                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Fin</th>
+                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let reservation of getRoomReservationsForDetails(selectedRoomDetails.id)" class="border-b border-gray-200 dark:border-gray-700">
+                    <td class="px-3 py-2 text-xs text-gray-700 dark:text-gray-200">{{ reservation.userName }}</td>
+                    <td class="px-3 py-2 text-xs text-gray-700 dark:text-gray-200">{{ reservation.startDate | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td class="px-3 py-2 text-xs text-gray-700 dark:text-gray-200">{{ reservation.endDate | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td class="px-3 py-2 text-xs text-gray-700 dark:text-gray-200">{{ reservation.status }}</td>
+                  </tr>
+                  <tr *ngIf="getRoomReservationsForDetails(selectedRoomDetails.id).length === 0">
+                    <td colspan="4" class="px-3 py-3 text-center text-xs text-gray-500 dark:text-gray-400">
+                      Aucune reservation liee pour cette salle.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        *ngIf="isArchiveRoomModalOpen && roomToArchive"
+        class="fixed inset-0 z-[110120] flex items-center justify-center bg-gray-950/60 p-4"
+      >
+        <div class="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 sm:p-6">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white/90">Archiver la salle</h2>
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            La salle <span class="font-semibold">{{ roomToArchive.name }}</span> sera desactivee. Les nouvelles reservations seront bloquees, l'historique reste conserve.
+          </p>
+
+          <div class="mt-5 flex justify-end gap-2">
+            <button
+              type="button"
+              (click)="closeArchiveRoomModal()"
+              class="h-10 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              (click)="archiveRoom()"
+              [disabled]="isArchivingRoom"
+              class="h-10 rounded-lg bg-error-500 px-4 text-sm font-semibold text-white hover:bg-error-600 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {{ isArchivingRoom ? 'Archivage...' : 'Confirmer archivage' }}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   `,
 })
-export class RoomReservationsComponent implements OnInit {
+export class RoomReservationsComponent implements OnInit, OnDestroy {
   currentRole: AppRole = 'EMPLOYEE';
   currentUserId = '';
   currentUserName = '';
@@ -276,6 +724,7 @@ export class RoomReservationsComponent implements OnInit {
     EMPLOYEE: 'Employe',
     MANAGER: 'Chef hierarchique',
     ROOM_MANAGER: 'Responsable salle',
+    IT_MANAGER: 'Responsable IT',
     SECURITY_MANAGER: 'Responsable securite',
     DSN_DIRECTOR: 'Directeur DSN',
     QUALITY_MANAGER: 'Responsable qualite',
@@ -283,13 +732,50 @@ export class RoomReservationsComponent implements OnInit {
 
   rooms: Room[] = [];
   roomReservations: RoomReservation[] = [];
+  events: Event[] = [];
 
   searchTerm = '';
   statusFilter: RoomStatusFilter = 'all';
   capacityFilter: CapacityFilter = 'all';
+  roomsPage = 0;
+  roomsPageSize = 10;
+  roomsTotalElements = 0;
+  roomsTotalPages = 0;
+  roomsLoading = false;
+  roomsLoadError = '';
+  private roomsPageSubscription?: Subscription;
 
   isModalOpen = false;
   selectedRoomId = '';
+  selectedEventId = '';
+  isRoomFormModalOpen = false;
+  roomFormMode: 'create' | 'edit' = 'create';
+  editingRoomId: string | null = null;
+  roomFormSaving = false;
+  roomFormError = '';
+  isRoomDetailsModalOpen = false;
+  selectedRoomDetails: Room | null = null;
+  isArchiveRoomModalOpen = false;
+  roomToArchive: Room | null = null;
+  isArchivingRoom = false;
+
+  overlapCheck = {
+    roomId: '',
+    startDate: '',
+    endDate: '',
+  };
+  isCheckingOverlap = false;
+  overlapCheckMessage = '';
+  overlapCheckTone: 'success' | 'error' | 'info' = 'info';
+
+  roomForm = {
+    name: '',
+    location: '',
+    description: '',
+    capacity: 10,
+    status: 'DISPONIBLE' as RoomBusinessStatus,
+    active: true,
+  };
 
   readonly statusFilterOptions: Option[] = [
     { value: 'all', label: 'Toutes' },
@@ -305,6 +791,20 @@ export class RoomReservationsComponent implements OnInit {
     { value: 'large', label: 'Grande (> 30)' },
   ];
 
+  readonly roomStatusOptions: Option[] = [
+    { value: 'DISPONIBLE', label: 'Disponible' },
+    { value: 'OCCUPEE', label: 'Occupee' },
+    { value: 'MAINTENANCE', label: 'Maintenance' },
+    { value: 'INACTIVE', label: 'Inactive' },
+  ];
+
+  get roomManagerRoomOptions(): Option[] {
+    return this.rooms.map((room) => ({
+      value: room.id,
+      label: `${room.name} (${this.getStatusLabel(this.getRoomStatus(room))})`,
+    }));
+  }
+
   get reservableRoomOptions(): Option[] {
     return this.reservableRooms.map((room) => ({
       value: room.id,
@@ -312,8 +812,18 @@ export class RoomReservationsComponent implements OnInit {
     }));
   }
 
+  get eventSelectOptions(): Option[] {
+    return this.events
+      .filter((event) => (event.eventMode ?? (event.onlineEvent ? 'EN_LIGNE' : 'PRESENTIEL')) !== 'EN_LIGNE')
+      .map((event) => ({
+      value: event.id,
+      label: `${event.title} [${event.eventMode ?? (event.onlineEvent ? 'EN_LIGNE' : 'PRESENTIEL')}] (${event.startDate.toLocaleDateString('fr-FR')})`,
+    }));
+  }
+
   feedbackMessage = '';
   feedbackTone: 'success' | 'error' = 'success';
+  lastCreatedReservationId = '';
 
   roomBooking = {
     title: '',
@@ -326,9 +836,20 @@ export class RoomReservationsComponent implements OnInit {
   constructor(
     private reservationService: ReservationService,
     private authService: AuthService,
+    private eventService: EventService,
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
+    this.roomsPageSubscription = this.reservationService.roomsPageState$.subscribe((pageState) => {
+      this.roomsPage = pageState.page;
+      this.roomsPageSize = pageState.size;
+      this.roomsTotalElements = pageState.totalElements;
+      const safeSize = Math.max(pageState.size || this.roomsPageSize || 1, 1);
+      const computedPages = pageState.totalElements > 0 ? Math.ceil(pageState.totalElements / safeSize) : 0;
+      this.roomsTotalPages = Math.max(pageState.totalPages || 0, computedPages);
+    });
+
     this.authService.currentUser$.subscribe((user) => {
       if (!user) {
         return;
@@ -339,34 +860,28 @@ export class RoomReservationsComponent implements OnInit {
       this.currentUserName = `${user.firstName} ${user.lastName}`.trim();
     });
 
+    this.initializeOverlapWindow();
     this.loadData();
   }
 
+  ngOnDestroy(): void {
+    this.roomsPageSubscription?.unsubscribe();
+  }
+
   loadData(): void {
-    this.reservationService.getRooms().subscribe((rooms) => {
-      this.rooms = rooms;
+    this.loadRooms();
+
+    this.reservationService.getRoomReservations({ page: 0, size: 500, sort: 'startAt,desc' }).subscribe((reservations) => {
+      this.roomReservations = reservations;
     });
 
-    this.reservationService.getRoomReservations().subscribe((reservations) => {
-      this.roomReservations = reservations;
+    this.eventService.getEvents().subscribe((events) => {
+      this.events = events;
     });
   }
 
   get filteredRooms(): Room[] {
-    const normalizedSearch = this.searchTerm.trim().toLowerCase();
-
     return this.rooms.filter((room) => {
-      const matchesSearch =
-        normalizedSearch.length === 0 ||
-        room.name.toLowerCase().includes(normalizedSearch) ||
-        room.description.toLowerCase().includes(normalizedSearch) ||
-        room.location.toLowerCase().includes(normalizedSearch) ||
-        room.amenities.some((amenity) => amenity.toLowerCase().includes(normalizedSearch));
-
-      if (!matchesSearch) {
-        return false;
-      }
-
       const status = this.getRoomStatus(room);
       if (this.statusFilter === 'available' && status !== 'LIBRE') {
         return false;
@@ -375,16 +890,6 @@ export class RoomReservationsComponent implements OnInit {
         return false;
       }
       if (this.statusFilter === 'maintenance' && status !== 'MAINTENANCE') {
-        return false;
-      }
-
-      if (this.capacityFilter === 'small' && room.capacity > 10) {
-        return false;
-      }
-      if (this.capacityFilter === 'medium' && (room.capacity <= 10 || room.capacity > 30)) {
-        return false;
-      }
-      if (this.capacityFilter === 'large' && room.capacity <= 30) {
         return false;
       }
 
@@ -399,6 +904,7 @@ export class RoomReservationsComponent implements OnInit {
   get canSubmitRoomBooking(): boolean {
     return (
       this.selectedRoomId.length > 0 &&
+      this.selectedEventId.length > 0 &&
       this.roomBooking.title.trim().length > 0 &&
       this.roomBooking.startDate.length > 0 &&
       this.roomBooking.endDate.length > 0 &&
@@ -434,9 +940,47 @@ export class RoomReservationsComponent implements OnInit {
     ].includes(this.currentRole);
   }
 
+  canManageInventory(): boolean {
+    return this.currentRole === 'ADMIN' || this.currentRole === 'ROOM_MANAGER';
+  }
+
+  isRoomReservationDisabled(room: Room): boolean {
+    return this.getRoomStatus(room) !== 'LIBRE' || !this.canCreateReservations();
+  }
+
+  getRoomReservationActionLabel(room: Room): string {
+    if (!this.canCreateReservations()) {
+      return 'Reservation indisponible (role)';
+    }
+    if (this.getRoomStatus(room) !== 'LIBRE') {
+      return 'Indisponible';
+    }
+    return 'Reserver';
+  }
+
+  hasAmenities(room: Room): boolean {
+    return Array.isArray(room.amenities) && room.amenities.length > 0;
+  }
+
+  goToEquipmentManagement(): void {
+    this.router.navigateByUrl('/reservations/equipements');
+  }
+
+  openRoomPlanning(room: Room): void {
+    this.openRoomDetails(room);
+  }
+
+  focusRoomInventory(): void {
+    const section = document.getElementById('rooms-inventory-grid');
+    section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   getRoomStatus(room: Room): RoomVisualStatus {
-    if (!room.isActive) {
+    if (!room.isActive || room.status === 'INACTIVE' || room.status === 'MAINTENANCE') {
       return 'MAINTENANCE';
+    }
+    if (room.status === 'OCCUPEE') {
+      return 'OCCUPEE';
     }
 
     if (this.hasCurrentReservation(room.id)) {
@@ -444,6 +988,20 @@ export class RoomReservationsComponent implements OnInit {
     }
 
     return 'LIBRE';
+  }
+
+  getBusinessRoomStatusLabel(room: Room): string {
+    const status = room.status ?? (room.isActive ? 'DISPONIBLE' : 'INACTIVE');
+    if (status === 'DISPONIBLE') {
+      return 'Disponible';
+    }
+    if (status === 'OCCUPEE') {
+      return 'Occupee';
+    }
+    if (status === 'MAINTENANCE') {
+      return 'Maintenance';
+    }
+    return 'Inactive';
   }
 
   getRoomOccupancy(room: Room): number {
@@ -500,6 +1058,7 @@ export class RoomReservationsComponent implements OnInit {
     }
 
     this.selectedRoomId = room.id;
+    this.selectedEventId = this.eventSelectOptions[0]?.value || '';
     this.initializeBookingWindow();
     this.isModalOpen = true;
   }
@@ -511,14 +1070,232 @@ export class RoomReservationsComponent implements OnInit {
 
     const firstRoom = this.reservableRooms[0];
     this.selectedRoomId = firstRoom ? firstRoom.id : '';
+    this.selectedEventId = this.eventSelectOptions[0]?.value || '';
     this.initializeBookingWindow();
     this.isModalOpen = true;
+  }
+
+  openCreateRoomModal(): void {
+    if (!this.canManageInventory()) {
+      return;
+    }
+
+    this.roomFormMode = 'create';
+    this.editingRoomId = null;
+    this.roomFormError = '';
+    this.roomForm = {
+      name: '',
+      location: '',
+      description: '',
+      capacity: 10,
+      status: 'DISPONIBLE',
+      active: true,
+    };
+    this.isRoomFormModalOpen = true;
+  }
+
+  openEditRoomModal(room: Room): void {
+    if (!this.canManageInventory()) {
+      return;
+    }
+
+    this.roomFormMode = 'edit';
+    this.editingRoomId = room.id;
+    this.roomFormError = '';
+    this.roomForm = {
+      name: room.name,
+      location: room.location,
+      description: room.description || '',
+      capacity: room.capacity,
+      status: room.status ?? (room.isActive ? 'DISPONIBLE' : 'INACTIVE'),
+      active: room.isActive,
+    };
+    this.isRoomFormModalOpen = true;
+  }
+
+  closeRoomFormModal(): void {
+    this.isRoomFormModalOpen = false;
+    this.roomFormSaving = false;
+  }
+
+  saveRoom(): void {
+    if (!this.canManageInventory()) {
+      return;
+    }
+
+    const name = this.roomForm.name.trim();
+    const location = this.roomForm.location.trim();
+    const description = this.roomForm.description.trim();
+    const capacity = Number(this.roomForm.capacity);
+
+    if (!name || !location || !Number.isFinite(capacity) || capacity < 1) {
+      this.roomFormError = 'Nom, localisation et capacite valide sont obligatoires.';
+      return;
+    }
+
+    this.roomFormSaving = true;
+    this.roomFormError = '';
+
+    const payload: Omit<Room, 'id' | 'createdAt'> = {
+      name,
+      location,
+      description,
+      capacity,
+      status: this.roomForm.status,
+      amenities: [],
+      isActive: this.roomForm.status !== 'INACTIVE' && this.roomForm.active,
+    };
+
+    const request$ = this.roomFormMode === 'create'
+      ? this.reservationService.addRoom(payload)
+      : this.reservationService.updateRoom(this.editingRoomId!, payload);
+
+    request$.subscribe({
+      next: () => {
+        this.showFeedback(
+          this.roomFormMode === 'create' ? 'Salle creee avec succes.' : 'Salle mise a jour avec succes.',
+          'success',
+        );
+        this.closeRoomFormModal();
+        this.loadData();
+      },
+      error: (error) => {
+        this.roomFormSaving = false;
+        this.roomFormError = this.readBackendError(error, 'Impossible d enregistrer la salle.');
+      },
+    });
+  }
+
+  openRoomDetails(room: Room): void {
+    this.selectedRoomDetails = room;
+    this.isRoomDetailsModalOpen = true;
+  }
+
+  closeRoomDetailsModal(): void {
+    this.isRoomDetailsModalOpen = false;
+    this.selectedRoomDetails = null;
+  }
+
+  getRoomReservationsForDetails(roomId: string): RoomReservation[] {
+    return this.roomReservations
+      .filter((reservation) => reservation.roomId === roomId)
+      .sort((left, right) => right.startDate.getTime() - left.startDate.getTime());
+  }
+
+  getNextRoomReservationLabel(roomId: string): string {
+    const now = Date.now();
+    const nextReservation = this.roomReservations
+      .filter((reservation) => reservation.roomId === roomId && reservation.endDate.getTime() >= now)
+      .sort((left, right) => left.startDate.getTime() - right.startDate.getTime())[0];
+
+    if (!nextReservation) {
+      return 'Aucune';
+    }
+
+    return `${nextReservation.startDate.toLocaleString('fr-FR')}`;
+  }
+
+  setRoomBusinessStatus(room: Room, status: RoomBusinessStatus): void {
+    if (!this.canManageInventory()) {
+      return;
+    }
+
+    const payload: Partial<Room> = {
+      status,
+      isActive: status !== 'INACTIVE',
+    };
+
+    this.reservationService.updateRoom(room.id, payload).subscribe({
+      next: () => {
+        this.showFeedback(`Statut salle mis a jour: ${this.getBusinessRoomStatusLabel({ ...room, ...payload })}.`, 'success');
+        this.loadData();
+      },
+      error: (error) => {
+        this.showFeedback(this.readBackendError(error, 'Mise a jour du statut salle impossible.'), 'error');
+      },
+    });
+  }
+
+  toggleRoomActive(room: Room): void {
+    const nextStatus: RoomBusinessStatus = room.isActive ? 'INACTIVE' : 'DISPONIBLE';
+    this.setRoomBusinessStatus(room, nextStatus);
+  }
+
+  runOverlapCheck(): void {
+    if (!this.overlapCheck.roomId || !this.overlapCheck.startDate || !this.overlapCheck.endDate) {
+      this.overlapCheckTone = 'error';
+      this.overlapCheckMessage = 'Selectionnez la salle, le debut et la fin du creneau.';
+      return;
+    }
+
+    const startDate = new Date(this.overlapCheck.startDate);
+    const endDate = new Date(this.overlapCheck.endDate);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate >= endDate) {
+      this.overlapCheckTone = 'error';
+      this.overlapCheckMessage = 'Le creneau est invalide.';
+      return;
+    }
+
+    this.isCheckingOverlap = true;
+    this.overlapCheckMessage = '';
+
+    this.reservationService.checkRoomConflict(this.overlapCheck.roomId, startDate, endDate).subscribe({
+      next: (hasConflict) => {
+        this.isCheckingOverlap = false;
+        this.overlapCheckTone = hasConflict ? 'error' : 'success';
+        this.overlapCheckMessage = hasConflict
+          ? 'Conflit detecte: cette salle est deja reservee sur ce creneau.'
+          : 'Aucun chevauchement detecte sur ce creneau.';
+      },
+      error: (error) => {
+        this.isCheckingOverlap = false;
+        this.overlapCheckTone = 'error';
+        this.overlapCheckMessage = this.readBackendError(error, 'Impossible de verifier le chevauchement.');
+      },
+    });
+  }
+
+  openArchiveRoomModal(room: Room): void {
+    if (!this.canManageInventory()) {
+      return;
+    }
+
+    this.roomToArchive = room;
+    this.isArchivingRoom = false;
+    this.isArchiveRoomModalOpen = true;
+  }
+
+  closeArchiveRoomModal(): void {
+    this.isArchiveRoomModalOpen = false;
+    this.isArchivingRoom = false;
+    this.roomToArchive = null;
+  }
+
+  archiveRoom(): void {
+    if (!this.canManageInventory() || !this.roomToArchive) {
+      return;
+    }
+
+    this.isArchivingRoom = true;
+    this.reservationService.deleteRoom(this.roomToArchive.id).subscribe({
+      next: () => {
+        this.showFeedback('Salle archivee avec succes.', 'success');
+        this.closeArchiveRoomModal();
+        this.loadData();
+      },
+      error: (error) => {
+        this.isArchivingRoom = false;
+        this.showFeedback(this.readBackendError(error, 'Archivage de la salle impossible.'), 'error');
+      },
+    });
   }
 
   resetFilters(): void {
     this.searchTerm = '';
     this.statusFilter = 'all';
     this.capacityFilter = 'all';
+    this.roomsPage = 0;
+    this.loadRooms();
   }
 
   closeModal(): void {
@@ -533,6 +1310,10 @@ export class RoomReservationsComponent implements OnInit {
     const selectedRoom = this.rooms.find((room) => room.id === this.selectedRoomId);
     if (!selectedRoom) {
       this.showFeedback('Veuillez selectionner une salle valide.', 'error');
+      return;
+    }
+    if (!this.selectedEventId) {
+      this.showFeedback('Veuillez selectionner un evenement lie.', 'error');
       return;
     }
 
@@ -550,6 +1331,7 @@ export class RoomReservationsComponent implements OnInit {
 
     this.reservationService
       .bookRoom({
+        eventId: this.selectedEventId,
         roomId: selectedRoom.id,
         roomName: selectedRoom.name,
         userId: this.currentUserId,
@@ -562,14 +1344,45 @@ export class RoomReservationsComponent implements OnInit {
       })
       .subscribe((result) => {
         if (!result) {
-          this.showFeedback('Conflit detecte: la salle est deja reservee sur ce creneau.', 'error');
+          this.lastCreatedReservationId = '';
+          this.showFeedback('Cette salle est deja reservee sur ce creneau.', 'error');
           return;
         }
 
+        this.lastCreatedReservationId = result.id;
         this.showFeedback('Reservation de salle enregistree.', 'success');
         this.loadData();
         this.closeModal();
+      }, (error) => {
+        this.showFeedback(this.readBackendError(error, 'Erreur serveur lors de la reservation.'), 'error');
       });
+  }
+
+  downloadLatestReservationPdf(): void {
+    if (!this.lastCreatedReservationId) {
+      return;
+    }
+
+    this.reservationService.downloadLatestOfficialDocument(this.lastCreatedReservationId).subscribe({
+      next: () => {
+        this.showFeedback('PDF officiel de reservation telecharge.', 'success');
+      },
+      error: () => {
+        this.showFeedback('Aucun PDF officiel disponible pour cette reservation.', 'error');
+      },
+    });
+  }
+
+  private initializeOverlapWindow(): void {
+    const now = new Date();
+    const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
+    this.overlapCheck = {
+      roomId: this.rooms[0]?.id || '',
+      startDate: this.toDateTimeLocal(now),
+      endDate: this.toDateTimeLocal(inOneHour),
+    };
+    this.overlapCheckMessage = '';
+    this.overlapCheckTone = 'info';
   }
 
   private initializeBookingWindow(): void {
@@ -613,6 +1426,14 @@ export class RoomReservationsComponent implements OnInit {
     this.feedbackTone = tone;
   }
 
+  private readBackendError(error: unknown, fallback: string): string {
+    const detail = (error as { error?: { detail?: string } })?.error?.detail;
+    if (typeof detail === 'string' && detail.trim().length > 0) {
+      return detail;
+    }
+    return fallback;
+  }
+
   private toDateTimeLocal(date: Date): string {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -621,6 +1442,104 @@ export class RoomReservationsComponent implements OnInit {
     const minutes = String(date.getMinutes()).padStart(2, '0');
 
     return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  applyFilters(): void {
+    this.roomsPage = 0;
+    this.loadRooms();
+  }
+
+  nextRoomsPage(): void {
+    if (this.roomsPage + 1 >= this.roomsTotalPages) {
+      return;
+    }
+    this.roomsPage += 1;
+    this.loadRooms();
+  }
+
+  previousRoomsPage(): void {
+    if (this.roomsPage <= 0) {
+      return;
+    }
+    this.roomsPage -= 1;
+    this.loadRooms();
+  }
+
+  goToRoomsPage(page: number): void {
+    if (page < 0 || page >= this.roomsTotalPages || page === this.roomsPage) {
+      return;
+    }
+    this.roomsPage = page;
+    this.loadRooms();
+  }
+
+  getVisiblePages(currentPage: number, totalPages: number): number[] {
+    if (totalPages <= 0) {
+      return [];
+    }
+
+    const maxButtons = 5;
+    const half = Math.floor(maxButtons / 2);
+    let start = Math.max(0, currentPage - half);
+    let end = Math.min(totalPages - 1, start + maxButtons - 1);
+
+    if ((end - start + 1) < maxButtons) {
+      start = Math.max(0, end - maxButtons + 1);
+    }
+
+    const pages: number[] = [];
+    for (let page = start; page <= end; page += 1) {
+      pages.push(page);
+    }
+    return pages;
+  }
+
+  getPaginationStart(page: number, size: number, total: number): number {
+    if (total <= 0) {
+      return 0;
+    }
+    return page * size + 1;
+  }
+
+  getPaginationEnd(page: number, size: number, total: number): number {
+    if (total <= 0) {
+      return 0;
+    }
+    return Math.min((page + 1) * size, total);
+  }
+
+  private loadRooms(): void {
+    const minCapacity = this.capacityFilter === 'small'
+      ? 1
+      : this.capacityFilter === 'medium'
+        ? 11
+        : this.capacityFilter === 'large'
+          ? 31
+          : undefined;
+
+    this.roomsLoading = true;
+    this.reservationService.getRooms({
+      page: this.roomsPage,
+      size: this.roomsPageSize,
+      sort: 'name,asc',
+      search: this.searchTerm.trim() || undefined,
+      active: undefined,
+      minCapacity,
+    }).subscribe({
+      next: (rooms) => {
+        this.rooms = rooms;
+        this.roomsLoadError = '';
+        if (!this.overlapCheck.roomId && rooms.length > 0) {
+          this.overlapCheck.roomId = rooms[0].id;
+        }
+        this.roomsLoading = false;
+      },
+      error: (error) => {
+        this.rooms = [];
+        this.roomsLoading = false;
+        this.roomsLoadError = this.readBackendError(error, 'Chargement des salles impossible. Verifiez vos droits puis reessayez.');
+      }
+    });
   }
 
 }

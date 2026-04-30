@@ -47,5 +47,8 @@ management:
 app:
   internal:
     api-key: ${NOTIFICATION_INTERNAL_API_KEY:change-me}
+  auth-user-service:
+    base-url: ${AUTH_USER_SERVICE_URL:http://localhost:8081}
   mail:
+    enabled: ${MAIL_ENABLED:true}
     from: ${MAIL_FROM:no-reply@cnstn.local}

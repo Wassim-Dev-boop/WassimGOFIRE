@@ -20,10 +20,18 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/signup").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/internal/permissions/check").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/password/forgot", "/api/v1/password/reset").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/public/departments").permitAll()
+                        .requestMatchers("/api/v1/internal/**").permitAll()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/password/forgot",
+                                "/api/v1/password/reset",
+                                "/api/v1/auth/forgot-password",
+                                "/api/v1/auth/reset-password"
+                        ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/me").authenticated()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()

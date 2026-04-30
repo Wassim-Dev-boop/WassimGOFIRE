@@ -23,6 +23,19 @@ public class ReservationEntity {
     @GeneratedValue
     private UUID id;
 
+    @Column(name = "event_id", nullable = false)
+    private UUID eventId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "event_mode", nullable = false, length = 20)
+    private EventMode eventMode;
+
+    @Column(name = "reference_code", nullable = false, length = 20, unique = true)
+    private String referenceCode;
+
+    @Column(name = "business_version", nullable = false)
+    private int businessVersion = 1;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id")
     private RoomEntity room;
@@ -30,6 +43,9 @@ public class ReservationEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "equipment_id")
     private EquipmentEntity equipment;
+
+    @Column(name = "quantity_requested", nullable = false)
+    private int quantityRequested = 1;
 
     @Column(name = "requester_username", nullable = false, length = 120)
     private String requesterUsername;
@@ -53,6 +69,15 @@ public class ReservationEntity {
     @Column(name = "security_checked_by", length = 120)
     private String securityCheckedBy;
 
+    @Column(name = "security_checked_at")
+    private Instant securityCheckedAt;
+
+    @Column(name = "security_decision_comment", length = 500)
+    private String securityDecisionComment;
+
+    @Column(name = "rejection_reason", length = 500)
+    private String rejectionReason;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -69,6 +94,38 @@ public class ReservationEntity {
         this.id = id;
     }
 
+    public UUID getEventId() {
+        return eventId;
+    }
+
+    public void setEventId(UUID eventId) {
+        this.eventId = eventId;
+    }
+
+    public EventMode getEventMode() {
+        return eventMode;
+    }
+
+    public void setEventMode(EventMode eventMode) {
+        this.eventMode = eventMode;
+    }
+
+    public String getReferenceCode() {
+        return referenceCode;
+    }
+
+    public void setReferenceCode(String referenceCode) {
+        this.referenceCode = referenceCode;
+    }
+
+    public int getBusinessVersion() {
+        return businessVersion;
+    }
+
+    public void setBusinessVersion(int businessVersion) {
+        this.businessVersion = businessVersion;
+    }
+
     public RoomEntity getRoom() {
         return room;
     }
@@ -83,6 +140,14 @@ public class ReservationEntity {
 
     public void setEquipment(EquipmentEntity equipment) {
         this.equipment = equipment;
+    }
+
+    public int getQuantityRequested() {
+        return quantityRequested;
+    }
+
+    public void setQuantityRequested(int quantityRequested) {
+        this.quantityRequested = quantityRequested;
     }
 
     public String getRequesterUsername() {
@@ -139,6 +204,30 @@ public class ReservationEntity {
 
     public void setSecurityCheckedBy(String securityCheckedBy) {
         this.securityCheckedBy = securityCheckedBy;
+    }
+
+    public Instant getSecurityCheckedAt() {
+        return securityCheckedAt;
+    }
+
+    public void setSecurityCheckedAt(Instant securityCheckedAt) {
+        this.securityCheckedAt = securityCheckedAt;
+    }
+
+    public String getSecurityDecisionComment() {
+        return securityDecisionComment;
+    }
+
+    public void setSecurityDecisionComment(String securityDecisionComment) {
+        this.securityDecisionComment = securityDecisionComment;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
     }
 
     public Instant getCreatedAt() {

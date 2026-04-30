@@ -1,10 +1,20 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { AdminService } from '../../../core/services/admin.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { User, AuditLog, SystemConfig, UserStatistics, Department, PermissionDefinition, UserPermissionMatrix } from '../../../core/models';
+import {
+  User,
+  UserStatistics,
+  Department,
+  PermissionDefinition,
+  UserPermissionMatrix,
+  AdminRole,
+  RolePermissionMatrix,
+} from '../../../core/models';
 import { Option, SelectComponent } from '../../../shared/components/form/select/select.component';
+import { Subscription } from 'rxjs';
 
 interface UserFormModel {
   id: string | null;
@@ -35,23 +45,63 @@ interface PermissionGroup {
 @Component({
   selector: 'app-admin-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule, SelectComponent],
+  imports: [CommonModule, FormsModule, RouterModule, SelectComponent],
   template: `
     <div class="container mx-auto px-4 py-6">
       <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-800 mb-2">Administration Panel</h1>
-        <p class="text-gray-600">User management, role assignment and enterprise services setup</p>
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Administration</h1>
+        <p class="text-gray-600">Gestion des utilisateurs, services, permissions et workflows de l'entreprise</p>
+        <a
+          *ngIf="hasAdminAccess()"
+          routerLink="/admin/workflows"
+          class="mt-3 inline-flex items-center rounded-lg border border-brand-300 px-3 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-50"
+          data-testid="go-to-workflows-admin"
+        >
+          Ouvrir Workflows
+        </a>
+        <div
+          *ngIf="isReadOnlyAdminMode"
+          class="mt-3 inline-flex items-center gap-2 rounded-full border border-warning-200 bg-warning-50 px-3 py-1.5 text-xs font-semibold text-warning-700"
+        >
+          <span>Mode lecture seule</span>
+          <span
+            class="inline-flex h-4 w-4 items-center justify-center rounded-full border border-warning-300 text-[10px] font-bold"
+            [attr.title]="readOnlyAdminHint"
+            aria-label="Information mode lecture seule"
+          >
+            i
+          </span>
+        </div>
       </div>
 
       <div *ngIf="!hasAdminAccess()" class="rounded-2xl border border-warning-300 bg-warning-50 p-6 text-warning-700">
-        <h2 class="text-lg font-semibold mb-2">Access restricted</h2>
+        <h2 class="text-lg font-semibold mb-2">Acces restreint</h2>
         <p>
-          This module is available only for administrators.
-          Switch role to <strong>Administrateur</strong> from the user dropdown to manage users and services.
+          Ce module est disponible uniquement pour les administrateurs.
+          Passez au role <strong>Administrateur</strong> depuis le menu utilisateur pour gerer les utilisateurs et les services.
         </p>
       </div>
 
       <ng-container *ngIf="hasAdminAccess()">
+        <div class="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <article class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <p class="text-2xl font-semibold text-gray-900">{{ usersTotalElements }}</p>
+            <p class="mt-1 text-sm text-gray-500">Utilisateurs total</p>
+          </article>
+          <article class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <p class="text-2xl font-semibold text-gray-900">{{ userStats?.activeUsers || 0 }}</p>
+            <p class="mt-1 text-sm text-gray-500">Comptes actifs</p>
+          </article>
+          <article class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <p class="text-2xl font-semibold text-gray-900">{{ departmentsTotalElements }}</p>
+            <p class="mt-1 text-sm text-gray-500">Services configurés</p>
+          </article>
+          <article class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <p class="text-2xl font-semibold text-gray-900">{{ adminRoles.length }}</p>
+            <p class="mt-1 text-sm text-gray-500">Rôles disponibles</p>
+          </article>
+        </div>
+
         <div class="flex gap-4 mb-6 border-b overflow-x-auto">
           <button
             *ngFor="let tab of tabs"
@@ -65,27 +115,68 @@ interface PermissionGroup {
           </button>
         </div>
 
-        <div *ngIf="activeTab === 'Users'" class="space-y-4">
+        <div *ngIf="activeTab === 'Utilisateurs'" class="space-y-4">
+          <div *ngIf="isReadOnlyAdminMode" class="rounded-xl border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-700">
+            <p class="font-semibold">Mode lecture seule actif</p>
+            <p class="mt-1">{{ readOnlyAdminHint }}</p>
+          </div>
+
           <button
+            *ngIf="canCreateUsers()"
             (click)="startCreateUser()"
             class="px-6 py-3 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition font-semibold"
           >
-            + Add New User
+            + Ajouter un utilisateur
           </button>
 
+          <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+              <input
+                type="text"
+                [(ngModel)]="userSearchTerm"
+                (input)="applyUserFilters()"
+                placeholder="Rechercher nom, email, username..."
+                class="px-4 py-2 border border-gray-300 rounded-lg"
+              />
+              <app-select
+                [(ngModel)]="userStatusFilter"
+                (ngModelChange)="applyUserFilters()"
+                [options]="userStatusFilterOptions"
+                placeholder="Statut"
+              ></app-select>
+              <app-select
+                [(ngModel)]="userRoleFilter"
+                (ngModelChange)="applyUserFilters()"
+                [options]="userRoleFilterOptions"
+                placeholder="Role"
+              ></app-select>
+              <button
+                type="button"
+                (click)="resetUserFilters()"
+                class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Reinitialiser
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="usersLoadError" class="rounded-xl border border-error-300 bg-error-50 px-4 py-3 text-sm text-error-700">
+            {{ usersLoadError }}
+          </div>
+
           <div *ngIf="showUserForm" class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-bold mb-4">{{ userForm.id ? 'Edit User' : 'Create New User' }}</h2>
+            <h2 class="text-xl font-bold mb-4">{{ userForm.id ? 'Modifier utilisateur' : 'Creer un utilisateur' }}</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
                 type="text"
                 [(ngModel)]="userForm.firstName"
-                placeholder="First Name"
+                placeholder="Prenom"
                 class="px-4 py-2 border border-gray-300 rounded-lg"
               />
               <input
                 type="text"
                 [(ngModel)]="userForm.lastName"
-                placeholder="Last Name"
+                placeholder="Nom"
                 class="px-4 py-2 border border-gray-300 rounded-lg"
               />
               <input
@@ -97,29 +188,29 @@ interface PermissionGroup {
               <input
                 type="text"
                 [(ngModel)]="userForm.username"
-                placeholder="Username"
+                placeholder="Nom d'utilisateur"
                 class="px-4 py-2 border border-gray-300 rounded-lg"
               />
               <input
                 type="text"
                 [(ngModel)]="userForm.department"
-                placeholder="Service/Department"
+                placeholder="Service"
                 class="px-4 py-2 border border-gray-300 rounded-lg"
               />
               <input
                 type="text"
                 [(ngModel)]="userForm.phone"
-                placeholder="Phone"
+                placeholder="Telephone"
                 class="px-4 py-2 border border-gray-300 rounded-lg"
               />
               <div class="md:col-span-2">
-                <label class="text-sm font-semibold text-gray-700 mb-2 block">Assigned Roles</label>
+                <label class="text-sm font-semibold text-gray-700 mb-2 block">Roles attribues</label>
                 <app-select
                   [(ngModel)]="userForm.roles"
                   [options]="roleOptionItems"
                   [multiple]="true"
                   [closeOnSelect]="false"
-                  placeholder="Select roles"
+                  placeholder="Selectionner des roles"
                   className="min-h-[120px]"
                 ></app-select>
               </div>
@@ -131,33 +222,44 @@ interface PermissionGroup {
 
             <div class="mt-4 flex gap-2">
               <button
+                *ngIf="(userForm.id && canUpdateUsers()) || (!userForm.id && canCreateUsers())"
                 (click)="saveUser()"
                 class="px-6 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition"
               >
-                {{ userForm.id ? 'Update User' : 'Create User' }}
+                {{ userForm.id ? 'Mettre a jour' : "Creer l'utilisateur" }}
               </button>
               <button
                 (click)="cancelUserEdit()"
                 class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
               >
-                Cancel
+                Annuler
               </button>
             </div>
+
+            <p
+              *ngIf="(userForm.id && !canUpdateUsers()) || (!userForm.id && !canCreateUsers())"
+              class="mt-3 text-sm font-medium text-warning-600"
+            >
+              Vous n'avez pas la permission necessaire pour cette action.
+            </p>
           </div>
 
-          <div class="bg-white rounded-lg shadow-md overflow-hidden">
+          <div class="bg-white rounded-lg shadow-md max-h-[68vh] overflow-auto">
             <table class="w-full">
               <thead class="bg-gray-100 border-b">
                 <tr>
-                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
                   <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
-                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Department</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Service</th>
                   <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Roles</th>
-                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Statut</th>
                   <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
                 </tr>
               </thead>
               <tbody>
+                <tr *ngIf="usersLoading">
+                  <td colspan="6" class="px-6 py-8 text-center text-gray-500">Chargement des utilisateurs...</td>
+                </tr>
                 <tr *ngFor="let user of users" class="border-b hover:bg-gray-50">
                   <td class="px-6 py-4">{{ user.firstName }} {{ user.lastName }}</td>
                   <td class="px-6 py-4 text-sm text-gray-600">{{ user.email }}</td>
@@ -177,58 +279,140 @@ interface PermissionGroup {
                       }"
                       class="px-3 py-1 rounded-full text-xs font-semibold"
                     >
-                      {{ user.isActive ? 'Active' : 'Inactive' }}
+                      {{ user.isActive ? 'Actif' : 'Inactif' }}
                     </span>
                   </td>
                   <td class="px-6 py-4 text-sm">
-                    <button (click)="startEditUser(user)" class="text-brand-500 hover:text-brand-700 mr-3">Edit</button>
-                    <button (click)="toggleUserStatus(user)" class="text-indigo-500 hover:text-indigo-700 mr-3">
-                      {{ user.isActive ? 'Deactivate' : 'Activate' }}
-                    </button>
-                    <button (click)="deleteUser(user.id)" class="text-red-500 hover:text-red-700">Delete</button>
+                    <ng-container *ngIf="canUpdateUsers(); else readOnlyUserActions">
+                      <button (click)="startEditUser(user)" class="text-brand-500 hover:text-brand-700 mr-3">Modifier</button>
+                      <button (click)="toggleUserStatus(user)" class="text-indigo-500 hover:text-indigo-700 mr-3">
+                        {{ user.isActive ? 'Desactiver' : 'Activer' }}
+                      </button>
+                      <button (click)="deleteUser(user.id)" class="text-red-500 hover:text-red-700">Supprimer</button>
+                    </ng-container>
+                    <ng-template #readOnlyUserActions>
+                      <span class="inline-flex items-center gap-1 text-xs text-gray-400" [attr.title]="readOnlyAdminHint">
+                        Lecture seule
+                        <span class="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-300 text-[10px] font-bold">i</span>
+                      </span>
+                    </ng-template>
                   </td>
                 </tr>
-                <tr *ngIf="users.length === 0">
-                  <td colspan="6" class="px-6 py-8 text-center text-gray-500">No users found.</td>
+                <tr *ngIf="!usersLoading && users.length === 0">
+                  <td colspan="6" class="px-6 py-8 text-center text-gray-500">Aucun utilisateur trouve.</td>
                 </tr>
               </tbody>
             </table>
           </div>
+
+          <div
+            *ngIf="!usersLoading && usersTotalElements > 0"
+            class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3"
+          >
+            <p class="text-sm text-gray-600">
+              Affichage {{ getPaginationStart(usersPage, usersPageSize, usersTotalElements) }}-{{ getPaginationEnd(usersPage, usersPageSize, usersTotalElements) }} sur {{ usersTotalElements }} éléments
+            </p>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                (click)="previousUsersPage()"
+                [disabled]="usersPage === 0"
+                class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Precedent
+              </button>
+              <button
+                *ngFor="let page of getVisiblePages(usersPage, usersTotalPages)"
+                type="button"
+                (click)="goToUsersPage(page)"
+                class="rounded-lg border px-3 py-2 text-sm font-semibold transition"
+                [ngClass]="page === usersPage
+                  ? 'border-brand-500 bg-brand-500 text-white'
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
+              >
+                {{ page + 1 }}
+              </button>
+              <button
+                type="button"
+                (click)="nextUsersPage()"
+                [disabled]="usersPage + 1 >= usersTotalPages"
+                class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Suivant
+              </button>
+            </div>
+          </div>
         </div>
 
         <div *ngIf="activeTab === 'Services'" class="space-y-4">
+          <div *ngIf="isReadOnlyAdminMode" class="rounded-xl border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-700">
+            <p class="font-semibold">Mode lecture seule actif</p>
+            <p class="mt-1">{{ readOnlyAdminHint }}</p>
+          </div>
+
           <button
             (click)="startCreateDepartment()"
-            class="px-6 py-3 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition font-semibold"
+            [disabled]="!canUpdateUsers()"
+            [attr.title]="!canUpdateUsers() ? readOnlyAdminHint : null"
+            class="px-6 py-3 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition font-semibold disabled:cursor-not-allowed disabled:opacity-60"
           >
-            + Add Service / Department
+            + Ajouter un service
           </button>
 
+          <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <input
+                type="text"
+                [(ngModel)]="departmentSearchTerm"
+                (input)="applyDepartmentFilters()"
+                placeholder="Rechercher nom, code, manager..."
+                class="px-4 py-2 border border-gray-300 rounded-lg"
+              />
+              <app-select
+                [(ngModel)]="departmentActiveFilter"
+                (ngModelChange)="applyDepartmentFilters()"
+                [options]="departmentStatusFilterOptions"
+                placeholder="Statut"
+              ></app-select>
+              <button
+                type="button"
+                (click)="resetDepartmentFilters()"
+                class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Reinitialiser
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="departmentsLoadError" class="rounded-xl border border-error-300 bg-error-50 px-4 py-3 text-sm text-error-700">
+            {{ departmentsLoadError }}
+          </div>
+
           <div *ngIf="showDepartmentForm" class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-bold mb-4">{{ departmentForm.id ? 'Edit Service' : 'Create Service' }}</h2>
+            <h2 class="text-xl font-bold mb-4">{{ departmentForm.id ? 'Modifier service' : 'Creer un service' }}</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
                 type="text"
                 [(ngModel)]="departmentForm.name"
-                placeholder="Service Name"
+                placeholder="Nom du service"
                 class="px-4 py-2 border border-gray-300 rounded-lg"
               />
               <input
                 type="text"
                 [(ngModel)]="departmentForm.code"
-                placeholder="Code (e.g. DSN)"
+                placeholder="Code (ex: DSN)"
                 class="px-4 py-2 border border-gray-300 rounded-lg"
               />
               <input
                 type="text"
                 [(ngModel)]="departmentForm.managerName"
-                placeholder="Manager Name"
+                placeholder="Nom du responsable"
                 class="px-4 py-2 border border-gray-300 rounded-lg"
               />
               <app-select
                 [(ngModel)]="departmentForm.isActive"
                 [options]="activeStatusOptions"
-                placeholder="Status"
+                placeholder="Statut"
               ></app-select>
               <textarea
                 [(ngModel)]="departmentForm.description"
@@ -245,31 +429,36 @@ interface PermissionGroup {
             <div class="mt-4 flex gap-2">
               <button
                 (click)="saveDepartment()"
-                class="px-6 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition"
+                [disabled]="!canUpdateUsers()"
+                [attr.title]="!canUpdateUsers() ? readOnlyAdminHint : null"
+                class="px-6 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {{ departmentForm.id ? 'Update Service' : 'Create Service' }}
+                {{ departmentForm.id ? 'Mettre a jour le service' : 'Creer le service' }}
               </button>
               <button
                 (click)="cancelDepartmentEdit()"
                 class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
               >
-                Cancel
+                Annuler
               </button>
             </div>
           </div>
 
-          <div class="bg-white rounded-lg shadow-md overflow-hidden">
+          <div class="bg-white rounded-lg shadow-md max-h-[68vh] overflow-auto">
             <table class="w-full">
               <thead class="bg-gray-100 border-b">
                 <tr>
-                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
                   <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Code</th>
-                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Manager</th>
-                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Responsable</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Statut</th>
                   <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
                 </tr>
               </thead>
               <tbody>
+                <tr *ngIf="departmentsLoading">
+                  <td colspan="5" class="px-6 py-8 text-center text-gray-500">Chargement des services...</td>
+                </tr>
                 <tr *ngFor="let department of departments" class="border-b hover:bg-gray-50">
                   <td class="px-6 py-4">
                     <div class="font-medium text-gray-900">{{ department.name }}</div>
@@ -282,208 +471,491 @@ interface PermissionGroup {
                       [ngClass]="department.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
                       class="px-3 py-1 rounded-full text-xs font-semibold"
                     >
-                      {{ department.isActive ? 'Active' : 'Inactive' }}
+                      {{ department.isActive ? 'Actif' : 'Inactif' }}
                     </span>
                   </td>
                   <td class="px-6 py-4 text-sm">
-                    <button (click)="startEditDepartment(department)" class="text-brand-500 hover:text-brand-700 mr-3">Edit</button>
-                    <button (click)="deleteDepartment(department.id)" class="text-red-500 hover:text-red-700">Delete</button>
+                    <ng-container *ngIf="canUpdateUsers(); else readOnlyDepartmentActions">
+                      <button (click)="startEditDepartment(department)" class="text-brand-500 hover:text-brand-700 mr-3">Modifier</button>
+                      <button (click)="deleteDepartment(department.id)" class="text-red-500 hover:text-red-700">Supprimer</button>
+                    </ng-container>
+                    <ng-template #readOnlyDepartmentActions>
+                      <span class="inline-flex items-center gap-1 text-xs text-gray-400" [attr.title]="readOnlyAdminHint">
+                        Lecture seule
+                        <span class="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-300 text-[10px] font-bold">i</span>
+                      </span>
+                    </ng-template>
                   </td>
                 </tr>
-                <tr *ngIf="departments.length === 0">
-                  <td colspan="5" class="px-6 py-8 text-center text-gray-500">No services configured.</td>
+                <tr *ngIf="!departmentsLoading && departments.length === 0">
+                  <td colspan="5" class="px-6 py-8 text-center text-gray-500">Aucun service configure.</td>
                 </tr>
               </tbody>
             </table>
           </div>
-        </div>
 
-        <div *ngIf="activeTab === 'System Config'" class="bg-white rounded-lg shadow-md p-6">
-          <h2 class="text-xl font-bold mb-4">System Configuration</h2>
-          <div class="space-y-4">
-            <div *ngFor="let config of systemConfigs" class="border-b pb-4">
-              <div class="flex justify-between items-start mb-2 gap-4">
-                <div>
-                  <h3 class="font-semibold text-gray-900">{{ config.key }}</h3>
-                  <p class="text-sm text-gray-600">{{ config.description }}</p>
-                </div>
-                <span
-                  [ngClass]="config.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
-                  class="px-3 py-1 rounded-full text-xs font-semibold"
-                >
-                  {{ config.isActive ? 'Active' : 'Inactive' }}
-                </span>
-              </div>
-              <div class="flex gap-2">
-                <input
-                  type="text"
-                  [(ngModel)]="config.value"
-                  class="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
-                />
-                <button
-                  (click)="updateConfig(config)"
-                  class="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition"
-                >
-                  Save
-                </button>
-              </div>
+          <div
+            *ngIf="!departmentsLoading && departmentsTotalElements > 0"
+            class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3"
+          >
+            <p class="text-sm text-gray-600">
+              Affichage {{ getPaginationStart(departmentsPage, departmentsPageSize, departmentsTotalElements) }}-{{ getPaginationEnd(departmentsPage, departmentsPageSize, departmentsTotalElements) }} sur {{ departmentsTotalElements }} éléments
+            </p>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                (click)="previousDepartmentsPage()"
+                [disabled]="departmentsPage === 0"
+                class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Precedent
+              </button>
+              <button
+                *ngFor="let page of getVisiblePages(departmentsPage, departmentsTotalPages)"
+                type="button"
+                (click)="goToDepartmentsPage(page)"
+                class="rounded-lg border px-3 py-2 text-sm font-semibold transition"
+                [ngClass]="page === departmentsPage
+                  ? 'border-brand-500 bg-brand-500 text-white'
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
+              >
+                {{ page + 1 }}
+              </button>
+              <button
+                type="button"
+                (click)="nextDepartmentsPage()"
+                [disabled]="departmentsPage + 1 >= departmentsTotalPages"
+                class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Suivant
+              </button>
             </div>
           </div>
-        </div>
-
-        <div *ngIf="activeTab === 'Audit Logs'" class="bg-white rounded-lg shadow-md overflow-hidden">
-          <div class="p-4 border-b">
-            <h2 class="text-xl font-bold">Audit Logs</h2>
-          </div>
-          <table class="w-full">
-            <thead class="bg-gray-100 border-b">
-              <tr>
-                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">User</th>
-                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Action</th>
-                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Entity</th>
-                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
-                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Timestamp</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let log of auditLogs" class="border-b hover:bg-gray-50">
-                <td class="px-6 py-4 text-sm text-gray-900">{{ log.userName }}</td>
-                <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ log.action }}</td>
-                <td class="px-6 py-4 text-sm text-gray-600">{{ log.entityType }}</td>
-                <td class="px-6 py-4">
-                  <span
-                    [ngClass]="{
-                      'bg-green-100 text-green-800': log.status === 'SUCCESS',
-                      'bg-red-100 text-red-800': log.status === 'FAILURE'
-                    }"
-                    class="px-3 py-1 rounded-full text-xs font-semibold"
-                  >
-                    {{ log.status }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-600">{{ log.timestamp | date:'short' }}</td>
-              </tr>
-            </tbody>
-          </table>
         </div>
 
         <div *ngIf="activeTab === 'Permissions'" class="space-y-4">
           <div class="rounded-2xl border border-gray-200 bg-white p-5">
             <h2 class="text-xl font-bold text-gray-900">Gestion des permissions</h2>
             <p class="mt-1 text-sm text-gray-600">
-              Selectionnez un utilisateur, puis activez/desactivez chaque permission par clic.
+              Gerez les permissions par role ou par utilisateur avec effet immediat.
             </p>
+
+            <div class="mt-4 inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1">
+              <button
+                type="button"
+                (click)="permissionEditMode = 'ROLE'"
+                class="rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+                [ngClass]="permissionEditMode === 'ROLE' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'"
+              >
+                Par role
+              </button>
+              <button
+                type="button"
+                (click)="permissionEditMode = 'USER'"
+                class="rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+                [ngClass]="permissionEditMode === 'USER' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'"
+              >
+                Par utilisateur
+              </button>
+            </div>
           </div>
 
-          <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <section class="rounded-2xl border border-gray-200 bg-white p-4 xl:col-span-1">
-              <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Utilisateurs</h3>
+          <div *ngIf="isReadOnlyAdminMode" class="rounded-xl border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-700">
+            <p class="font-semibold">Edition desactivee</p>
+            <p class="mt-1">{{ readOnlyAdminHint }}</p>
+          </div>
 
-              <div class="max-h-[520px] space-y-2 overflow-y-auto pr-1">
-                <button
-                  *ngFor="let user of users"
-                  type="button"
-                  (click)="selectPermissionsUser(user.id)"
-                  class="w-full rounded-xl border px-3 py-3 text-left transition"
-                  [ngClass]="selectedPermissionsUserId === user.id
-                    ? 'border-brand-400 bg-brand-50'
-                    : 'border-gray-200 bg-white hover:border-brand-300 hover:bg-gray-50'"
-                >
-                  <p class="text-sm font-semibold text-gray-900">{{ user.firstName }} {{ user.lastName }}</p>
-                  <p class="text-xs text-gray-500">{{ user.email }}</p>
-                </button>
-              </div>
-            </section>
+          <ng-container *ngIf="permissionEditMode === 'USER'; else rolePermissionModeTemplate">
+            <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+              <section class="rounded-2xl border border-gray-200 bg-white p-4 xl:col-span-1">
+                <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Utilisateurs</h3>
 
-            <section class="rounded-2xl border border-gray-200 bg-white p-4 xl:col-span-2">
-              <div *ngIf="!selectedPermissionsUserId" class="rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500">
-                Selectionnez un utilisateur pour modifier ses permissions.
-              </div>
-
-              <ng-container *ngIf="selectedPermissionsUserId">
-                <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p class="text-sm text-gray-500">Utilisateur selectionne</p>
-                    <p class="text-base font-semibold text-gray-900">{{ selectedPermissionsUserLabel }}</p>
-                    <p class="text-xs text-gray-500">
-                      Mode: {{ selectedUserPermissions?.customized ? 'Personnalise' : 'Par defaut (roles)' }}
-                    </p>
-                  </div>
-
+                <div class="max-h-[520px] space-y-2 overflow-y-auto pr-1">
                   <button
+                    *ngFor="let user of users"
                     type="button"
-                    (click)="resetSelectedUserPermissions()"
-                    [disabled]="isSavingPermissions"
-                    class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    (click)="selectPermissionsUser(user.id)"
+                    class="w-full rounded-xl border px-3 py-3 text-left transition"
+                    [ngClass]="selectedPermissionsUserId === user.id
+                      ? 'border-brand-400 bg-brand-50'
+                      : 'border-gray-200 bg-white hover:border-brand-300 hover:bg-gray-50'"
                   >
-                    Reinitialiser par roles
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-brand-600">
+                      {{ getUserPrimaryRoleLabel(user) }}
+                    </p>
+                    <p class="text-sm font-semibold text-gray-900">{{ user.firstName }} {{ user.lastName }}</p>
+                    <p class="text-xs text-gray-500">{{ user.email }}</p>
                   </button>
                 </div>
+              </section>
 
-                <div *ngIf="permissionsFeedback"
-                  class="mb-4 rounded-lg border px-3 py-2 text-sm"
-                  [ngClass]="permissionsFeedbackTone === 'success'
-                    ? 'border-success-200 bg-success-50 text-success-700'
-                    : 'border-error-200 bg-error-50 text-error-700'"
-                >
-                  {{ permissionsFeedback }}
+              <section class="rounded-2xl border border-gray-200 bg-white p-4 xl:col-span-2">
+                <div *ngIf="!selectedPermissionsUserId" class="rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500">
+                  Selectionnez un utilisateur pour modifier ses permissions.
                 </div>
 
-                <div class="space-y-4" *ngIf="permissionGroups.length > 0; else noPermissionsTemplate">
-                  <article *ngFor="let group of permissionGroups" class="rounded-xl border border-gray-200">
-                    <div class="border-b border-gray-200 bg-gray-50 px-4 py-2">
-                      <h4 class="text-sm font-semibold text-gray-700">{{ group.module }}</h4>
+                <ng-container *ngIf="selectedPermissionsUserId">
+                  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p class="text-sm text-gray-500">Utilisateur selectionne</p>
+                      <p class="text-base font-semibold text-gray-900">{{ selectedPermissionsUserLabel }}</p>
+                      <p class="text-xs text-gray-500">
+                        Mode: {{ selectedUserPermissions?.customized ? 'Personnalise' : 'Par defaut (roles)' }}
+                      </p>
                     </div>
 
-                    <div class="divide-y divide-gray-100">
-                      <label
-                        *ngFor="let permission of group.permissions"
-                        class="flex cursor-pointer items-start justify-between gap-3 px-4 py-3 hover:bg-gray-50"
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span
+                        *ngIf="hasPermissionChanges"
+                        class="rounded-full bg-warning-100 px-2 py-1 text-[11px] font-semibold text-warning-700"
                       >
-                        <div>
-                          <p class="text-sm font-semibold text-gray-900">{{ permission.label }}</p>
-                          <p class="text-xs text-gray-500">{{ permission.description }}</p>
-                          <p class="mt-1 text-[11px] font-mono text-gray-400">{{ permission.code }}</p>
-                        </div>
+                        Modifications non sauvegardees
+                      </span>
 
+                      <button
+                        type="button"
+                        (click)="saveSelectedUserPermissions()"
+                        [disabled]="isSavingPermissions || !hasPermissionChanges || !canUpdateUsers()"
+                        [attr.title]="!canUpdateUsers() ? readOnlyAdminHint : null"
+                        class="rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Sauvegarder
+                      </button>
+
+                      <button
+                        type="button"
+                        (click)="resetSelectedUserPermissions()"
+                        [disabled]="isSavingPermissions || !canUpdateUsers()"
+                        [attr.title]="!canUpdateUsers() ? readOnlyAdminHint : null"
+                        class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Reinitialiser par roles
+                      </button>
+                    </div>
+                  </div>
+
+                  <div *ngIf="permissionsFeedback"
+                    class="mb-4 rounded-lg border px-3 py-2 text-sm"
+                    [ngClass]="permissionsFeedbackTone === 'success'
+                      ? 'border-success-200 bg-success-50 text-success-700'
+                      : 'border-error-200 bg-error-50 text-error-700'"
+                  >
+                    {{ permissionsFeedback }}
+                  </div>
+
+                  <div class="space-y-4" *ngIf="filteredPermissionRows.length > 0; else noUserPermissionsTemplate">
+                    <div class="grid grid-cols-1 gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 md:grid-cols-3">
+                      <input
+                        type="text"
+                        [value]="permissionSearchTerm"
+                        (input)="permissionSearchTerm = $any($event.target).value"
+                        placeholder="Rechercher une permission..."
+                        class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-400 focus:outline-hidden"
+                      />
+
+                      <select
+                        [value]="permissionModuleFilter"
+                        (change)="permissionModuleFilter = $any($event.target).value"
+                        class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-400 focus:outline-hidden"
+                      >
+                        <option value="ALL">Tous les modules</option>
+                        <option *ngFor="let module of permissionModuleOptions" [value]="module">
+                          {{ module }}
+                        </option>
+                      </select>
+
+                      <div class="flex items-center justify-end rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600">
+                        {{ filteredPermissionRows.length }} permission(s)
+                      </div>
+                    </div>
+
+                    <div class="overflow-hidden rounded-xl border border-gray-200">
+                      <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                          <thead class="border-b border-gray-200 bg-gray-50">
+                            <tr>
+                              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Module</th>
+                              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Permission</th>
+                              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Code</th>
+                              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Source</th>
+                              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Activer</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-100 bg-white">
+                            <tr *ngFor="let permission of filteredPermissionRows" class="hover:bg-gray-50">
+                              <td class="px-4 py-3 text-sm font-semibold text-gray-700">{{ permission.module }}</td>
+                              <td class="px-4 py-3">
+                                <p class="text-sm font-semibold text-gray-900">{{ permission.label }}</p>
+                                <p class="text-xs text-gray-500">{{ permission.description }}</p>
+                              </td>
+                              <td class="px-4 py-3 text-[11px] font-mono text-gray-500">{{ permission.code }}</td>
+                              <td class="px-4 py-3">
+                                <div class="flex flex-wrap gap-1">
+                                  <span
+                                    *ngIf="isPermissionRoleDerived(permission.code)"
+                                    class="rounded-full bg-indigo-100 px-2 py-1 text-[11px] font-semibold text-indigo-700"
+                                  >
+                                    Role
+                                  </span>
+                                  <span
+                                    *ngIf="isPermissionAssigned(permission.code)"
+                                    class="rounded-full bg-brand-100 px-2 py-1 text-[11px] font-semibold text-brand-700"
+                                  >
+                                    Personnalise
+                                  </span>
+                                  <span
+                                    *ngIf="!isPermissionRoleDerived(permission.code) && !isPermissionAssigned(permission.code)"
+                                    class="rounded-full bg-gray-100 px-2 py-1 text-[11px] font-semibold text-gray-500"
+                                  >
+                                    Inactif
+                                  </span>
+                                </div>
+                              </td>
+                              <td class="px-4 py-3 text-right">
+                                <label class="inline-flex cursor-pointer items-center justify-end">
+                                  <input
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                                    [checked]="isPermissionChecked(permission.code)"
+                                    [disabled]="isSavingPermissions || !canUpdateUsers()"
+                                    [attr.title]="!canUpdateUsers() ? readOnlyAdminHint : null"
+                                    (change)="togglePermission(permission.code, $event)"
+                                  />
+                                </label>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  <ng-template #noUserPermissionsTemplate>
+                    <div class="rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500">
+                      Aucune permission disponible.
+                    </div>
+                  </ng-template>
+                </ng-container>
+              </section>
+            </div>
+          </ng-container>
+
+          <ng-template #rolePermissionModeTemplate>
+            <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+              <section class="rounded-2xl border border-gray-200 bg-white p-4 xl:col-span-1">
+                <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Roles</h3>
+
+                <div class="max-h-[520px] space-y-2 overflow-y-auto pr-1">
+                  <button
+                    *ngFor="let role of adminRoles"
+                    type="button"
+                    (click)="selectPermissionsRole(role.id)"
+                    class="w-full rounded-xl border px-3 py-3 text-left transition"
+                    [ngClass]="selectedPermissionsRoleId === role.id
+                      ? 'border-brand-400 bg-brand-50'
+                      : 'border-gray-200 bg-white hover:border-brand-300 hover:bg-gray-50'"
+                  >
+                    <p class="text-sm font-semibold uppercase tracking-wide text-gray-900">{{ getRoleLabel(role.name) }}</p>
+                    <p class="text-xs text-gray-500">{{ role.description || role.name }}</p>
+                  </button>
+                </div>
+              </section>
+
+              <section class="rounded-2xl border border-gray-200 bg-white p-4 xl:col-span-2">
+                <div *ngIf="!selectedPermissionsRoleId" class="rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500">
+                  Selectionnez un role pour modifier ses permissions.
+                </div>
+
+                <ng-container *ngIf="selectedPermissionsRoleId">
+                  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p class="text-sm text-gray-500">Role selectionne</p>
+                      <p class="text-base font-semibold text-gray-900">{{ selectedPermissionsRoleLabel }}</p>
+                      <p class="text-xs text-gray-500">
+                        {{ selectedRolePermissions?.usersInRole || 0 }} utilisateur(s) | {{ selectedRolePermissions?.usersUsingRoleDefaults || 0 }} sur valeurs role
+                      </p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                      <label class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700">
                         <input
                           type="checkbox"
-                          class="mt-1 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-                          [checked]="isPermissionChecked(permission.code)"
-                          [disabled]="isSavingPermissions"
-                          (change)="togglePermission(permission.code, $event)"
+                          class="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                          [(ngModel)]="applyRolePermissionsToUsers"
+                          [disabled]="isSavingPermissions || !canUpdateUsers()"
                         />
+                        Appliquer a tous les utilisateurs du role
                       </label>
-                    </div>
-                  </article>
-                </div>
 
-                <ng-template #noPermissionsTemplate>
-                  <div class="rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500">
-                    Aucune permission disponible.
+                      <span
+                        *ngIf="hasRolePermissionChanges"
+                        class="rounded-full bg-warning-100 px-2 py-1 text-[11px] font-semibold text-warning-700"
+                      >
+                        Modifications non sauvegardees
+                      </span>
+
+                      <button
+                        type="button"
+                        (click)="saveSelectedRolePermissions()"
+                        [disabled]="isSavingPermissions || !hasRolePermissionChanges || !canUpdateUsers()"
+                        [attr.title]="!canUpdateUsers() ? readOnlyAdminHint : null"
+                        class="rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Sauvegarder
+                      </button>
+                    </div>
                   </div>
-                </ng-template>
-              </ng-container>
-            </section>
-          </div>
+
+                  <div *ngIf="rolePermissionsFeedback"
+                    class="mb-4 rounded-lg border px-3 py-2 text-sm"
+                    [ngClass]="rolePermissionsFeedbackTone === 'success'
+                      ? 'border-success-200 bg-success-50 text-success-700'
+                      : 'border-error-200 bg-error-50 text-error-700'"
+                  >
+                    {{ rolePermissionsFeedback }}
+                  </div>
+
+                  <div class="space-y-4" *ngIf="filteredPermissionRows.length > 0; else noRolePermissionsTemplate">
+                    <div class="grid grid-cols-1 gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 md:grid-cols-3">
+                      <input
+                        type="text"
+                        [value]="permissionSearchTerm"
+                        (input)="permissionSearchTerm = $any($event.target).value"
+                        placeholder="Rechercher une permission..."
+                        class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-400 focus:outline-hidden"
+                      />
+
+                      <select
+                        [value]="permissionModuleFilter"
+                        (change)="permissionModuleFilter = $any($event.target).value"
+                        class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-400 focus:outline-hidden"
+                      >
+                        <option value="ALL">Tous les modules</option>
+                        <option *ngFor="let module of permissionModuleOptions" [value]="module">
+                          {{ module }}
+                        </option>
+                      </select>
+
+                      <div class="flex items-center justify-end rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600">
+                        {{ filteredPermissionRows.length }} permission(s)
+                      </div>
+                    </div>
+
+                    <div class="overflow-hidden rounded-xl border border-gray-200">
+                      <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                          <thead class="border-b border-gray-200 bg-gray-50">
+                            <tr>
+                              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Module</th>
+                              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Permission</th>
+                              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Code</th>
+                              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Activer</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-100 bg-white">
+                            <tr *ngFor="let permission of filteredPermissionRows" class="hover:bg-gray-50">
+                              <td class="px-4 py-3 text-sm font-semibold text-gray-700">{{ permission.module }}</td>
+                              <td class="px-4 py-3">
+                                <p class="text-sm font-semibold text-gray-900">{{ permission.label }}</p>
+                                <p class="text-xs text-gray-500">{{ permission.description }}</p>
+                              </td>
+                              <td class="px-4 py-3 text-[11px] font-mono text-gray-500">{{ permission.code }}</td>
+                              <td class="px-4 py-3 text-right">
+                                <label class="inline-flex cursor-pointer items-center justify-end">
+                                  <input
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                                    [checked]="isRolePermissionChecked(permission.code)"
+                                    [disabled]="isSavingPermissions || !canUpdateUsers()"
+                                    [attr.title]="!canUpdateUsers() ? readOnlyAdminHint : null"
+                                    (change)="toggleRolePermission(permission.code, $event)"
+                                  />
+                                </label>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  <ng-template #noRolePermissionsTemplate>
+                    <div class="rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500">
+                      Aucune permission disponible.
+                    </div>
+                  </ng-template>
+                </ng-container>
+              </section>
+            </div>
+          </ng-template>
         </div>
 
-        <div *ngIf="activeTab === 'Statistics'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div class="bg-white rounded-lg shadow-md p-6">
-            <h3 class="text-gray-600 text-sm font-semibold mb-2">Total Users</h3>
-            <p class="text-3xl font-bold text-gray-900">{{ userStats?.totalUsers || 0 }}</p>
+        <div *ngIf="activeTab === 'Workflows'" class="space-y-4">
+          <section class="rounded-2xl border border-gray-200 bg-white p-5">
+            <h2 class="text-xl font-bold text-gray-900">Workflows</h2>
+            <p class="mt-1 text-sm text-gray-600">
+              Pilotez les circuits de validation et vérifiez les étapes responsables par module.
+            </p>
+
+            <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              <article class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <p class="text-2xl font-semibold text-gray-900">{{ usersTotalElements }}</p>
+                <p class="mt-1 text-sm text-gray-500">Utilisateurs impactés</p>
+              </article>
+              <article class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <p class="text-2xl font-semibold text-gray-900">{{ adminRoles.length }}</p>
+                <p class="mt-1 text-sm text-gray-500">Rôles de validation</p>
+              </article>
+              <article class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <p class="text-2xl font-semibold text-gray-900">{{ departmentsTotalElements }}</p>
+                <p class="mt-1 text-sm text-gray-500">Services concernés</p>
+              </article>
+            </div>
+
+            <div class="mt-4 flex flex-wrap gap-2">
+              <a
+                routerLink="/admin/workflows"
+                class="inline-flex items-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-600"
+              >
+                Ouvrir le panneau Workflows
+              </a>
+              <button
+                type="button"
+                (click)="loadStatistics()"
+                class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+              >
+                Actualiser les indicateurs
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <div *ngIf="activeTab === 'Statistiques'" class="space-y-4">
+          <div *ngIf="statsLoading" class="rounded-xl border border-gray-200 bg-white px-4 py-8 text-center text-sm text-gray-500">
+            Chargement des statistiques...
           </div>
-          <div class="bg-white rounded-lg shadow-md p-6">
-            <h3 class="text-gray-600 text-sm font-semibold mb-2">Active Users</h3>
-            <p class="text-3xl font-bold text-green-600">{{ userStats?.activeUsers || 0 }}</p>
+
+          <div *ngIf="statsLoadError" class="rounded-xl border border-error-300 bg-error-50 px-4 py-3 text-sm text-error-700">
+            {{ statsLoadError }}
           </div>
-          <div class="bg-white rounded-lg shadow-md p-6">
-            <h3 class="text-gray-600 text-sm font-semibold mb-2">Inactive Users</h3>
-            <p class="text-3xl font-bold text-red-600">{{ userStats?.inactiveUsers || 0 }}</p>
-          </div>
-          <div class="bg-white rounded-lg shadow-md p-6">
-            <h3 class="text-gray-600 text-sm font-semibold mb-2">New This Month</h3>
-            <p class="text-3xl font-bold text-blue-600">{{ userStats?.newUsersThisMonth || 0 }}</p>
+
+          <div *ngIf="!statsLoading && userStats" class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div class="bg-white rounded-lg shadow-md p-6">
+              <h3 class="text-gray-600 text-sm font-semibold mb-2">Utilisateurs total</h3>
+              <p class="text-3xl font-bold text-gray-900">{{ userStats.totalUsers }}</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6">
+              <h3 class="text-gray-600 text-sm font-semibold mb-2">Utilisateurs actifs</h3>
+              <p class="text-3xl font-bold text-green-600">{{ userStats.activeUsers }}</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6">
+              <h3 class="text-gray-600 text-sm font-semibold mb-2">Utilisateurs inactifs</h3>
+              <p class="text-3xl font-bold text-red-600">{{ userStats.inactiveUsers }}</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6">
+              <h3 class="text-gray-600 text-sm font-semibold mb-2">Nouveaux ce mois</h3>
+              <p class="text-3xl font-bold text-blue-600">{{ userStats.newUsersThisMonth }}</p>
+            </div>
           </div>
         </div>
       </ng-container>
@@ -491,43 +963,87 @@ interface PermissionGroup {
   `,
   styles: []
 })
-export class AdminPanelComponent implements OnInit {
-  tabs = ['Users', 'Services', 'Permissions', 'Statistics'];
-  activeTab = 'Users';
+export class AdminPanelComponent implements OnInit, OnDestroy {
+  tabs = ['Utilisateurs', 'Services', 'Permissions', 'Workflows', 'Statistiques'];
+  activeTab = 'Utilisateurs';
+  readonly readOnlyAdminHint = 'Permission UPDATE_USER manquante : modifications des utilisateurs, services et permissions desactivees.';
+  permissionEditMode: 'ROLE' | 'USER' = 'ROLE';
 
   users: User[] = [];
+  adminRoles: AdminRole[] = [];
   departments: Department[] = [];
-  systemConfigs: SystemConfig[] = [];
-  auditLogs: AuditLog[] = [];
   userStats: UserStatistics | null = null;
   permissionCatalog: PermissionDefinition[] = [];
   permissionGroups: PermissionGroup[] = [];
   selectedPermissionsUserId: string | null = null;
   selectedUserPermissions: UserPermissionMatrix | null = null;
   selectedEffectivePermissionCodes = new Set<string>();
+  selectedSavedPermissionCodes = new Set<string>();
+  selectedPermissionsRoleId: string | null = null;
+  selectedRolePermissions: RolePermissionMatrix | null = null;
+  selectedRolePermissionCodes = new Set<string>();
+  selectedSavedRolePermissionCodes = new Set<string>();
+  rolePermissionsFeedback = '';
+  rolePermissionsFeedbackTone: 'success' | 'error' = 'success';
+  applyRolePermissionsToUsers = true;
   isSavingPermissions = false;
   permissionsFeedback = '';
   permissionsFeedbackTone: 'success' | 'error' = 'success';
+  permissionSearchTerm = '';
+  permissionModuleFilter = 'ALL';
 
   showUserForm = false;
   formError = '';
 
   showDepartmentForm = false;
   departmentFormError = '';
+  userSearchTerm = '';
+  userRoleFilter = '';
+  userStatusFilter: '' | 'true' | 'false' = '';
+  usersPage = 0;
+  usersPageSize = 10;
+  usersTotalElements = 0;
+  usersTotalPages = 0;
+  usersLoading = false;
+  usersLoadError = '';
+
+  departmentSearchTerm = '';
+  departmentActiveFilter: '' | 'true' | 'false' = '';
+  departmentsPage = 0;
+  departmentsPageSize = 10;
+  departmentsTotalElements = 0;
+  departmentsTotalPages = 0;
+  departmentsLoading = false;
+  departmentsLoadError = '';
+  statsLoading = false;
+  statsLoadError = '';
+  private usersPageStateSubscription?: Subscription;
+  private departmentsPageStateSubscription?: Subscription;
 
   readonly roleOptions: string[] = [
     'ADMIN',
     'EMPLOYEE',
     'MANAGER',
     'ROOM_MANAGER',
+    'IT_MANAGER',
     'SECURITY_MANAGER',
     'DSN_DIRECTOR',
     'QUALITY_MANAGER'
   ];
 
   readonly activeStatusOptions: Option[] = [
-    { value: true, label: 'Active' },
-    { value: false, label: 'Inactive' },
+    { value: true, label: 'Actif' },
+    { value: false, label: 'Inactif' },
+  ];
+  readonly userStatusFilterOptions: Option[] = [
+    { value: '', label: 'Tous les statuts' },
+    { value: 'true', label: 'Actif' },
+    { value: 'false', label: 'Inactif' },
+  ];
+  readonly departmentStatusFilterOptions: Option[] = [
+    { value: '', label: 'Tous les statuts' },
+    { value: 'true', label: 'Actif' },
+    { value: 'false', label: 'Inactif' },
   ];
 
   get roleOptionItems(): Option[] {
@@ -537,49 +1053,291 @@ export class AdminPanelComponent implements OnInit {
     }));
   }
 
+  get userRoleFilterOptions(): Option[] {
+    return [
+      { value: '', label: 'Tous les roles' },
+      ...this.roleOptionItems,
+    ];
+  }
+
   userForm: UserFormModel = this.getEmptyUserForm();
   departmentForm: DepartmentFormModel = this.getEmptyDepartmentForm();
 
   constructor(private adminService: AdminService, private authService: AuthService) {}
 
   ngOnInit(): void {
+    this.usersPageStateSubscription = this.adminService.usersPageState$.subscribe((pageState) => {
+      this.usersPage = pageState.page;
+      this.usersPageSize = pageState.size;
+      this.usersTotalElements = pageState.totalElements;
+      const safeSize = pageState.size > 0 ? pageState.size : this.usersPageSize || 1;
+      const computedPages = pageState.totalElements > 0 ? Math.ceil(pageState.totalElements / safeSize) : 0;
+      this.usersTotalPages = Math.max(pageState.totalPages, computedPages);
+    });
+    this.departmentsPageStateSubscription = this.adminService.departmentsPageState$.subscribe((pageState) => {
+      this.departmentsPage = pageState.page;
+      this.departmentsPageSize = pageState.size;
+      this.departmentsTotalElements = pageState.totalElements;
+      const safeSize = pageState.size > 0 ? pageState.size : this.departmentsPageSize || 1;
+      const computedPages = pageState.totalElements > 0 ? Math.ceil(pageState.totalElements / safeSize) : 0;
+      this.departmentsTotalPages = Math.max(pageState.totalPages, computedPages);
+    });
+
     this.loadUsers();
+    this.loadAdminRoles();
     this.loadDepartments();
     this.loadStatistics();
     this.loadPermissionCatalog();
+  }
+
+  ngOnDestroy(): void {
+    this.usersPageStateSubscription?.unsubscribe();
+    this.departmentsPageStateSubscription?.unsubscribe();
   }
 
   hasAdminAccess(): boolean {
     return this.authService.hasRole('ADMIN');
   }
 
+  get isReadOnlyAdminMode(): boolean {
+    return this.hasAdminAccess() && !this.canUpdateUsers();
+  }
+
+  canCreateUsers(): boolean {
+    return this.authService.hasPermission('CREATE_USER');
+  }
+
+  canUpdateUsers(): boolean {
+    return this.authService.hasPermission('UPDATE_USER');
+  }
+
+  getUserPrimaryRoleLabel(user: User): string {
+    const primaryRole = user.roles?.[0] ?? 'EMPLOYEE';
+    return this.getRoleLabel(primaryRole);
+  }
+
+  getRoleLabel(roleCode: string): string {
+    const labels: Record<string, string> = {
+      ADMIN: 'Administrateur',
+      EMPLOYEE: 'Employe',
+      EMPLOYE: 'Employe',
+      MANAGER: 'Chef hierarchique',
+      CHEF_HIERARCHIQUE: 'Chef hierarchique',
+      ROOM_MANAGER: 'Responsable salle',
+      RESPONSABLE_SALLE: 'Responsable salle',
+      IT_MANAGER: 'Responsable IT',
+      RESPONSABLE_IT: 'Responsable IT',
+      SECURITY_MANAGER: 'Responsable securite',
+      RESPONSABLE_SECURITE: 'Responsable securite',
+      DSN_DIRECTOR: 'Directeur DSN',
+      DIRECTEUR_DSN: 'Directeur DSN',
+      QUALITY_MANAGER: 'Responsable qualite',
+      RESPONSABLE_QUALITE: 'Responsable qualite',
+    };
+
+    return labels[roleCode] ?? roleCode;
+  }
+
+  get hasPermissionChanges(): boolean {
+    if (this.selectedEffectivePermissionCodes.size !== this.selectedSavedPermissionCodes.size) {
+      return true;
+    }
+
+    return Array.from(this.selectedEffectivePermissionCodes)
+      .some((code) => !this.selectedSavedPermissionCodes.has(code));
+  }
+
+  get hasRolePermissionChanges(): boolean {
+    if (this.selectedRolePermissionCodes.size !== this.selectedSavedRolePermissionCodes.size) {
+      return true;
+    }
+
+    return Array.from(this.selectedRolePermissionCodes)
+      .some((code) => !this.selectedSavedRolePermissionCodes.has(code));
+  }
+
   loadUsers(): void {
-    this.adminService.getUsers().subscribe(users => {
-      this.users = users;
+    this.usersLoading = true;
+    this.usersLoadError = '';
+    this.adminService.getUsers({
+      page: this.usersPage,
+      size: this.usersPageSize,
+      search: this.userSearchTerm.trim() || undefined,
+      enabled: this.userStatusFilter === '' ? undefined : this.userStatusFilter === 'true',
+      role: this.userRoleFilter || undefined,
+      sort: 'createdAt,desc',
+    }).subscribe({
+      next: (users) => {
+        this.users = users;
+        this.usersLoading = false;
+      },
+      error: (error) => {
+        this.users = [];
+        this.usersLoading = false;
+        this.usersLoadError = error instanceof Error ? error.message : 'Chargement des utilisateurs impossible.';
+      }
+    });
+  }
+
+  loadAdminRoles(): void {
+    this.adminService.getAdminRoles().subscribe({
+      next: (roles) => {
+        this.adminRoles = roles;
+        if (!this.selectedPermissionsRoleId && roles.length > 0) {
+          this.selectPermissionsRole(roles[0].id);
+        }
+      },
+      error: (error) => {
+        this.rolePermissionsFeedbackTone = 'error';
+        this.rolePermissionsFeedback = error instanceof Error ? error.message : 'Chargement des roles impossible.';
+      }
     });
   }
 
   loadDepartments(): void {
-    this.adminService.getDepartments().subscribe(departments => {
-      this.departments = departments;
+    this.departmentsLoading = true;
+    this.departmentsLoadError = '';
+    this.adminService.getDepartments({
+      page: this.departmentsPage,
+      size: this.departmentsPageSize,
+      search: this.departmentSearchTerm.trim() || undefined,
+      active: this.departmentActiveFilter === '' ? undefined : this.departmentActiveFilter === 'true',
+      sort: 'name,asc',
+    }).subscribe({
+      next: (departments) => {
+        this.departments = departments;
+        this.departmentsLoading = false;
+      },
+      error: (error) => {
+        this.departments = [];
+        this.departmentsLoading = false;
+        this.departmentsLoadError = error instanceof Error ? error.message : 'Chargement des services impossible.';
+      }
     });
   }
 
-  loadSystemConfig(): void {
-    this.adminService.getSystemConfig().subscribe(configs => {
-      this.systemConfigs = configs;
-    });
+  applyUserFilters(): void {
+    this.usersPage = 0;
+    this.loadUsers();
   }
 
-  loadAuditLogs(): void {
-    this.adminService.getAuditLogs().subscribe(logs => {
-      this.auditLogs = logs.slice(0, 30);
-    });
+  resetUserFilters(): void {
+    this.userSearchTerm = '';
+    this.userRoleFilter = '';
+    this.userStatusFilter = '';
+    this.usersPage = 0;
+    this.loadUsers();
+  }
+
+  nextUsersPage(): void {
+    if (this.usersPage + 1 >= this.usersTotalPages) {
+      return;
+    }
+    this.usersPage += 1;
+    this.loadUsers();
+  }
+
+  previousUsersPage(): void {
+    if (this.usersPage <= 0) {
+      return;
+    }
+    this.usersPage -= 1;
+    this.loadUsers();
+  }
+
+  goToUsersPage(page: number): void {
+    if (page < 0 || page >= this.usersTotalPages || page === this.usersPage) {
+      return;
+    }
+    this.usersPage = page;
+    this.loadUsers();
+  }
+
+  applyDepartmentFilters(): void {
+    this.departmentsPage = 0;
+    this.loadDepartments();
+  }
+
+  resetDepartmentFilters(): void {
+    this.departmentSearchTerm = '';
+    this.departmentActiveFilter = '';
+    this.departmentsPage = 0;
+    this.loadDepartments();
+  }
+
+  nextDepartmentsPage(): void {
+    if (this.departmentsPage + 1 >= this.departmentsTotalPages) {
+      return;
+    }
+    this.departmentsPage += 1;
+    this.loadDepartments();
+  }
+
+  previousDepartmentsPage(): void {
+    if (this.departmentsPage <= 0) {
+      return;
+    }
+    this.departmentsPage -= 1;
+    this.loadDepartments();
+  }
+
+  goToDepartmentsPage(page: number): void {
+    if (page < 0 || page >= this.departmentsTotalPages || page === this.departmentsPage) {
+      return;
+    }
+    this.departmentsPage = page;
+    this.loadDepartments();
+  }
+
+  getVisiblePages(currentPage: number, totalPages: number): number[] {
+    if (totalPages <= 0) {
+      return [];
+    }
+
+    const maxButtons = 5;
+    const half = Math.floor(maxButtons / 2);
+    let start = Math.max(0, currentPage - half);
+    let end = Math.min(totalPages - 1, start + maxButtons - 1);
+
+    if ((end - start + 1) < maxButtons) {
+      start = Math.max(0, end - maxButtons + 1);
+    }
+
+    const pages: number[] = [];
+    for (let page = start; page <= end; page += 1) {
+      pages.push(page);
+    }
+
+    return pages;
+  }
+
+  getPaginationStart(page: number, size: number, total: number): number {
+    if (total <= 0) {
+      return 0;
+    }
+    return page * size + 1;
+  }
+
+  getPaginationEnd(page: number, size: number, total: number): number {
+    if (total <= 0) {
+      return 0;
+    }
+    return Math.min((page + 1) * size, total);
   }
 
   loadStatistics(): void {
-    this.adminService.getUserStatistics().subscribe(stats => {
-      this.userStats = stats;
+    this.statsLoading = true;
+    this.statsLoadError = '';
+    this.adminService.getUserStatistics().subscribe({
+      next: (stats) => {
+        this.userStats = stats;
+        this.statsLoading = false;
+      },
+      error: (error) => {
+        this.userStats = null;
+        this.statsLoading = false;
+        this.statsLoadError = error instanceof Error ? error.message : 'Chargement des statistiques impossible.';
+      },
     });
   }
 
@@ -594,6 +1352,52 @@ export class AdminPanelComponent implements OnInit {
     }
 
     return `${user.firstName} ${user.lastName}`.trim() || user.email;
+  }
+
+  get selectedPermissionsRoleLabel(): string {
+    if (!this.selectedPermissionsRoleId) {
+      return '';
+    }
+
+    const role = this.adminRoles.find((item) => item.id === this.selectedPermissionsRoleId);
+    if (!role) {
+      return '';
+    }
+
+    return this.getRoleLabel(role.name);
+  }
+
+  get permissionModuleOptions(): string[] {
+    return this.permissionGroups
+      .map((group) => group.module)
+      .filter((module, index, array) => module && array.indexOf(module) === index)
+      .sort((moduleA, moduleB) => moduleA.localeCompare(moduleB, 'fr', { sensitivity: 'base' }));
+  }
+
+  get filteredPermissionRows(): PermissionDefinition[] {
+    const normalizedSearch = this.permissionSearchTerm.trim().toLowerCase();
+
+    return this.permissionCatalog
+      .filter((permission) => {
+        if (this.permissionModuleFilter !== 'ALL' && permission.module !== this.permissionModuleFilter) {
+          return false;
+        }
+
+        if (!normalizedSearch) {
+          return true;
+        }
+
+        const searchable = `${permission.module} ${permission.label} ${permission.code} ${permission.description}`.toLowerCase();
+        return searchable.includes(normalizedSearch);
+      })
+      .sort((permissionA, permissionB) => {
+        const moduleComparison = permissionA.module.localeCompare(permissionB.module, 'fr', { sensitivity: 'base' });
+        if (moduleComparison !== 0) {
+          return moduleComparison;
+        }
+
+        return permissionA.label.localeCompare(permissionB.label, 'fr', { sensitivity: 'base' });
+      });
   }
 
   loadPermissionCatalog(): void {
@@ -614,11 +1418,13 @@ export class AdminPanelComponent implements OnInit {
     this.permissionsFeedback = '';
     this.selectedUserPermissions = null;
     this.selectedEffectivePermissionCodes = new Set<string>();
+    this.selectedSavedPermissionCodes = new Set<string>();
 
     this.adminService.getUserPermissionMatrix(userId).subscribe({
       next: (matrix) => {
         this.selectedUserPermissions = matrix;
         this.selectedEffectivePermissionCodes = new Set(matrix.effectivePermissions);
+        this.selectedSavedPermissionCodes = new Set(matrix.effectivePermissions);
       },
       error: (error) => {
         this.permissionsFeedbackTone = 'error';
@@ -631,11 +1437,19 @@ export class AdminPanelComponent implements OnInit {
     return this.selectedEffectivePermissionCodes.has(permissionCode);
   }
 
+  isPermissionRoleDerived(permissionCode: string): boolean {
+    return this.selectedUserPermissions?.roleDerivedPermissions.includes(permissionCode) ?? false;
+  }
+
+  isPermissionAssigned(permissionCode: string): boolean {
+    return this.selectedUserPermissions?.assignedPermissions.includes(permissionCode) ?? false;
+  }
+
   togglePermission(permissionCode: string, event: Event): void {
     const input = event.target as HTMLInputElement | null;
     const shouldEnable = !!input?.checked;
 
-    if (!this.selectedPermissionsUserId) {
+    if (!this.selectedPermissionsUserId || !this.canUpdateUsers()) {
       return;
     }
 
@@ -643,6 +1457,12 @@ export class AdminPanelComponent implements OnInit {
       this.selectedEffectivePermissionCodes.add(permissionCode);
     } else {
       this.selectedEffectivePermissionCodes.delete(permissionCode);
+    }
+  }
+
+  saveSelectedUserPermissions(): void {
+    if (!this.selectedPermissionsUserId || !this.canUpdateUsers() || !this.hasPermissionChanges) {
+      return;
     }
 
     this.isSavingPermissions = true;
@@ -654,16 +1474,13 @@ export class AdminPanelComponent implements OnInit {
         this.isSavingPermissions = false;
         this.selectedUserPermissions = matrix;
         this.selectedEffectivePermissionCodes = new Set(matrix.effectivePermissions);
+        this.selectedSavedPermissionCodes = new Set(matrix.effectivePermissions);
         this.permissionsFeedbackTone = 'success';
         this.permissionsFeedback = 'Permissions utilisateur mises a jour.';
+        this.refreshCurrentSessionPermissionsIfNeeded(matrix.userId);
       },
       error: (error) => {
         this.isSavingPermissions = false;
-        if (shouldEnable) {
-          this.selectedEffectivePermissionCodes.delete(permissionCode);
-        } else {
-          this.selectedEffectivePermissionCodes.add(permissionCode);
-        }
         this.permissionsFeedbackTone = 'error';
         this.permissionsFeedback = error instanceof Error ? error.message : 'Mise a jour des permissions impossible.';
       }
@@ -671,7 +1488,7 @@ export class AdminPanelComponent implements OnInit {
   }
 
   resetSelectedUserPermissions(): void {
-    if (!this.selectedPermissionsUserId) {
+    if (!this.selectedPermissionsUserId || !this.canUpdateUsers()) {
       return;
     }
 
@@ -683,8 +1500,10 @@ export class AdminPanelComponent implements OnInit {
         this.isSavingPermissions = false;
         this.selectedUserPermissions = matrix;
         this.selectedEffectivePermissionCodes = new Set(matrix.effectivePermissions);
+        this.selectedSavedPermissionCodes = new Set(matrix.effectivePermissions);
         this.permissionsFeedbackTone = 'success';
         this.permissionsFeedback = 'Permissions reinitialisees selon les roles.';
+        this.refreshCurrentSessionPermissionsIfNeeded(matrix.userId);
       },
       error: (error) => {
         this.isSavingPermissions = false;
@@ -694,13 +1513,98 @@ export class AdminPanelComponent implements OnInit {
     });
   }
 
+  selectPermissionsRole(roleId: string): void {
+    this.selectedPermissionsRoleId = roleId;
+    this.rolePermissionsFeedback = '';
+    this.selectedRolePermissions = null;
+    this.selectedRolePermissionCodes = new Set<string>();
+    this.selectedSavedRolePermissionCodes = new Set<string>();
+
+    this.adminService.getRolePermissionMatrix(roleId).subscribe({
+      next: (matrix) => {
+        this.selectedRolePermissions = matrix;
+        this.selectedRolePermissionCodes = new Set(matrix.assignedPermissions);
+        this.selectedSavedRolePermissionCodes = new Set(matrix.assignedPermissions);
+      },
+      error: (error) => {
+        this.rolePermissionsFeedbackTone = 'error';
+        this.rolePermissionsFeedback = error instanceof Error ? error.message : 'Chargement des permissions role impossible.';
+      }
+    });
+  }
+
+  isRolePermissionChecked(permissionCode: string): boolean {
+    return this.selectedRolePermissionCodes.has(permissionCode);
+  }
+
+  toggleRolePermission(permissionCode: string, event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const shouldEnable = !!input?.checked;
+
+    if (!this.selectedPermissionsRoleId || !this.canUpdateUsers()) {
+      return;
+    }
+
+    if (shouldEnable) {
+      this.selectedRolePermissionCodes.add(permissionCode);
+    } else {
+      this.selectedRolePermissionCodes.delete(permissionCode);
+    }
+  }
+
+  saveSelectedRolePermissions(): void {
+    if (!this.selectedPermissionsRoleId || !this.canUpdateUsers() || !this.hasRolePermissionChanges) {
+      return;
+    }
+
+    this.isSavingPermissions = true;
+    this.rolePermissionsFeedback = '';
+
+    const payload = Array.from(this.selectedRolePermissionCodes);
+    this.adminService.updateRolePermissionMatrix(
+      this.selectedPermissionsRoleId,
+      payload,
+      this.applyRolePermissionsToUsers,
+    ).subscribe({
+      next: (matrix) => {
+        this.isSavingPermissions = false;
+        this.selectedRolePermissions = matrix;
+        this.selectedRolePermissionCodes = new Set(matrix.assignedPermissions);
+        this.selectedSavedRolePermissionCodes = new Set(matrix.assignedPermissions);
+        this.rolePermissionsFeedbackTone = 'success';
+        this.rolePermissionsFeedback = this.applyRolePermissionsToUsers
+          ? 'Permissions du role mises a jour et appliquees aux utilisateurs.'
+          : 'Permissions du role mises a jour.';
+        if (this.applyRolePermissionsToUsers) {
+          this.loadUsers();
+        }
+        this.authService.reloadPermissions();
+      },
+      error: (error) => {
+        this.isSavingPermissions = false;
+        this.rolePermissionsFeedbackTone = 'error';
+        this.rolePermissionsFeedback = error instanceof Error ? error.message : 'Mise a jour des permissions role impossible.';
+      }
+    });
+  }
+
   startCreateUser(): void {
+    if (!this.canCreateUsers()) {
+      this.formError = 'Permission CREATE_USER manquante.';
+      return;
+    }
+
     this.formError = '';
     this.userForm = this.getEmptyUserForm();
     this.showUserForm = true;
   }
 
   startEditUser(user: User): void {
+    if (!this.canUpdateUsers()) {
+      this.formError = 'Permission UPDATE_USER manquante.';
+      return;
+    }
+
     this.formError = '';
     this.userForm = {
       id: user.id,
@@ -723,8 +1627,18 @@ export class AdminPanelComponent implements OnInit {
   }
 
   saveUser(): void {
+    if (this.userForm.id && !this.canUpdateUsers()) {
+      this.formError = 'Permission UPDATE_USER manquante.';
+      return;
+    }
+
+    if (!this.userForm.id && !this.canCreateUsers()) {
+      this.formError = 'Permission CREATE_USER manquante.';
+      return;
+    }
+
     if (!this.userForm.firstName.trim() || !this.userForm.email.trim() || this.userForm.roles.length === 0) {
-      this.formError = 'First name, email and at least one role are required.';
+      this.formError = 'Le prenom, l email et au moins un role sont obligatoires.';
       return;
     }
 
@@ -741,9 +1655,14 @@ export class AdminPanelComponent implements OnInit {
         phone: this.userForm.phone.trim(),
         roles: [...this.userForm.roles],
         isActive: this.userForm.isActive
-      }).subscribe(() => {
-        this.loadUsers();
-        this.cancelUserEdit();
+      }).subscribe({
+        next: () => {
+          this.loadUsers();
+          this.cancelUserEdit();
+        },
+        error: (error) => {
+          this.formError = error instanceof Error ? error.message : 'Mise a jour utilisateur impossible.';
+        },
       });
       return;
     }
@@ -757,38 +1676,73 @@ export class AdminPanelComponent implements OnInit {
       phone: this.userForm.phone.trim(),
       roles: [...this.userForm.roles],
       isActive: this.userForm.isActive
-    }).subscribe(() => {
-      this.loadUsers();
-      this.loadStatistics();
-      this.cancelUserEdit();
+    }).subscribe({
+      next: () => {
+        this.loadUsers();
+        this.loadStatistics();
+        this.cancelUserEdit();
+      },
+      error: (error) => {
+        this.formError = error instanceof Error ? error.message : 'Creation utilisateur impossible.';
+      },
     });
   }
 
   toggleUserStatus(user: User): void {
-    this.adminService.updateUser(user.id, { isActive: !user.isActive }).subscribe(() => {
-      this.loadUsers();
-      this.loadStatistics();
+    if (!this.canUpdateUsers()) {
+      this.formError = 'Permission UPDATE_USER manquante.';
+      return;
+    }
+
+    this.adminService.updateUser(user.id, { isActive: !user.isActive }).subscribe({
+      next: () => {
+        this.loadUsers();
+        this.loadStatistics();
+      },
+      error: (error) => {
+        this.formError = error instanceof Error ? error.message : 'Mise a jour du statut utilisateur impossible.';
+      },
     });
   }
 
   deleteUser(id: string): void {
-    if (!confirm('Delete this user?')) {
+    if (!this.canUpdateUsers()) {
+      this.formError = 'Permission UPDATE_USER manquante.';
       return;
     }
 
-    this.adminService.deleteUser(id).subscribe(() => {
-      this.loadUsers();
-      this.loadStatistics();
+    if (!confirm('Supprimer cet utilisateur ?')) {
+      return;
+    }
+
+    this.adminService.deleteUser(id).subscribe({
+      next: () => {
+        this.loadUsers();
+        this.loadStatistics();
+      },
+      error: (error) => {
+        this.formError = error instanceof Error ? error.message : 'Suppression utilisateur impossible.';
+      },
     });
   }
 
   startCreateDepartment(): void {
+    if (!this.canUpdateUsers()) {
+      this.departmentFormError = this.readOnlyAdminHint;
+      return;
+    }
+
     this.departmentFormError = '';
     this.departmentForm = this.getEmptyDepartmentForm();
     this.showDepartmentForm = true;
   }
 
   startEditDepartment(department: Department): void {
+    if (!this.canUpdateUsers()) {
+      this.departmentFormError = this.readOnlyAdminHint;
+      return;
+    }
+
     this.departmentFormError = '';
     this.departmentForm = {
       id: department.id,
@@ -808,8 +1762,13 @@ export class AdminPanelComponent implements OnInit {
   }
 
   saveDepartment(): void {
+    if (!this.canUpdateUsers()) {
+      this.departmentFormError = this.readOnlyAdminHint;
+      return;
+    }
+
     if (!this.departmentForm.name.trim() || !this.departmentForm.code.trim()) {
-      this.departmentFormError = 'Service name and code are required.';
+      this.departmentFormError = 'Le nom du service et le code sont obligatoires.';
       return;
     }
 
@@ -822,9 +1781,14 @@ export class AdminPanelComponent implements OnInit {
         description: this.departmentForm.description.trim(),
         managerName: this.departmentForm.managerName.trim(),
         isActive: this.departmentForm.isActive
-      }).subscribe(() => {
-        this.loadDepartments();
-        this.cancelDepartmentEdit();
+      }).subscribe({
+        next: () => {
+          this.loadDepartments();
+          this.cancelDepartmentEdit();
+        },
+        error: (error) => {
+          this.departmentFormError = error instanceof Error ? error.message : 'Mise a jour service impossible.';
+        },
       });
       return;
     }
@@ -835,24 +1799,35 @@ export class AdminPanelComponent implements OnInit {
       description: this.departmentForm.description.trim(),
       managerName: this.departmentForm.managerName.trim(),
       isActive: this.departmentForm.isActive
-    }).subscribe(() => {
-      this.loadDepartments();
-      this.cancelDepartmentEdit();
+    }).subscribe({
+      next: () => {
+        this.loadDepartments();
+        this.cancelDepartmentEdit();
+      },
+      error: (error) => {
+        this.departmentFormError = error instanceof Error ? error.message : 'Creation service impossible.';
+      },
     });
   }
 
   deleteDepartment(id: string): void {
-    if (!confirm('Delete this service/department?')) {
+    if (!this.canUpdateUsers()) {
+      this.departmentFormError = this.readOnlyAdminHint;
       return;
     }
 
-    this.adminService.deleteDepartment(id).subscribe(() => {
-      this.loadDepartments();
-    });
-  }
+    if (!confirm('Supprimer ce service ?')) {
+      return;
+    }
 
-  updateConfig(config: SystemConfig): void {
-    this.adminService.updateSystemConfig(config.id, config).subscribe();
+    this.adminService.deleteDepartment(id).subscribe({
+      next: () => {
+        this.loadDepartments();
+      },
+      error: (error) => {
+        this.departmentFormError = error instanceof Error ? error.message : 'Suppression service impossible.';
+      },
+    });
   }
 
   private groupPermissionsByModule(permissions: PermissionDefinition[]): PermissionGroup[] {
@@ -896,5 +1871,13 @@ export class AdminPanelComponent implements OnInit {
       managerName: '',
       isActive: true
     };
+  }
+
+  private refreshCurrentSessionPermissionsIfNeeded(updatedUserId: string): void {
+    if (this.authService.currentUser?.id !== updatedUserId) {
+      return;
+    }
+
+    this.authService.reloadPermissions();
   }
 }

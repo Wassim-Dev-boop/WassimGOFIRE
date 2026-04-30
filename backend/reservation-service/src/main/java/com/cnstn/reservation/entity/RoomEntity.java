@@ -2,6 +2,8 @@ package com.cnstn.reservation.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -24,8 +26,15 @@ public class RoomEntity {
     @Column(name = "location", nullable = false, length = 120)
     private String location;
 
+    @Column(name = "description", length = 400)
+    private String description;
+
     @Column(name = "capacity", nullable = false)
     private int capacity;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private RoomOperationalStatus status = RoomOperationalStatus.DISPONIBLE;
 
     @Column(name = "active", nullable = false)
     private boolean active = true;
@@ -68,6 +77,22 @@ public class RoomEntity {
 
     public void setCapacity(int capacity) {
         this.capacity = capacity;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public RoomOperationalStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(RoomOperationalStatus status) {
+        this.status = status;
     }
 
     public boolean isActive() {

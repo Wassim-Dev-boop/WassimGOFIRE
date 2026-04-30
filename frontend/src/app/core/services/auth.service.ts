@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, catchError, map, of, switchMap, tap, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, finalize, map, of, switchMap, tap, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 import {
   buildApiUrl,
@@ -30,6 +30,7 @@ interface BackendMyPermissionsResponse {
 
 interface KeycloakTokenResponse {
   access_token?: string;
+  refresh_token?: string;
 }
 
 interface KeycloakJwtPayload {
@@ -43,15 +44,40 @@ interface KeycloakJwtPayload {
   };
 }
 
-interface SignUpRequest {
+interface PasswordRecoveryResponse {
+  message?: string;
+}
+
+interface LogoutRequest {
+  refresh_token: string;
+}
+
+interface ProfileUpdatePayload {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+}
+
+interface SignupRequestPayload {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
+  departmentId?: string;
   password: string;
+  confirmPassword: string;
 }
 
-interface PasswordRecoveryResponse {
+interface SignupResponsePayload {
   message?: string;
+}
+
+interface PublicDepartmentResponse {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
 }
 
 @Injectable({
@@ -62,12 +88,13 @@ export class AuthService {
   private readonly permissionStorageKey = 'enterprise-auth-permissions';
   private readonly appRoles: AppRole[] = [
     'ADMIN',
-    'EMPLOYEE',
     'MANAGER',
     'ROOM_MANAGER',
+    'IT_MANAGER',
     'SECURITY_MANAGER',
     'DSN_DIRECTOR',
     'QUALITY_MANAGER',
+    'EMPLOYEE',
   ];
 
   private readonly roleLabelsMap: Record<AppRole, string> = {
@@ -75,6 +102,7 @@ export class AuthService {
     EMPLOYEE: 'Employe',
     MANAGER: 'Chef hierarchique',
     ROOM_MANAGER: 'Responsable salle',
+    IT_MANAGER: 'Responsable IT',
     SECURITY_MANAGER: 'Responsable securite',
     DSN_DIRECTOR: 'Directeur DSN',
     QUALITY_MANAGER: 'Responsable qualite'
@@ -114,11 +142,16 @@ export class AuthService {
       'VIEW_REPORTS_MODULE',
       'CHANGE_INTERVENTION_STATUS',
     ],
+    IT_MANAGER: [
+      'VIEW_INTERVENTIONS_MODULE',
+      'VIEW_REPORTS_MODULE',
+    ],
     SECURITY_MANAGER: [
       'VIEW_REPORTS_MODULE',
     ],
     DSN_DIRECTOR: [
       'VIEW_EVENTS_MODULE',
+      'VIEW_INTERVENTIONS_MODULE',
       'VIEW_REPORTS_MODULE',
       'VALIDATE_EVENT',
     ],
@@ -173,24 +206,6 @@ export class AuthService {
     return !!this.currentUserSubject.value;
   }
 
-  signUp(firstName: string, lastName: string, email: string, password: string): Observable<void> {
-    const payload: SignUpRequest = {
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      email: email.trim().toLowerCase(),
-      password: password.trim(),
-    };
-
-    if (!payload.firstName || !payload.lastName || !payload.email || !payload.password) {
-      return throwError(() => new Error('Tous les champs obligatoires doivent etre renseignes.'));
-    }
-
-    return this.http.post(buildApiUrl('/api/v1/auth/register'), payload).pipe(
-      map(() => undefined),
-      catchError((error) => throwError(() => new Error(this.toSignUpErrorMessage(error)))),
-    );
-  }
-
   signIn(identifier: string, password: string): Observable<AppUserProfile> {
     const normalizedIdentifier = identifier.trim();
     const normalizedPassword = password.trim();
@@ -206,13 +221,16 @@ export class AuthService {
         password: normalizedPassword,
       },
     ).pipe(
-      map((response) => response.access_token?.trim() ?? ''),
-      switchMap((accessToken) => {
-        if (!accessToken) {
+      map((response) => ({
+        accessToken: response.access_token?.trim() ?? '',
+        refreshToken: response.refresh_token?.trim() ?? '',
+      })),
+      switchMap(({ accessToken, refreshToken }) => {
+        if (!accessToken || !refreshToken) {
           return throwError(() => new Error('Token Keycloak introuvable dans la reponse.'));
         }
 
-        this.persistBackendToken(accessToken);
+        this.persistBackendSession(accessToken, refreshToken);
 
         const fallbackUser = this.buildFallbackUserFromToken(accessToken, normalizedIdentifier);
         return this.syncWithBackendProfile(fallbackUser);
@@ -230,11 +248,21 @@ export class AuthService {
       return throwError(() => new Error('Email obligatoire.'));
     }
 
+    const payload = { email: normalizedEmail };
     return this.http.post<PasswordRecoveryResponse>(
-      buildApiUrl('/api/v1/password/forgot'),
-      { email: normalizedEmail },
+      buildApiUrl('/api/v1/auth/forgot-password'),
+      payload,
     ).pipe(
-      map((response) => response.message?.trim() || 'If this email exists, a password reset link has been sent'),
+      catchError((error) => {
+        if (error instanceof HttpErrorResponse && error.status === 404) {
+          return this.http.post<PasswordRecoveryResponse>(
+            buildApiUrl('/api/v1/password/forgot'),
+            payload,
+          );
+        }
+        return throwError(() => error);
+      }),
+      map((response) => response.message?.trim() || 'Si cette adresse existe, un email de reinitialisation sera envoye.'),
       catchError((error) => throwError(() => new Error(this.toPasswordRecoveryErrorMessage(error)))),
     );
   }
@@ -256,22 +284,102 @@ export class AuthService {
       return throwError(() => new Error('Les mots de passe ne correspondent pas.'));
     }
 
+    const payload = {
+      token: normalizedToken,
+      newPassword: normalizedNewPassword,
+      confirmPassword: normalizedConfirmPassword,
+    };
+
     return this.http.post<PasswordRecoveryResponse>(
-      buildApiUrl('/api/v1/password/reset'),
-      {
-        token: normalizedToken,
-        newPassword: normalizedNewPassword,
-        confirmPassword: normalizedConfirmPassword,
-      },
+      buildApiUrl('/api/v1/auth/reset-password'),
+      payload,
     ).pipe(
-      map((response) => response.message?.trim() || 'Password has been reset successfully'),
+      catchError((error) => {
+        if (error instanceof HttpErrorResponse && error.status === 404) {
+          return this.http.post<PasswordRecoveryResponse>(
+            buildApiUrl('/api/v1/password/reset'),
+            payload,
+          );
+        }
+        return throwError(() => error);
+      }),
+      map((response) => response.message?.trim() || 'Mot de passe reinitialise avec succes.'),
       catchError((error) => throwError(() => new Error(this.toPasswordRecoveryErrorMessage(error)))),
     );
   }
 
+  signUp(payload: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    departmentId?: string;
+    password: string;
+    confirmPassword: string;
+  }): Observable<string> {
+    const requestPayload: SignupRequestPayload = {
+      firstName: payload.firstName.trim(),
+      lastName: payload.lastName.trim(),
+      email: payload.email.trim().toLowerCase(),
+      phone: (payload.phone || '').trim() || undefined,
+      departmentId: payload.departmentId?.trim() || undefined,
+      password: payload.password.trim(),
+      confirmPassword: payload.confirmPassword.trim(),
+    };
+
+    if (!requestPayload.firstName || !requestPayload.lastName || !requestPayload.email || !requestPayload.password || !requestPayload.confirmPassword) {
+      return throwError(() => new Error('Tous les champs obligatoires doivent etre renseignes.'));
+    }
+
+    if (requestPayload.password !== requestPayload.confirmPassword) {
+      return throwError(() => new Error('La confirmation du mot de passe ne correspond pas.'));
+    }
+
+    return this.http.post<SignupResponsePayload>(
+      buildApiUrl('/api/v1/auth/signup'),
+      requestPayload,
+    ).pipe(
+      map((response) => response.message?.trim() || 'Votre demande de compte a ete envoyee. Elle doit etre validee par un administrateur.'),
+      catchError((error) => throwError(() => new Error(this.toSignupErrorMessage(error)))),
+    );
+  }
+
+  getPublicDepartments(): Observable<Array<{ id: string; code: string; name: string }>> {
+    return this.http.get<PublicDepartmentResponse[]>(
+      buildApiUrl('/api/v1/public/departments'),
+    ).pipe(
+      map((departments) => Array.isArray(departments)
+        ? departments.map((department) => ({
+            id: department.id,
+            code: department.code,
+            name: department.name,
+          }))
+        : []),
+      catchError(() => of([])),
+    );
+  }
+
   signOut(): void {
-    this.clearBackendSession();
-    this.router.navigate(['/signin']);
+    const refreshToken = this.readRefreshToken();
+    const accessToken = this.readBackendToken();
+
+    if (!refreshToken || !accessToken) {
+      this.clearBackendSession();
+      void this.router.navigate(['/signin']);
+      return;
+    }
+
+    const payload: LogoutRequest = {
+      refresh_token: refreshToken,
+    };
+
+    this.http.post<void>(buildApiUrl('/api/v1/auth/logout'), payload).pipe(
+      catchError(() => of(undefined)),
+      finalize(() => {
+        this.clearBackendSession();
+        void this.router.navigate(['/signin']);
+      }),
+    ).subscribe();
   }
 
   switchRole(role: AppRole): void {
@@ -331,28 +439,53 @@ export class AuthService {
     return permissionCodes.every((permissionCode) => this.hasPermission(permissionCode));
   }
 
-  updateProfile(changes: Partial<Pick<AppUserProfile, 'firstName' | 'lastName' | 'email' | 'phone' | 'department'>>): void {
+  reloadPermissions(): void {
+    this.refreshPermissionsFromBackend();
+  }
+
+  updateProfile(changes: Partial<Pick<AppUserProfile, 'firstName' | 'lastName' | 'email' | 'phone'>>): Observable<AppUserProfile> {
     const current = this.currentUserSubject.value;
     if (!current) {
-      return;
+      return throwError(() => new Error('Utilisateur non authentifie.'));
     }
 
-    const updated: AppUserProfile = {
-      ...current,
-      ...changes,
-      email: (changes.email ?? current.email).trim()
+    const payload: ProfileUpdatePayload = {
+      email: (changes.email ?? current.email).trim(),
+      firstName: (changes.firstName ?? current.firstName).trim(),
+      lastName: (changes.lastName ?? current.lastName).trim(),
+      phone: (changes.phone ?? current.phone ?? '').trim(),
     };
 
-    this.persistUser(updated);
-    this.currentUserSubject.next(updated);
+    if (!payload.email || !payload.firstName || !payload.lastName) {
+      return throwError(() => new Error('Nom, prenom et email sont obligatoires.'));
+    }
+
+    return this.http.patch<BackendProfileResponse>(
+      buildApiUrl('/api/v1/me/profile'),
+      payload,
+    ).pipe(
+      map((response) => this.mapBackendProfile(response, current)),
+      map((updatedUser) => ({
+        ...updatedUser,
+        permissionsCustomized: current.permissionsCustomized,
+        permissions: current.permissions ?? this.resolveDefaultPermissionsForRoles(updatedUser.roles),
+      })),
+      tap((updatedUser) => {
+        this.persistUser(updatedUser);
+        this.currentUserSubject.next(updatedUser);
+        this.currentRoleSubject.next(updatedUser.role);
+      }),
+      catchError((error) => throwError(() => new Error(this.toProfileUpdateErrorMessage(error)))),
+    );
   }
 
   private persistUser(user: AppUserProfile): void {
     localStorage.setItem(this.storageKey, JSON.stringify(user));
   }
 
-  private persistBackendToken(token: string): void {
-    localStorage.setItem('backend_access_token', token);
+  private persistBackendSession(accessToken: string, refreshToken: string): void {
+    localStorage.setItem('backend_access_token', accessToken);
+    localStorage.setItem('backend_refresh_token', refreshToken);
     localStorage.removeItem('auth_token');
     localStorage.removeItem('access_token');
   }
@@ -364,6 +497,7 @@ export class AuthService {
     localStorage.removeItem(this.storageKey);
     localStorage.removeItem(this.permissionStorageKey);
     localStorage.removeItem('backend_access_token');
+    localStorage.removeItem('backend_refresh_token');
     localStorage.removeItem('auth_token');
     localStorage.removeItem('access_token');
   }
@@ -381,14 +515,18 @@ export class AuthService {
 
     return this.http.get<BackendProfileResponse>(buildApiUrl('/api/v1/me')).pipe(
       map((response) => this.mapBackendProfile(response, fallbackUser)),
-      tap((profile) => {
-        const profileWithDefaults = this.attachRoleDefaultPermissions(profile);
-        this.persistUser(profileWithDefaults);
-        this.currentUserSubject.next(profileWithDefaults);
-        this.currentRoleSubject.next(profileWithDefaults.role);
-        this.persistPermissions(profileWithDefaults.permissions ?? []);
-        this.currentPermissionsSubject.next(profileWithDefaults.permissions ?? []);
-        this.refreshPermissionsFromBackend();
+      switchMap((profile) =>
+        this.http.get<BackendMyPermissionsResponse>(buildApiUrl('/api/v1/me/permissions')).pipe(
+          map((permissionsResponse) => this.attachEffectivePermissions(profile, permissionsResponse)),
+          catchError(() => of(this.attachRoleDefaultPermissions(profile))),
+        )
+      ),
+      tap((profileWithPermissions) => {
+        this.persistUser(profileWithPermissions);
+        this.currentUserSubject.next(profileWithPermissions);
+        this.currentRoleSubject.next(profileWithPermissions.role);
+        this.persistPermissions(profileWithPermissions.permissions ?? []);
+        this.currentPermissionsSubject.next(profileWithPermissions.permissions ?? []);
       }),
       catchError(() => {
         const fallbackWithPermissions = this.attachRoleDefaultPermissions(fallbackUser);
@@ -408,7 +546,7 @@ export class AuthService {
   ): AppUserProfile {
     const backendRoles = toFrontendRoles(response.roles ?? []);
     const roles = backendRoles.length > 0 ? backendRoles : fallbackUser.roles;
-    const role = roles[0] ?? fallbackUser.role;
+    const role = this.resolvePrimaryRole(roles, fallbackUser.role);
 
     return {
       id: response.id || fallbackUser.id,
@@ -420,6 +558,21 @@ export class AuthService {
       department: response.department?.name || fallbackUser.department,
       roles,
       role,
+    };
+  }
+
+  private attachEffectivePermissions(
+    profile: AppUserProfile,
+    permissionsResponse: BackendMyPermissionsResponse
+  ): AppUserProfile {
+    const effectivePermissions = Array.isArray(permissionsResponse.effectivePermissions)
+      ? Array.from(new Set(permissionsResponse.effectivePermissions))
+      : this.resolveDefaultPermissionsForRoles(profile.roles);
+
+    return {
+      ...profile,
+      permissionsCustomized: !!permissionsResponse.customized,
+      permissions: effectivePermissions,
     };
   }
 
@@ -438,8 +591,26 @@ export class AuthService {
       lastName,
       email,
       roles: roles.length > 0 ? roles : ['EMPLOYEE'],
-      role: roles[0] ?? 'EMPLOYEE',
+      role: this.resolvePrimaryRole(roles, 'EMPLOYEE'),
     };
+  }
+
+  private resolvePrimaryRole(roles: AppRole[], fallback: AppRole = 'EMPLOYEE'): AppRole {
+    if (!Array.isArray(roles) || roles.length === 0) {
+      return fallback;
+    }
+
+    const normalizedRoles = Array.from(new Set(
+      roles.filter((role): role is AppRole => this.appRoles.includes(role))
+    ));
+
+    if (normalizedRoles.length === 0) {
+      return fallback;
+    }
+
+    const orderedRoles = [...this.appRoles];
+    const firstByPriority = orderedRoles.find((role) => normalizedRoles.includes(role));
+    return firstByPriority ?? fallback;
   }
 
   private decodeJwtPayload(token: string): KeycloakJwtPayload | null {
@@ -523,7 +694,7 @@ export class AuthService {
     return 'Echec de connexion.';
   }
 
-  private toSignUpErrorMessage(error: unknown): string {
+  private toProfileUpdateErrorMessage(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
       if (error.status === 0) {
         return 'Backend inaccessible. Verifiez que les services sont demarres.';
@@ -533,16 +704,16 @@ export class AuthService {
         ? error.error.detail
         : '';
 
-      if (error.status === 409) {
-        return detail || 'Cet email existe deja.';
+      if (error.status === 400) {
+        return detail || 'Donnees invalides. Verifiez les champs du profil.';
       }
 
-      if (error.status === 400) {
-        return detail || 'Donnees invalides. Verifiez les champs du formulaire.';
+      if (error.status === 401 || error.status === 403) {
+        return 'Session invalide ou droits insuffisants pour modifier le profil.';
       }
 
       if (error.status === 502) {
-        return 'Erreur de synchronisation Keycloak. Reessayez dans quelques secondes.';
+        return 'Service externe indisponible. Reessayez dans quelques secondes.';
       }
 
       if (detail) {
@@ -554,7 +725,7 @@ export class AuthService {
       return error.message;
     }
 
-    return 'Echec de creation du compte.';
+    return 'Echec de mise a jour du profil.';
   }
 
   private toPasswordRecoveryErrorMessage(error: unknown): string {
@@ -589,6 +760,36 @@ export class AuthService {
     }
 
     return 'Operation impossible pour le moment.';
+  }
+
+  private toSignupErrorMessage(error: unknown): string {
+    if (error instanceof HttpErrorResponse) {
+      if (error.status === 0) {
+        return 'Backend inaccessible. Verifiez que les services sont demarres.';
+      }
+
+      const detail = typeof error.error === 'object' && typeof error.error?.detail === 'string'
+        ? error.error.detail
+        : '';
+
+      if (error.status === 400) {
+        return detail || 'Les donnees d inscription sont invalides.';
+      }
+
+      if (error.status === 409) {
+        return detail || 'Un compte existe deja avec cet email.';
+      }
+
+      if (detail) {
+        return detail;
+      }
+    }
+
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+
+    return 'Inscription impossible pour le moment.';
   }
 
   private refreshPermissionsFromBackend(): void {
@@ -689,6 +890,10 @@ export class AuthService {
       || localStorage.getItem('auth_token')?.trim()
       || localStorage.getItem('access_token')?.trim()
       || '';
+  }
+
+  private readRefreshToken(): string {
+    return localStorage.getItem('backend_refresh_token')?.trim() || '';
   }
 
   private refreshUserFromBackend(): void {

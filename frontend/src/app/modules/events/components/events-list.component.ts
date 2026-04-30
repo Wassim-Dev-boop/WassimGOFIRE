@@ -1,16 +1,19 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FullCalendarComponent, FullCalendarModule } from '@fullcalendar/angular';
-import { EventInput, CalendarOptions, DateSelectArg, EventClickArg } from '@fullcalendar/core';
+import { EventInput, CalendarOptions, DateSelectArg, EventClickArg, EventContentArg } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { catchError, firstValueFrom, forkJoin, map, of } from 'rxjs';
+import frLocale from '@fullcalendar/core/locales/fr';
+import { Subscription, catchError, firstValueFrom, forkJoin, map, of } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
 import { EventService } from '../../../core/services/event.service';
 import { InvitationService } from '../../../core/services/invitation.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { AppRole, Event, EventStatus, InvitationStatus } from '../../../core/models';
+import { ReservationService } from '../../../core/services/reservation.service';
+import { AppRole, Event, EventMode, EventStatus, InvitationStatus, Room } from '../../../core/models';
 import { Option, SelectComponent } from '../../../shared/components/form/select/select.component';
 
 type CalendarVisualLevel = 'Danger' | 'Success' | 'Primary' | 'Warning';
@@ -42,7 +45,7 @@ declare global {
           <div>
             <h1 class="mb-1 text-2xl font-bold text-gray-900 dark:text-white/90 lg:text-3xl">Evenements</h1>
             <p class="max-w-2xl text-sm text-gray-600 dark:text-gray-400">
-              Planification, validation et participation aux evenements internes dans un flux unique.
+              Planification, validation et participation aux evenements internes dans un espace clair et lisible.
             </p>
             <div class="mt-3 flex flex-wrap items-center gap-2">
               <span class="inline-flex rounded-full bg-brand-500/10 px-3 py-1 text-xs font-semibold text-brand-700 dark:text-brand-300">
@@ -60,14 +63,14 @@ declare global {
               [ngClass]="viewMode === 'list' ? 'border-brand-500 bg-brand-500 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.03]'"
               class="rounded-xl border px-5 py-2.5 text-sm font-semibold transition"
             >
-              Vue liste
+              Voir la liste
             </button>
             <button
               (click)="viewMode = 'calendar'"
               [ngClass]="viewMode === 'calendar' ? 'border-brand-500 bg-brand-500 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.03]'"
               class="rounded-xl border px-5 py-2.5 text-sm font-semibold transition"
             >
-              Vue calendrier
+              Voir calendrier
             </button>
             <button
               *ngIf="canCreateEvents()"
@@ -89,9 +92,16 @@ declare global {
           {{ calendarSubmissionFeedback }}
         </div>
 
+        <div
+          *ngIf="eventsLoadError"
+          class="mt-3 rounded-xl border border-error-300 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/40 dark:bg-error-500/10 dark:text-error-300"
+        >
+          {{ eventsLoadError }}
+        </div>
+
         <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-4">
           <article class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
-            <p class="text-3xl font-semibold text-gray-900 dark:text-white/90">{{ events.length }}</p>
+            <p class="text-3xl font-semibold text-gray-900 dark:text-white/90">{{ totalElements }}</p>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Evenements total</p>
           </article>
 
@@ -111,16 +121,18 @@ declare global {
           </article>
         </div>
 
-        <div *ngIf="viewMode === 'list'" class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_220px_220px_auto]">
+        <div class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_220px_220px_auto_auto_auto]">
           <input
             type="text"
             [(ngModel)]="searchTerm"
+            (keydown.enter)="applyListFilters()"
             placeholder="Rechercher un evenement, lieu, organisateur..."
             class="h-11 w-full rounded-xl border border-gray-300 bg-transparent px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
           />
 
           <app-select
             [(ngModel)]="statusFilter"
+            (ngModelChange)="applyListFilters()"
             [options]="statusFilterOptions"
             placeholder="Tous les statuts"
             className="bg-white dark:bg-gray-900"
@@ -128,6 +140,7 @@ declare global {
 
           <app-select
             [(ngModel)]="typeFilter"
+            (ngModelChange)="applyListFilters()"
             [options]="typeFilterOptions"
             placeholder="Tous les types"
             className="bg-white dark:bg-gray-900"
@@ -140,12 +153,35 @@ declare global {
           >
             Trier: {{ getSortModeLabel() }}
           </button>
+
+          <button
+            type="button"
+            (click)="applyListFilters()"
+            class="h-11 rounded-xl border border-brand-300 px-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-brand-500/50 dark:text-brand-300 dark:hover:bg-brand-500/10"
+          >
+            Appliquer
+          </button>
+
+          <button
+            type="button"
+            (click)="resetListFilters()"
+            class="h-11 rounded-xl border border-gray-300 px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+          >
+            Reinitialiser
+          </button>
         </div>
       </section>
 
       <section *ngIf="viewMode === 'list'" class="space-y-5">
         <div
-          *ngIf="canApproveEvents() && pendingEvents.length > 0"
+          *ngIf="isListLoading"
+          class="rounded-2xl border border-gray-200 bg-white px-6 py-8 text-center text-sm text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300"
+        >
+          Chargement des evenements...
+        </div>
+
+        <div
+          *ngIf="!isListLoading && canReviewWorkflowEvents() && pendingEvents.length > 0"
           class="rounded-2xl border border-warning-300 bg-warning-50 p-5 dark:border-warning-500/40 dark:bg-warning-500/10"
         >
           <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-warning-700 dark:text-warning-300">
@@ -161,7 +197,7 @@ declare global {
                 <div>
                   <p class="text-base font-semibold text-gray-900 dark:text-white/90">{{ request.title }}</p>
                   <p class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ request.onlineEvent ? 'En ligne (Zoom)' : request.location }} - {{ request.startDate | date:'short' }}
+                    {{ getEventModeLabel(request) }} - {{ isEventOnlineOnly(request) ? 'Acces en ligne' : request.location }} - {{ request.startDate | date:'short' }}
                   </p>
                 </div>
                 <div class="flex gap-2">
@@ -169,7 +205,7 @@ declare global {
                     (click)="approveEvent(request)"
                     class="rounded-lg bg-success-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-success-600"
                   >
-                    Approuver
+                    Valider
                   </button>
                   <button
                     (click)="rejectEvent(request)"
@@ -183,12 +219,12 @@ declare global {
           </div>
         </div>
 
-        <div *ngIf="filteredEvents.length === 0" class="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center dark:border-gray-700 dark:bg-white/[0.03]">
+        <div *ngIf="!isListLoading && filteredEvents.length === 0" class="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center dark:border-gray-700 dark:bg-white/[0.03]">
           <p class="text-lg font-semibold text-gray-800 dark:text-white/90">Aucun evenement trouve</p>
           <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Ajustez vos filtres ou creez un nouvel evenement.</p>
         </div>
 
-        <div *ngIf="filteredEvents.length > 0" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div *ngIf="!isListLoading && filteredEvents.length > 0" class="grid max-h-[68vh] grid-cols-1 gap-4 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3">
           <article
             *ngFor="let event of filteredEvents"
             class="group rounded-2xl border border-gray-200 bg-white p-5 transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-theme-md dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-brand-500"
@@ -202,10 +238,9 @@ declare global {
                   {{ event.type }}
                 </span>
                 <span
-                  *ngIf="event.onlineEvent"
                   class="rounded-full bg-brand-500/10 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:text-brand-300"
                 >
-                  En ligne (Zoom)
+                  {{ getEventModeLabel(event) }}
                 </span>
               </div>
             </div>
@@ -213,7 +248,7 @@ declare global {
             <p class="mb-4 line-clamp-2 text-sm text-gray-600 dark:text-gray-400">{{ event.description || 'Aucune description.' }}</p>
 
             <div class="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-              <p><span class="font-semibold">{{ event.onlineEvent ? 'Acces' : 'Lieu' }}:</span> {{ event.onlineEvent ? 'Reunion Zoom integree' : event.location }}</p>
+              <p><span class="font-semibold">{{ isEventOnlineOnly(event) ? 'Acces' : 'Lieu' }}:</span> {{ isEventOnlineOnly(event) ? 'Reunion Zoom integree' : event.location }}</p>
               <p><span class="font-semibold">Date:</span> {{ getEventDateRangeLabel(event) }}</p>
               <p><span class="font-semibold">Organisateur:</span> {{ event.organiserName }}</p>
             </div>
@@ -235,12 +270,18 @@ declare global {
               <span class="text-xs text-gray-500 dark:text-gray-400">Mis a jour {{ event.updatedAt | date:'shortDate' }}</span>
             </div>
 
-            <div class="mt-4 grid grid-cols-2 gap-2">
+            <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <button
                 (click)="viewEvent(event)"
                 class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
               >
-                Ouvrir
+                Voir detail
+              </button>
+              <button
+                (click)="openEventInCalendar(event)"
+                class="rounded-lg border border-brand-300 px-3 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-brand-500/50 dark:text-brand-300 dark:hover:bg-brand-500/10"
+              >
+                Voir calendrier
               </button>
               <button
                 *ngIf="canEditEvent(event)"
@@ -249,14 +290,39 @@ declare global {
               >
                 Modifier
               </button>
+              <button
+                *ngIf="canSubmitEvent(event)"
+                (click)="submitEvent(event)"
+                class="rounded-lg bg-warning-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-warning-600"
+              >
+                Soumettre
+              </button>
             </div>
 
-            <div *ngIf="canApproveEvents() && event.status === 'DRAFT'" class="mt-3 grid grid-cols-2 gap-2">
+            <button
+              (click)="openPhotoAlbum(event)"
+              class="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+            >
+              Album photos
+            </button>
+
+            <button
+              (click)="downloadEventPdf(event)"
+              [disabled]="!canDownloadEventPdf(event)"
+              class="mt-2 w-full rounded-lg border border-brand-300 px-3 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/50 dark:text-brand-300 dark:hover:bg-brand-500/10"
+            >
+              Telecharger PDF officiel
+            </button>
+            <p *ngIf="!canDownloadEventPdf(event)" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{ getPdfUnavailableReason(event) }}
+            </p>
+
+            <div *ngIf="canDecideEvent(event)" class="mt-3 grid grid-cols-2 gap-2">
               <button
                 (click)="approveEvent(event)"
                 class="rounded-lg bg-success-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-success-600"
               >
-                Approuver
+                Valider
               </button>
               <button
                 (click)="rejectEvent(event)"
@@ -267,13 +333,51 @@ declare global {
             </div>
           </article>
         </div>
+
+        <div
+          *ngIf="!isListLoading && totalElements > 0"
+          class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-white/[0.03]"
+        >
+          <p class="text-sm text-gray-600 dark:text-gray-300">
+            Affichage {{ getPaginationStart(currentPage, pageSize, totalElements) }}-{{ getPaginationEnd(currentPage, pageSize, totalElements) }} sur {{ totalElements }} éléments
+          </p>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              (click)="previousPage()"
+              [disabled]="currentPage === 0"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300"
+            >
+              Precedent
+            </button>
+            <button
+              *ngFor="let page of getVisiblePages(currentPage, totalPages)"
+              type="button"
+              (click)="goToPage(page)"
+              class="rounded-lg border px-3 py-2 text-sm font-semibold transition dark:border-gray-700"
+              [ngClass]="page === currentPage
+                ? 'border-brand-500 bg-brand-500 text-white'
+                : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.03]'"
+            >
+              {{ page + 1 }}
+            </button>
+            <button
+              type="button"
+              (click)="nextPage()"
+              [disabled]="currentPage + 1 >= totalPages"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300"
+            >
+              Suivant
+            </button>
+          </div>
+        </div>
       </section>
 
       <section *ngIf="viewMode === 'calendar'" class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 p-5 dark:border-gray-800">
           <div>
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white/90">Calendrier des evenements</h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Vue mensuelle, hebdomadaire et journaliere.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Cliquez sur un evenement pour afficher ses details et ses actions.</p>
           </div>
 
           <button
@@ -281,12 +385,144 @@ declare global {
             (click)="openCalendarModal()"
             class="rounded-xl bg-success-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-success-600"
           >
-            Ajouter un evenement
+            Nouvel evenement
           </button>
         </div>
 
-        <div class="custom-calendar p-5">
-          <full-calendar #calendar [options]="calendarOptions"></full-calendar>
+        <div class="grid grid-cols-1 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div class="custom-calendar overflow-hidden rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+            <full-calendar #calendar [options]="calendarOptions"></full-calendar>
+          </div>
+
+          <aside class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
+            <ng-container *ngIf="selectedEvent; else emptyCalendarSelection">
+              <div class="mb-3 flex flex-wrap items-start justify-between gap-2">
+                <h3 class="line-clamp-2 text-lg font-semibold text-gray-900 dark:text-white/90">{{ selectedEvent.title }}</h3>
+                <div class="flex items-center gap-2">
+                  <span class="rounded-full px-2.5 py-1 text-xs font-semibold" [ngClass]="getEventStatusBadgeClass(selectedEvent.status)">
+                    {{ getEventStatusLabel(selectedEvent.status) }}
+                  </span>
+                  <button
+                    type="button"
+                    (click)="closeEventDetails()"
+                    class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 text-xs font-semibold text-gray-600 transition hover:bg-white dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                    aria-label="Fermer le detail evenement"
+                  >
+                    x
+                  </button>
+                </div>
+              </div>
+
+              <div class="mb-3 flex flex-wrap gap-2">
+                <span class="rounded-full px-2.5 py-1 text-xs font-semibold" [ngClass]="getEventTypeBadgeClass(selectedEvent.type)">
+                  {{ selectedEvent.type }}
+                </span>
+                <span class="rounded-full bg-brand-500/10 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:text-brand-300">
+                  {{ getEventModeLabel(selectedEvent) }}
+                </span>
+              </div>
+
+              <p class="mb-4 line-clamp-3 text-sm text-gray-700 dark:text-gray-300">{{ selectedEvent.description || 'Aucune description.' }}</p>
+
+              <div class="space-y-3 text-sm">
+                <p class="text-gray-700 dark:text-gray-300">
+                  <span class="font-semibold text-gray-900 dark:text-white/90">{{ isEventOnlineOnly(selectedEvent) ? 'Acces' : 'Lieu' }}:</span>
+                  {{ isEventOnlineOnly(selectedEvent) ? (selectedEvent.onlineMeetingUrl || 'Lien non disponible') : selectedEvent.location }}
+                </p>
+                <p class="text-gray-700 dark:text-gray-300">
+                  <span class="font-semibold text-gray-900 dark:text-white/90">Periode:</span>
+                  {{ getEventDateRangeLabel(selectedEvent) }}
+                </p>
+                <p class="text-gray-700 dark:text-gray-300">
+                  <span class="font-semibold text-gray-900 dark:text-white/90">Organisateur:</span>
+                  {{ selectedEvent.organiserName }}
+                </p>
+                <p class="text-gray-700 dark:text-gray-300">
+                  <span class="font-semibold text-gray-900 dark:text-white/90">Participants:</span>
+                  {{ selectedEvent.participants.length }} / {{ selectedEvent.maxParticipants || 0 }}
+                </p>
+              </div>
+
+              <div *ngIf="isOnlineMode(getResolvedEventMode(selectedEvent))" class="mt-4 space-y-2">
+                <button
+                  type="button"
+                  (click)="openOnlineMeeting(selectedEvent)"
+                  [disabled]="!canOpenOnlineMeeting(selectedEvent)"
+                  class="w-full rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Rejoindre en ligne
+                </button>
+                <p *ngIf="!canOpenOnlineMeeting(selectedEvent)" class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ getOnlineJoinUnavailableReason(selectedEvent) }}
+                </p>
+                <p *ngIf="onlineJoinFeedback" class="text-xs" [ngClass]="onlineJoinFeedbackTone === 'success' ? 'text-success-600 dark:text-success-300' : 'text-error-600 dark:text-error-300'">
+                  {{ onlineJoinFeedback }}
+                </p>
+              </div>
+
+              <div class="mt-4 grid grid-cols-1 gap-2">
+                <button
+                  type="button"
+                  (click)="downloadEventPdf(selectedEvent)"
+                  [disabled]="!canDownloadEventPdf(selectedEvent)"
+                  class="rounded-lg border border-brand-300 px-3 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/50 dark:text-brand-300 dark:hover:bg-brand-500/10"
+                >
+                  Telecharger PDF
+                </button>
+                <p *ngIf="!canDownloadEventPdf(selectedEvent)" class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ getPdfUnavailableReason(selectedEvent) }}
+                </p>
+                <button
+                  type="button"
+                  (click)="openPhotoAlbum(selectedEvent)"
+                  class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+                >
+                  Album photos
+                </button>
+                <button
+                  *ngIf="canSubmitEvent(selectedEvent)"
+                  type="button"
+                  (click)="submitEvent(selectedEvent)"
+                  class="rounded-lg bg-warning-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-warning-600"
+                >
+                  Soumettre
+                </button>
+                <button
+                  *ngIf="canEditEvent(selectedEvent)"
+                  type="button"
+                  (click)="editEvent(selectedEvent)"
+                  class="rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-600"
+                >
+                  Modifier
+                </button>
+                <button
+                  *ngIf="canDecideEvent(selectedEvent)"
+                  type="button"
+                  (click)="approveEvent(selectedEvent)"
+                  class="rounded-lg bg-success-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-success-600"
+                >
+                  Valider
+                </button>
+                <button
+                  *ngIf="canDecideEvent(selectedEvent)"
+                  type="button"
+                  (click)="rejectEvent(selectedEvent)"
+                  class="rounded-lg bg-error-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-error-600"
+                >
+                  Refuser
+                </button>
+              </div>
+            </ng-container>
+
+            <ng-template #emptyCalendarSelection>
+              <div class="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-8 text-center dark:border-gray-700 dark:bg-gray-900">
+                <p class="text-sm font-semibold text-gray-800 dark:text-white/90">Aucun evenement selectionne</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Selectionnez un evenement dans le calendrier pour afficher le detail.
+                </p>
+              </div>
+            </ng-template>
+          </aside>
         </div>
       </section>
 
@@ -328,15 +564,24 @@ declare global {
 
             <div>
               <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                {{ calendarEventOnline ? 'Lien / canal de reunion' : 'Lieu' }}
-                <span *ngIf="!calendarEventOnline" class="text-error-500">*</span>
+                {{ isPhysicalMode(calendarEventMode) ? 'Lieu (salle)' : 'Lien / canal de reunion' }}
+                <span *ngIf="isPhysicalMode(calendarEventMode)" class="text-error-500">*</span>
               </label>
-              <input
-                type="text"
-                [(ngModel)]="calendarEventLocation"
-                [placeholder]="calendarEventOnline ? 'Ex: Salle Zoom CNSTN (optionnel)' : 'Ex: Salle conference A'"
-                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-              />
+              <ng-container *ngIf="isPhysicalMode(calendarEventMode); else onlineLocationField">
+                <app-select
+                  [(ngModel)]="calendarEventLocation"
+                  [options]="roomLocationSelectOptions"
+                  placeholder="Selectionner une salle"
+                ></app-select>
+              </ng-container>
+              <ng-template #onlineLocationField>
+                <input
+                  type="text"
+                  [(ngModel)]="calendarEventLocation"
+                  placeholder="Ex: Salle Zoom CNSTN (optionnel)"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                />
+              </ng-template>
             </div>
 
             <div>
@@ -362,6 +607,24 @@ declare global {
               <input
                 type="date"
                 [(ngModel)]="calendarEventEndDate"
+                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Heure debut</label>
+              <input
+                type="time"
+                [(ngModel)]="calendarEventStartTime"
+                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Heure fin</label>
+              <input
+                type="time"
+                [(ngModel)]="calendarEventEndTime"
                 class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
               />
             </div>
@@ -394,29 +657,18 @@ declare global {
 
             <div class="sm:col-span-2">
               <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-400">Mode evenement</label>
-              <label class="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-brand-400/70 bg-brand-500/5 px-4 py-3 text-sm text-gray-700 transition hover:border-brand-500 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-gray-200">
-                <span class="inline-flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    [(ngModel)]="calendarEventOnline"
-                    (ngModelChange)="onCalendarOnlineModeChange()"
-                    class="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-                  />
-                  <span class="font-semibold">Evenement en ligne (Zoom SDK integre)</span>
-                </span>
-                <span
-                  *ngIf="calendarEventOnline"
-                  class="rounded-full border border-success-300 bg-success-100 px-2.5 py-1 text-xs font-semibold text-success-700 dark:border-success-500/40 dark:bg-success-500/10 dark:text-success-300"
-                >
-                  Actif
-                </span>
-              </label>
+              <app-select
+                [(ngModel)]="calendarEventMode"
+                [options]="eventModeSelectOptions"
+                placeholder="Choisir un mode"
+                (ngModelChange)="onCalendarEventModeChange()"
+              ></app-select>
               <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Activez pour permettre aux participants de rejoindre la reunion depuis la plateforme et inviter des partenaires externes.
+                Presentiel: salle obligatoire. En ligne: informations reunion obligatoires. Hybride: salle + informations reunion.
               </p>
             </div>
 
-            <div *ngIf="calendarEventOnline">
+            <div *ngIf="isOnlineMode(calendarEventMode)">
               <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">ID reunion Zoom <span class="text-error-500">*</span></label>
               <input
                 type="text"
@@ -426,7 +678,7 @@ declare global {
               />
             </div>
 
-            <div *ngIf="calendarEventOnline">
+            <div *ngIf="isOnlineMode(calendarEventMode)">
               <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Code secret Zoom <span class="text-error-500">*</span></label>
               <input
                 type="text"
@@ -437,7 +689,7 @@ declare global {
             </div>
 
             <div
-              *ngIf="calendarEventOnline && canInvitePartners()"
+              *ngIf="isOnlineMode(calendarEventMode) && canInvitePartners()"
               class="sm:col-span-2 rounded-xl border border-brand-300/70 bg-brand-500/5 dark:border-brand-500/40 dark:bg-brand-500/10"
             >
               <div class="border-b border-brand-200/70 p-4 dark:border-brand-500/30">
@@ -570,7 +822,7 @@ declare global {
       </div>
 
       <div
-        *ngIf="selectedEvent"
+        *ngIf="selectedEvent && viewMode === 'list'"
         class="fixed inset-0 z-[110000] overflow-y-auto bg-gray-950/60 p-4 backdrop-blur-sm"
         (click)="closeEventDetails()"
       >
@@ -600,10 +852,9 @@ declare global {
                 {{ selectedEvent.type }}
               </span>
               <span
-                *ngIf="selectedEvent.onlineEvent"
                 class="rounded-full bg-brand-500/10 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:text-brand-300"
               >
-                En ligne (Zoom)
+                {{ getEventModeLabel(selectedEvent) }}
               </span>
             </div>
 
@@ -613,9 +864,9 @@ declare global {
 
             <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div class="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
-                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ selectedEvent.onlineEvent ? 'Acces' : 'Lieu' }}</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ isEventOnlineOnly(selectedEvent) ? 'Acces' : 'Lieu' }}</p>
                 <p class="mt-1 text-sm font-medium text-gray-900 dark:text-white/90">
-                  {{ selectedEvent.onlineEvent ? 'Reunion Zoom integree sur la plateforme' : selectedEvent.location }}
+                  {{ isEventOnlineOnly(selectedEvent) ? (selectedEvent.onlineMeetingUrl || 'Lien de reunion non disponible.') : selectedEvent.location }}
                 </p>
               </div>
               <div class="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
@@ -633,61 +884,130 @@ declare global {
             </div>
 
             <div
-              *ngIf="selectedEvent.onlineEvent"
+              *ngIf="isOnlineMode(getResolvedEventMode(selectedEvent))"
               class="mt-5 rounded-xl border border-brand-300 bg-brand-500/5 p-4 dark:border-brand-500/40 dark:bg-brand-500/10"
             >
               <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h4 class="text-sm font-semibold text-gray-900 dark:text-white/90">Reunion Zoom en direct</h4>
+                  <h4 class="text-sm font-semibold text-gray-900 dark:text-white/90">Reunion en ligne</h4>
                   <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                    Les participants rejoignent ici, sans ouvrir une application externe.
+                    Ouvrir le lien de reunion dans un nouvel onglet securise.
                   </p>
                 </div>
 
-                <div class="flex flex-wrap gap-2">
-                  <button
-                    *ngIf="!zoomSessionActive"
-                    (click)="joinZoomMeeting(selectedEvent)"
-                    [disabled]="zoomJoinState === 'loading'"
-                    class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {{ zoomJoinState === 'loading' ? 'Connexion...' : 'Rejoindre la reunion' }}
-                  </button>
-
-                  <button
-                    *ngIf="zoomSessionActive"
-                    (click)="leaveZoomMeeting()"
-                    class="rounded-lg border border-error-500 px-4 py-2 text-sm font-semibold text-error-600 transition hover:bg-error-50 dark:text-error-300 dark:hover:bg-error-500/10"
-                  >
-                    Quitter la reunion
-                  </button>
-                </div>
+                <button
+                  (click)="openOnlineMeeting(selectedEvent)"
+                  [disabled]="!canOpenOnlineMeeting(selectedEvent)"
+                  class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Rejoindre en ligne
+                </button>
               </div>
 
-              <p *ngIf="zoomJoinError" class="mt-3 text-xs text-error-600 dark:text-error-300">
-                {{ zoomJoinError }}
+              <p *ngIf="!canOpenOnlineMeeting(selectedEvent)" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                {{ getOnlineJoinUnavailableReason(selectedEvent) }}
               </p>
 
-              <div
-                *ngIf="zoomSessionActive || zoomJoinState === 'loading'"
-                [id]="zoomContainerId"
-                class="mt-3 min-h-[420px] overflow-hidden rounded-xl border border-gray-200 bg-gray-950/95 dark:border-gray-700"
-              ></div>
+              <p *ngIf="onlineJoinFeedback" class="mt-3 text-xs" [ngClass]="onlineJoinFeedbackTone === 'success' ? 'text-success-600 dark:text-success-300' : 'text-error-600 dark:text-error-300'">
+                {{ onlineJoinFeedback }}
+              </p>
+            </div>
 
-              <div
-                *ngIf="!zoomSessionActive && zoomJoinState !== 'loading'"
-                class="mt-3 rounded-xl border border-dashed border-gray-300 bg-white/80 px-4 py-5 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900/60 dark:text-gray-300"
-              >
-                Lancez la reunion pour afficher Zoom integre ici. En cas de signature SDK indisponible, une ouverture Zoom Web sera proposee automatiquement.
+            <div *ngIf="canInvitePartners() || canCreateEvents()" class="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/70">
+              <h4 class="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Inviter des employes</h4>
+              <p class="mb-3 text-xs text-gray-600 dark:text-gray-300">Saisissez les destinataires reels (utilisateur + email), puis envoyez les invitations.</p>
+
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <input
+                  [(ngModel)]="internalInviteRecipient.username"
+                  type="text"
+                  placeholder="Nom utilisateur"
+                  class="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                />
+                <input
+                  [(ngModel)]="internalInviteRecipient.name"
+                  type="text"
+                  placeholder="Nom complet"
+                  class="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                />
+                <input
+                  [(ngModel)]="internalInviteRecipient.email"
+                  type="email"
+                  placeholder="Email employe"
+                  class="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                />
+              </div>
+
+              <div class="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  (click)="addInternalRecipient()"
+                  class="rounded-lg border border-brand-300 px-4 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-brand-500/50 dark:text-brand-300 dark:hover:bg-brand-500/10"
+                >
+                  Ajouter destinataire
+                </button>
+                <span class="text-xs text-gray-500 dark:text-gray-400">{{ internalInviteRecipients.length }} destinataire(s)</span>
+              </div>
+
+              <div *ngIf="internalInviteRecipients.length > 0" class="mt-3 flex flex-wrap gap-2">
+                <span
+                  *ngFor="let recipient of internalInviteRecipients"
+                  class="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+                >
+                  {{ recipient.name }} ({{ recipient.email }})
+                  <button type="button" (click)="removeInternalRecipient(recipient.username)" class="text-error-600 dark:text-error-300">x</button>
+                </span>
+              </div>
+
+              <textarea
+                [(ngModel)]="internalInviteMessage"
+                rows="2"
+                placeholder="Message invitation (optionnel)"
+                class="mt-3 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              ></textarea>
+
+              <div class="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  (click)="sendInternalInvitations(selectedEvent)"
+                  [disabled]="isSendingInternalInvites"
+                  class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {{ isSendingInternalInvites ? 'Envoi...' : 'Envoyer invitations employes' }}
+                </button>
+                <p
+                  *ngIf="internalInviteFeedback"
+                  class="text-xs"
+                  [ngClass]="internalInviteFeedbackTone === 'success' ? 'text-success-600 dark:text-success-300' : 'text-error-600 dark:text-error-300'"
+                >
+                  {{ internalInviteFeedback }}
+                </p>
               </div>
             </div>
 
-            <div *ngIf="canApproveEvents() && selectedEvent.status === 'DRAFT'" class="mt-5 flex flex-wrap gap-2">
+            <div *ngIf="canSubmitEvent(selectedEvent)" class="mt-5 flex flex-wrap gap-2">
+              <button
+                (click)="submitEvent(selectedEvent)"
+                class="rounded-lg bg-warning-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-warning-600"
+              >
+                Soumettre evenement
+              </button>
+              <button
+                (click)="downloadEventPdf(selectedEvent)"
+                [disabled]="!canDownloadEventPdf(selectedEvent)"
+                class="rounded-lg border border-brand-300 px-4 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/50 dark:text-brand-300 dark:hover:bg-brand-500/10"
+              >
+                Telecharger PDF officiel
+              </button>
+              <p *ngIf="!canDownloadEventPdf(selectedEvent)" class="text-xs text-gray-500 dark:text-gray-400">
+                {{ getPdfUnavailableReason(selectedEvent) }}
+              </p>
+            </div>
+
+            <div *ngIf="canDecideEvent(selectedEvent)" class="mt-5 flex flex-wrap gap-2">
               <button
                 (click)="approveEvent(selectedEvent)"
                 class="rounded-lg bg-success-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-success-600"
               >
-                Approuver demande
+                Valider demande
               </button>
               <button
                 (click)="rejectEvent(selectedEvent)"
@@ -798,10 +1118,61 @@ declare global {
       .fc-event {
         cursor: pointer;
         transition: transform 0.2s ease;
+        border-radius: 0.75rem;
+        padding: 0;
       }
 
       .fc-event:hover {
         transform: translateY(-1px);
+      }
+
+      .fc .calendar-event-card {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        padding: 0.3rem 0.45rem 0.4rem;
+      }
+
+      .fc .calendar-event-title {
+        font-size: 0.72rem;
+        font-weight: 700;
+        line-height: 1.05rem;
+        white-space: normal;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+      }
+
+      .fc .calendar-event-time {
+        font-size: 0.68rem;
+        line-height: 0.85rem;
+        color: #334155;
+        font-weight: 600;
+      }
+
+      .fc .calendar-event-meta {
+        display: flex;
+        gap: 0.25rem;
+        flex-wrap: wrap;
+      }
+
+      .fc .calendar-event-meta-badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        border: 1px solid #cbd5e1;
+        background: #f8fafc;
+        color: #334155;
+        padding: 0.05rem 0.35rem;
+        font-size: 0.62rem;
+        font-weight: 700;
+        line-height: 0.8rem;
+      }
+
+      .fc .fc-timegrid-event .calendar-event-title {
+        -webkit-line-clamp: 1;
       }
     }
 
@@ -813,26 +1184,38 @@ declare global {
     }
   `]
 })
-export class EventsListComponent implements OnInit {
+export class EventsListComponent implements OnInit, OnDestroy {
   @ViewChild('calendar') calendarComponent!: FullCalendarComponent;
 
   events: Event[] = [];
+  rooms: Room[] = [];
   selectedEvent: Event | null = null;
   viewMode: 'list' | 'calendar' = 'list';
   currentRole: AppRole = 'EMPLOYEE';
   currentUserId = 'current-user';
+  currentUsername = '';
   currentUserName = 'Current User';
 
   searchTerm = '';
   statusFilter: 'all' | EventStatus = 'all';
   typeFilter: 'all' | Event['type'] = 'all';
   sortMode: EventSortMode = 'recent';
+  currentPage = 0;
+  pageSize = 10;
+  totalElements = 0;
+  totalPages = 0;
+  isListLoading = false;
+  eventsLoadError = '';
+  private eventPageStateSubscription?: Subscription;
+  private routeQuerySubscription?: Subscription;
+  private pendingRouteEventId = '';
 
   readonly roleLabels: Record<AppRole, string> = {
     ADMIN: 'Administrateur',
     EMPLOYEE: 'Employe',
     MANAGER: 'Chef hierarchique',
     ROOM_MANAGER: 'Responsable salle',
+    IT_MANAGER: 'Responsable IT',
     SECURITY_MANAGER: 'Responsable securite',
     DSN_DIRECTOR: 'Directeur DSN',
     QUALITY_MANAGER: 'Responsable qualite'
@@ -843,7 +1226,7 @@ export class EventsListComponent implements OnInit {
   calendarEventTitle = '';
   calendarEventDescription = '';
   calendarEventLocation = '';
-  calendarEventOnline = false;
+  calendarEventMode: EventMode = 'PRESENTIEL';
   calendarEventZoomMeetingNumber = '';
   calendarEventZoomPasscode = '';
   calendarEventType: Event['type'] = 'MEETING';
@@ -852,6 +1235,8 @@ export class EventsListComponent implements OnInit {
   calendarEventLevel: CalendarVisualLevel = 'Primary';
   calendarEventStartDate = '';
   calendarEventEndDate = '';
+  calendarEventStartTime = '09:00';
+  calendarEventEndTime = '18:00';
   calendarFormError = '';
   calendarPartnerInviteEmail = '';
   calendarPartnerInvites: string[] = [];
@@ -861,11 +1246,24 @@ export class EventsListComponent implements OnInit {
   calendarSubmissionFeedback = '';
   calendarSubmissionFeedbackTone: CalendarInviteFeedbackTone = 'success';
   readonly zoomContainerId = 'zoom-meeting-embedded-root';
-  zoomJoinState: 'idle' | 'loading' | 'joined' | 'error' = 'idle';
+  zoomJoinState: 'idle' | 'loading' | 'joined' | 'opened_web_client' | 'error' = 'idle';
   zoomJoinError = '';
   zoomSessionActive = false;
   private zoomClient: any = null;
   private zoomSdkLoadPromise: Promise<void> | null = null;
+  onlineJoinFeedback = '';
+  onlineJoinFeedbackTone: 'success' | 'error' = 'success';
+
+  internalInviteRecipient = {
+    username: '',
+    email: '',
+    name: '',
+  };
+  internalInviteRecipients: Array<{ username: string; email: string; name: string }> = [];
+  internalInviteMessage = '';
+  internalInviteFeedback = '';
+  internalInviteFeedbackTone: 'success' | 'error' = 'success';
+  isSendingInternalInvites = false;
 
   partnerInvite = {
     name: '',
@@ -879,10 +1277,12 @@ export class EventsListComponent implements OnInit {
   eventTypeOptions: Event['type'][] = ['CONFERENCE', 'MEETING', 'TRAINING', 'WORKSHOP', 'OTHER'];
   eventStatusOptions: EventStatus[] = [
     EventStatus.DRAFT,
+    EventStatus.SUBMITTED,
     EventStatus.PUBLISHED,
     EventStatus.CANCELLED,
     EventStatus.COMPLETED
   ];
+  readonly eventModeOptions: EventMode[] = ['PRESENTIEL', 'EN_LIGNE', 'HYBRIDE'];
 
   get eventTypeSelectOptions(): Option[] {
     return this.eventTypeOptions.map((type) => ({
@@ -895,6 +1295,13 @@ export class EventsListComponent implements OnInit {
     return this.eventStatusOptions.map((status) => ({
       value: status,
       label: this.getEventStatusLabel(status),
+    }));
+  }
+
+  get eventModeSelectOptions(): Option[] {
+    return this.eventModeOptions.map((mode) => ({
+      value: mode,
+      label: this.getEventModeText(mode),
     }));
   }
 
@@ -912,15 +1319,37 @@ export class EventsListComponent implements OnInit {
     ];
   }
 
+  get roomLocationSelectOptions(): Option[] {
+    const activeRooms = this.rooms.filter((room) => room.isActive);
+    const options = activeRooms.map((room) => ({
+      value: room.name,
+      label: `${room.name} (${room.location})`,
+    }));
+
+    if (this.calendarEventLocation && !options.some((option) => option.value === this.calendarEventLocation)) {
+      options.unshift({
+        value: this.calendarEventLocation,
+        label: `${this.calendarEventLocation} (hors liste)`,
+      });
+    }
+
+    if (options.length === 0) {
+      return [{ value: '', label: 'Aucune salle disponible', disabled: true }];
+    }
+
+    return options;
+  }
+
   calendarsEvents: Record<CalendarVisualLevel, string> = {
-    'Danger': '#dc2626',
-    'Success': '#16a34a',
-    'Primary': '#2563eb',
-    'Warning': '#ea580c'
+    'Danger': '#fecaca',
+    'Success': '#bbf7d0',
+    'Primary': '#bfdbfe',
+    'Warning': '#fed7aa'
   };
 
   calendarOptions: CalendarOptions = {
     initialView: 'dayGridMonth',
+    locale: frLocale,
     headerToolbar: {
       left: 'prev,next today',
       center: 'title',
@@ -930,8 +1359,20 @@ export class EventsListComponent implements OnInit {
     editable: true,
     selectable: true,
     selectMinDistance: 10,
+    eventDisplay: 'block',
+    buttonText: {
+      today: 'Aujourd’hui',
+      month: 'Mois',
+      week: 'Semaine',
+      day: 'Jour',
+    },
+    dayMaxEvents: 3,
+    dayMaxEventRows: 3,
+    moreLinkText: (count: number) => `+ ${count} autres`,
+    eventTimeFormat: { hour: '2-digit', minute: '2-digit', meridiem: false },
     eventClick: (arg) => this.handleEventClick(arg),
     dateClick: (arg) => this.handleDateClick(arg),
+    eventContent: (arg) => this.renderCalendarEventContent(arg),
     eventDidMount: (arg: any) => this.applyEventVisualStyles(arg),
     select: (arg) => this.handleDateSelect(arg),
     events: [],
@@ -942,10 +1383,22 @@ export class EventsListComponent implements OnInit {
   constructor(
     private eventService: EventService,
     private invitationService: InvitationService,
-    private authService: AuthService
+    private authService: AuthService,
+    private reservationService: ReservationService,
+    private route: ActivatedRoute,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
+    this.eventPageStateSubscription = this.eventService.eventPageState$.subscribe((pageState) => {
+      this.currentPage = pageState.page;
+      this.pageSize = pageState.size;
+      this.totalElements = pageState.totalElements;
+      const safeSize = Math.max(pageState.size || this.pageSize || 1, 1);
+      const computedPages = pageState.totalElements > 0 ? Math.ceil(pageState.totalElements / safeSize) : 0;
+      this.totalPages = Math.max(pageState.totalPages || 0, computedPages);
+    });
+
     this.authService.currentUser$.subscribe(user => {
       if (!user) {
         return;
@@ -953,54 +1406,69 @@ export class EventsListComponent implements OnInit {
 
       this.currentRole = user.role;
       this.currentUserId = user.id;
+      this.currentUsername = (user.username || '').trim();
       this.currentUserName = `${user.firstName} ${user.lastName}`.trim();
     });
 
+    this.routeQuerySubscription = this.route.queryParamMap.subscribe((params) => {
+      this.pendingRouteEventId = (params.get('eventId') || '').trim();
+      if (this.pendingRouteEventId) {
+        this.viewMode = 'calendar';
+        this.handleRouteEventSelection();
+      }
+    });
+
     this.loadEvents();
+    this.loadRooms();
+  }
+
+  ngOnDestroy(): void {
+    this.eventPageStateSubscription?.unsubscribe();
+    this.routeQuerySubscription?.unsubscribe();
   }
 
   get filteredEvents(): Event[] {
-    let scoped = [...this.events];
-    const term = this.searchTerm.trim().toLowerCase();
-
-    if (term) {
-      scoped = scoped.filter(event =>
-        [
-          event.title,
-          event.description || '',
-          event.location,
-          event.organiserName,
-          event.type,
-          this.getEventStatusLabel(event.status)
-        ]
-          .join(' ')
-          .toLowerCase()
-          .includes(term)
-      );
-    }
-
-    if (this.statusFilter !== 'all') {
-      scoped = scoped.filter(event => event.status === this.statusFilter);
-    }
-
-    if (this.typeFilter !== 'all') {
-      scoped = scoped.filter(event => event.type === this.typeFilter);
-    }
-
-    return this.sortEvents(scoped);
+    return [...this.events];
   }
 
   get pendingEvents(): Event[] {
-    return this.events.filter(event => event.status === EventStatus.DRAFT);
+    return this.events.filter((event) => this.canDecideEvent(event));
   }
 
   loadEvents(): void {
-    this.eventService.getEvents().subscribe({
+    this.isListLoading = true;
+    this.eventsLoadError = '';
+    this.eventService.getEvents({
+      page: this.currentPage,
+      size: this.pageSize,
+      sort: this.getSortQueryParam(),
+      search: this.searchTerm.trim() || undefined,
+      status: this.statusFilter !== 'all' ? this.statusFilter : undefined,
+      eventType: this.typeFilter !== 'all' ? this.typeFilter : undefined,
+    }).subscribe({
       next: (data) => {
-        this.events = data;
+        this.events = Array.isArray(data) ? data : [];
         this.updateCalendarEvents();
+        this.handleRouteEventSelection();
+        this.isListLoading = false;
       },
-      error: (error) => console.error('Error loading events:', error)
+      error: () => {
+        this.events = [];
+        this.eventsLoadError = 'Chargement des evenements impossible pour le moment.';
+        this.isListLoading = false;
+      }
+    });
+  }
+
+  loadRooms(): void {
+    this.reservationService.getRooms().subscribe({
+      next: (rooms) => {
+        this.rooms = Array.isArray(rooms) ? rooms : [];
+      },
+      error: (error) => {
+        console.error('Error loading rooms for events:', error);
+        this.rooms = [];
+      },
     });
   }
 
@@ -1017,6 +1485,7 @@ export class EventsListComponent implements OnInit {
   convertEventsToCalendarFormat(events: Event[]): EventInput[] {
     return events.map(event => {
       const visualLevel = this.getEventVisualLevel(event);
+      const resolvedMode = this.getResolvedEventMode(event);
       return {
         id: event.id,
         title: event.title,
@@ -1024,12 +1493,14 @@ export class EventsListComponent implements OnInit {
         end: event.endDate,
         backgroundColor: this.getLevelColor(visualLevel),
         borderColor: this.getLevelBorderColor(visualLevel),
-        textColor: '#ffffff',
+        textColor: this.getLevelTextColor(visualLevel),
         extendedProps: {
           description: event.description,
           location: event.location,
           type: event.type,
           status: event.status,
+          modeLabel: this.getEventModeText(resolvedMode),
+          statusLabel: this.getEventStatusLabel(event.status),
           visualColor: event.visualColor,
           participants: event.participants,
           maxParticipants: event.maxParticipants,
@@ -1044,6 +1515,81 @@ export class EventsListComponent implements OnInit {
     const sortOrder: EventSortMode[] = ['recent', 'title', 'status'];
     const currentIndex = sortOrder.indexOf(this.sortMode);
     this.sortMode = sortOrder[(currentIndex + 1) % sortOrder.length];
+    this.currentPage = 0;
+    this.loadEvents();
+  }
+
+  applyListFilters(): void {
+    this.currentPage = 0;
+    this.loadEvents();
+  }
+
+  resetListFilters(): void {
+    this.searchTerm = '';
+    this.statusFilter = 'all';
+    this.typeFilter = 'all';
+    this.sortMode = 'recent';
+    this.currentPage = 0;
+    this.loadEvents();
+  }
+
+  previousPage(): void {
+    if (this.currentPage <= 0) {
+      return;
+    }
+    this.currentPage -= 1;
+    this.loadEvents();
+  }
+
+  nextPage(): void {
+    if (this.currentPage + 1 >= this.totalPages) {
+      return;
+    }
+    this.currentPage += 1;
+    this.loadEvents();
+  }
+
+  goToPage(page: number): void {
+    if (page < 0 || page >= this.totalPages || page === this.currentPage) {
+      return;
+    }
+    this.currentPage = page;
+    this.loadEvents();
+  }
+
+  getVisiblePages(currentPage: number, totalPages: number): number[] {
+    if (totalPages <= 0) {
+      return [];
+    }
+
+    const maxButtons = 5;
+    const half = Math.floor(maxButtons / 2);
+    let start = Math.max(0, currentPage - half);
+    let end = Math.min(totalPages - 1, start + maxButtons - 1);
+
+    if ((end - start + 1) < maxButtons) {
+      start = Math.max(0, end - maxButtons + 1);
+    }
+
+    const pages: number[] = [];
+    for (let page = start; page <= end; page += 1) {
+      pages.push(page);
+    }
+    return pages;
+  }
+
+  getPaginationStart(page: number, size: number, total: number): number {
+    if (total <= 0) {
+      return 0;
+    }
+    return page * size + 1;
+  }
+
+  getPaginationEnd(page: number, size: number, total: number): number {
+    if (total <= 0) {
+      return 0;
+    }
+    return Math.min((page + 1) * size, total);
   }
 
   getSortModeLabel(): string {
@@ -1076,32 +1622,33 @@ export class EventsListComponent implements OnInit {
 
   getEventAccentClass(type: Event['type']): string {
     const classMap: Record<Event['type'], string> = {
-      CONFERENCE: 'bg-gradient-to-r from-blue-500 to-indigo-600',
-      MEETING: 'bg-gradient-to-r from-violet-500 to-fuchsia-600',
-      TRAINING: 'bg-gradient-to-r from-emerald-500 to-green-600',
-      WORKSHOP: 'bg-gradient-to-r from-orange-500 to-red-600',
-      OTHER: 'bg-gradient-to-r from-slate-500 to-gray-600'
+      CONFERENCE: 'bg-blue-400',
+      MEETING: 'bg-slate-400',
+      TRAINING: 'bg-emerald-400',
+      WORKSHOP: 'bg-amber-400',
+      OTHER: 'bg-gray-400'
     };
     return classMap[type];
   }
 
   getEventTypeBadgeClass(type: Event['type']): string {
     const classMap: Record<Event['type'], string> = {
-      CONFERENCE: 'bg-blue-500/10 text-blue-700 dark:text-blue-300',
-      MEETING: 'bg-violet-500/10 text-violet-700 dark:text-violet-300',
-      TRAINING: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-      WORKSHOP: 'bg-orange-500/10 text-orange-700 dark:text-orange-300',
-      OTHER: 'bg-slate-500/10 text-slate-700 dark:text-slate-300'
+      CONFERENCE: 'bg-blue-100 text-blue-700 dark:text-blue-300',
+      MEETING: 'bg-slate-100 text-slate-700 dark:text-slate-300',
+      TRAINING: 'bg-emerald-100 text-emerald-700 dark:text-emerald-300',
+      WORKSHOP: 'bg-amber-100 text-amber-700 dark:text-amber-300',
+      OTHER: 'bg-gray-100 text-gray-700 dark:text-gray-300'
     };
     return classMap[type];
   }
 
   getEventStatusBadgeClass(status: EventStatus): string {
     const classMap: Record<EventStatus, string> = {
-      [EventStatus.PUBLISHED]: 'bg-success-500/10 text-success-700 dark:text-success-300',
-      [EventStatus.DRAFT]: 'bg-warning-500/10 text-warning-700 dark:text-warning-300',
-      [EventStatus.CANCELLED]: 'bg-error-500/10 text-error-700 dark:text-error-300',
-      [EventStatus.COMPLETED]: 'bg-slate-500/10 text-slate-700 dark:text-slate-300'
+      [EventStatus.PUBLISHED]: 'bg-emerald-100 text-emerald-700 dark:text-emerald-300',
+      [EventStatus.SUBMITTED]: 'bg-amber-100 text-amber-700 dark:text-amber-300',
+      [EventStatus.DRAFT]: 'bg-slate-100 text-slate-700 dark:text-slate-300',
+      [EventStatus.CANCELLED]: 'bg-rose-100 text-rose-700 dark:text-rose-300',
+      [EventStatus.COMPLETED]: 'bg-blue-100 text-blue-700 dark:text-blue-300'
     };
     return classMap[status];
   }
@@ -1150,10 +1697,69 @@ export class EventsListComponent implements OnInit {
   }
 
   private getEventVisualLevel(event: Event): CalendarVisualLevel {
+    const statusLevel = this.mapStatusToLevel(event.status);
+    if (statusLevel) {
+      return statusLevel;
+    }
+
     if (event.visualColor && this.isVisualLevel(event.visualColor)) {
       return event.visualColor;
     }
+
     return this.mapTypeToLevel(event.type);
+  }
+
+  private handleRouteEventSelection(): void {
+    const eventId = this.pendingRouteEventId.trim();
+    if (!eventId) {
+      return;
+    }
+
+    const matchingEvent = this.events.find((event) => event.id === eventId);
+    if (matchingEvent) {
+      this.viewMode = 'calendar';
+      this.viewEvent(matchingEvent);
+      this.clearRouteEventQueryParam();
+      return;
+    }
+
+    this.eventService.getEventById(eventId).subscribe({
+      next: (event) => {
+        if (!event) {
+          this.calendarSubmissionFeedbackTone = 'error';
+          this.calendarSubmissionFeedback = 'Evenement introuvable ou non autorise pour ce compte.';
+          this.clearRouteEventQueryParam();
+          return;
+        }
+
+        if (!this.events.some((existing) => existing.id === event.id)) {
+          this.events = [event, ...this.events];
+          this.updateCalendarEvents();
+        }
+
+        this.viewMode = 'calendar';
+        this.viewEvent(event);
+        this.clearRouteEventQueryParam();
+      },
+      error: () => {
+        this.calendarSubmissionFeedbackTone = 'error';
+        this.calendarSubmissionFeedback = 'Ouverture de l evenement impossible pour ce compte.';
+        this.clearRouteEventQueryParam();
+      },
+    });
+  }
+
+  private clearRouteEventQueryParam(): void {
+    if (!this.pendingRouteEventId) {
+      return;
+    }
+    this.pendingRouteEventId = '';
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { eventId: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   private getLevelColor(level: CalendarVisualLevel): string {
@@ -1162,12 +1768,22 @@ export class EventsListComponent implements OnInit {
 
   private getLevelBorderColor(level: CalendarVisualLevel): string {
     const borderColorMap: Record<CalendarVisualLevel, string> = {
-      'Danger': '#b91c1c',
-      'Success': '#15803d',
-      'Primary': '#1d4ed8',
-      'Warning': '#c2410c'
+      'Danger': '#fca5a5',
+      'Success': '#86efac',
+      'Primary': '#93c5fd',
+      'Warning': '#fdba74'
     };
     return borderColorMap[level];
+  }
+
+  private getLevelTextColor(level: CalendarVisualLevel): string {
+    const textColorMap: Record<CalendarVisualLevel, string> = {
+      'Danger': '#9f1239',
+      'Success': '#166534',
+      'Primary': '#1e3a8a',
+      'Warning': '#9a3412'
+    };
+    return textColorMap[level];
   }
 
   handleEventClick(clickInfo: EventClickArg): void {
@@ -1177,31 +1793,7 @@ export class EventsListComponent implements OnInit {
     if (!matchedEvent) {
       return;
     }
-
-    if (this.viewMode === 'calendar') {
-      this.selectedEventForModal = matchedEvent;
-      this.calendarEventTitle = matchedEvent.title;
-      this.calendarEventDescription = matchedEvent.description || '';
-      this.calendarEventLocation = matchedEvent.location || '';
-      this.calendarEventOnline = !!matchedEvent.onlineEvent;
-      this.calendarEventZoomMeetingNumber = matchedEvent.zoomMeetingNumber || '';
-      this.calendarEventZoomPasscode = matchedEvent.zoomPasscode || '';
-      this.calendarEventType = matchedEvent.type || 'MEETING';
-      this.calendarEventStatus = matchedEvent.status || EventStatus.DRAFT;
-      this.calendarEventMaxParticipants = matchedEvent.maxParticipants || 50;
-      this.calendarEventStartDate = this.formatDateForInput(new Date(matchedEvent.startDate));
-      this.calendarEventEndDate = this.formatDateForInput(new Date(matchedEvent.endDate));
-      this.calendarEventLevel = this.getEventVisualLevel(matchedEvent);
-      this.calendarFormError = '';
-      this.resetCalendarPartnerInviteState();
-      this.calendarSubmissionFeedback = '';
-      this.isCalendarModalOpen = true;
-      return;
-    }
-
-    this.selectedEvent = matchedEvent;
-    this.resetZoomJoinState();
-    this.inviteFeedback = '';
+    this.viewEvent(matchedEvent);
   }
 
   handleDateClick(dateInfo: any): void {
@@ -1240,7 +1832,7 @@ export class EventsListComponent implements OnInit {
     this.calendarEventTitle = '';
     this.calendarEventDescription = '';
     this.calendarEventLocation = '';
-    this.calendarEventOnline = false;
+    this.calendarEventMode = 'PRESENTIEL';
     this.calendarEventZoomMeetingNumber = '';
     this.calendarEventZoomPasscode = '';
     this.calendarEventType = 'MEETING';
@@ -1249,6 +1841,8 @@ export class EventsListComponent implements OnInit {
     this.calendarEventLevel = 'Primary';
     this.calendarEventStartDate = this.formatDateForInput(baseStartDate);
     this.calendarEventEndDate = this.formatDateForInput(baseEndDate);
+    this.calendarEventStartTime = this.formatTimeForInput(baseStartDate, '09:00');
+    this.calendarEventEndTime = this.formatTimeForInput(baseEndDate, '18:00');
     this.calendarFormError = '';
     this.resetCalendarPartnerInviteState();
     this.calendarSubmissionFeedback = '';
@@ -1260,7 +1854,7 @@ export class EventsListComponent implements OnInit {
     this.calendarEventTitle = '';
     this.calendarEventDescription = '';
     this.calendarEventLocation = '';
-    this.calendarEventOnline = false;
+    this.calendarEventMode = 'PRESENTIEL';
     this.calendarEventZoomMeetingNumber = '';
     this.calendarEventZoomPasscode = '';
     this.calendarEventType = 'MEETING';
@@ -1269,14 +1863,16 @@ export class EventsListComponent implements OnInit {
     this.calendarEventLevel = 'Primary';
     this.calendarEventStartDate = '';
     this.calendarEventEndDate = '';
+    this.calendarEventStartTime = '09:00';
+    this.calendarEventEndTime = '18:00';
     this.calendarFormError = '';
     this.resetCalendarPartnerInviteState();
   }
 
-  onCalendarOnlineModeChange(): void {
+  onCalendarEventModeChange(): void {
     this.clearCalendarInviteFeedback();
 
-    if (this.calendarEventOnline) {
+    if (this.isOnlineMode(this.calendarEventMode)) {
       return;
     }
 
@@ -1286,7 +1882,7 @@ export class EventsListComponent implements OnInit {
   }
 
   addCalendarPartnerEmail(): void {
-    if (!this.calendarEventOnline) {
+    if (!this.isOnlineMode(this.calendarEventMode)) {
       this.calendarInviteFeedbackTone = 'error';
       this.calendarInviteFeedback = 'Activez d abord le mode evenement en ligne.';
       return;
@@ -1324,7 +1920,7 @@ export class EventsListComponent implements OnInit {
   }
 
   previewCalendarInvitation(): void {
-    if (!this.calendarEventOnline) {
+    if (!this.isOnlineMode(this.calendarEventMode)) {
       this.calendarInviteFeedbackTone = 'error';
       this.calendarInviteFeedback = 'Le mode evenement en ligne doit etre actif pour previsualiser.';
       return;
@@ -1354,11 +1950,13 @@ export class EventsListComponent implements OnInit {
     const title = this.calendarEventTitle.trim();
     const location = this.calendarEventLocation.trim();
     const description = this.calendarEventDescription.trim();
-    const onlineEvent = this.calendarEventOnline;
-    const zoomMeetingNumber = this.calendarEventZoomMeetingNumber.trim();
+    const eventMode = this.calendarEventMode;
+    const onlineEvent = this.isOnlineMode(eventMode);
+    const requiresPhysicalLocation = this.isPhysicalMode(eventMode);
+    const zoomMeetingNumber = this.normalizeZoomMeetingNumber(this.calendarEventZoomMeetingNumber);
     const zoomPasscode = this.calendarEventZoomPasscode.trim();
-    const startDate = this.toEventDate(this.calendarEventStartDate, 'start');
-    const endDate = this.toEventDate(this.calendarEventEndDate, 'end');
+    const startDate = this.toEventDate(this.calendarEventStartDate, this.calendarEventStartTime);
+    const endDate = this.toEventDate(this.calendarEventEndDate, this.calendarEventEndTime);
     const maxParticipants = Number(this.calendarEventMaxParticipants);
 
     if (!title) {
@@ -1366,7 +1964,7 @@ export class EventsListComponent implements OnInit {
       return;
     }
 
-    if (!onlineEvent && !location) {
+    if (requiresPhysicalLocation && !location) {
       this.calendarFormError = 'Le lieu est obligatoire.';
       return;
     }
@@ -1376,18 +1974,23 @@ export class EventsListComponent implements OnInit {
       return;
     }
 
+    if (onlineEvent && !this.isValidZoomMeetingNumber(zoomMeetingNumber)) {
+      this.calendarFormError = 'L ID de reunion Zoom doit contenir entre 9 et 11 chiffres.';
+      return;
+    }
+
     if (onlineEvent && !zoomPasscode) {
       this.calendarFormError = 'Le code secret Zoom est obligatoire pour un evenement en ligne.';
       return;
     }
 
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      this.calendarFormError = 'Veuillez selectionner des dates valides.';
+      this.calendarFormError = 'Veuillez selectionner des dates et heures valides.';
       return;
     }
 
     if (endDate < startDate) {
-      this.calendarFormError = 'La date de fin doit etre superieure ou egale a la date de debut.';
+      this.calendarFormError = 'La date/heure de fin doit etre superieure ou egale a la date/heure de debut.';
       return;
     }
 
@@ -1408,13 +2011,19 @@ export class EventsListComponent implements OnInit {
     }
 
     this.calendarFormError = '';
-    const resolvedLocation = onlineEvent ? (location || 'En ligne (Zoom)') : location;
+    if (onlineEvent) {
+      this.calendarEventZoomMeetingNumber = zoomMeetingNumber;
+    }
+    const resolvedLocation = eventMode === 'EN_LIGNE' ? (location || 'En ligne (Zoom)') : location;
 
     const eventToSave: Omit<Event, 'id' | 'createdAt' | 'updatedAt'> = {
       title,
       description,
       location: resolvedLocation,
+      eventMode,
       onlineEvent,
+      onlineMeetingProvider: onlineEvent ? 'Zoom' : undefined,
+      onlineMeetingUrl: onlineEvent ? `https://zoom.us/j/${zoomMeetingNumber}` : undefined,
       zoomMeetingNumber: onlineEvent ? zoomMeetingNumber : undefined,
       zoomPasscode: onlineEvent ? zoomPasscode : undefined,
       type: this.calendarEventType,
@@ -1424,7 +2033,7 @@ export class EventsListComponent implements OnInit {
       endDate,
       participants: this.selectedEventForModal?.participants || [],
       maxParticipants,
-      organiserId: this.selectedEventForModal?.organiserId || this.currentUserId,
+      organiserId: this.selectedEventForModal?.organiserId || this.currentUsername || this.currentUserId,
       organiserName: this.selectedEventForModal?.organiserName || this.currentUserName
     };
 
@@ -1472,12 +2081,17 @@ export class EventsListComponent implements OnInit {
       return 'Aucune date selectionnee';
     }
 
-    const startLabel = this.formatDateLabel(this.calendarEventStartDate);
-    if (!this.calendarEventEndDate || this.calendarEventEndDate === this.calendarEventStartDate) {
+    const startLabel = `${this.formatDateLabel(this.calendarEventStartDate)} ${this.calendarEventStartTime || '--:--'}`;
+    if (!this.calendarEventEndDate) {
       return startLabel;
     }
 
-    return `${startLabel} - ${this.formatDateLabel(this.calendarEventEndDate)}`;
+    const endLabel = `${this.formatDateLabel(this.calendarEventEndDate)} ${this.calendarEventEndTime || '--:--'}`;
+    if (this.calendarEventEndDate === this.calendarEventStartDate) {
+      return `${this.formatDateLabel(this.calendarEventStartDate)} ${this.calendarEventStartTime || '--:--'} - ${this.calendarEventEndTime || '--:--'}`;
+    }
+
+    return `${startLabel} - ${endLabel}`;
   }
 
   private formatDateForInput(date: Date): string {
@@ -1487,19 +2101,27 @@ export class EventsListComponent implements OnInit {
     return `${year}-${month}-${day}`;
   }
 
-  private toEventDate(dateValue: string, boundary: 'start' | 'end'): Date {
-    const date = new Date(dateValue);
+  private formatTimeForInput(date: Date, fallbackTime: string): string {
     if (Number.isNaN(date.getTime())) {
-      return date;
+      return fallbackTime;
     }
 
-    if (boundary === 'start') {
-      date.setHours(9, 0, 0, 0);
-    } else {
-      date.setHours(18, 0, 0, 0);
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    if (hours === 0 && minutes === 0) {
+      return fallbackTime;
     }
 
-    return date;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  }
+
+  private toEventDate(dateValue: string, timeValue: string): Date {
+    if (!dateValue || !timeValue) {
+      return new Date(Number.NaN);
+    }
+
+    const parsed = new Date(`${dateValue}T${timeValue}:00`);
+    return Number.isNaN(parsed.getTime()) ? new Date(Number.NaN) : parsed;
   }
 
   private extractBackendError(error: unknown, fallbackMessage: string): string {
@@ -1514,7 +2136,7 @@ export class EventsListComponent implements OnInit {
         .filter((email): email is string => !!email)
     ));
 
-    if (!event.onlineEvent || !this.canInvitePartners() || uniqueEmails.length === 0) {
+    if (!this.isOnlineMode(this.getResolvedEventMode(event)) || !this.canInvitePartners() || uniqueEmails.length === 0) {
       return of({
         sentCount: 0,
         failedCount: 0,
@@ -1656,6 +2278,22 @@ export class EventsListComponent implements OnInit {
     return 'Warning';
   }
 
+  private mapStatusToLevel(status: EventStatus): CalendarVisualLevel | null {
+    if (status === EventStatus.PUBLISHED) {
+      return 'Success';
+    }
+    if (status === EventStatus.CANCELLED) {
+      return 'Danger';
+    }
+    if (status === EventStatus.SUBMITTED) {
+      return 'Warning';
+    }
+    if (status === EventStatus.DRAFT || status === EventStatus.COMPLETED) {
+      return 'Primary';
+    }
+    return null;
+  }
+
   private isVisualLevel(level: string): level is CalendarVisualLevel {
     return Object.prototype.hasOwnProperty.call(this.calendarsEvents, level);
   }
@@ -1674,21 +2312,112 @@ export class EventsListComponent implements OnInit {
     const visualLevel = this.getEventVisualLevel(matchedEvent);
     const bgColor = this.getLevelColor(visualLevel);
     const borderColor = this.getLevelBorderColor(visualLevel);
+    const textColor = this.getLevelTextColor(visualLevel);
 
     const el = arg.el as HTMLElement;
     el.style.setProperty('background-color', bgColor, 'important');
     el.style.setProperty('border-color', borderColor, 'important');
-    el.style.setProperty('color', '#ffffff', 'important');
+    el.style.setProperty('color', textColor, 'important');
 
     const eventMain = el.querySelector('.fc-event-main') as HTMLElement | null;
     if (eventMain) {
-      eventMain.style.setProperty('color', '#ffffff', 'important');
+      eventMain.style.setProperty('color', textColor, 'important');
     }
+
+    const modeBadge = el.querySelector('.calendar-event-meta-badge--mode') as HTMLElement | null;
+    const statusBadge = el.querySelector('.calendar-event-meta-badge--status') as HTMLElement | null;
+    if (modeBadge) {
+      modeBadge.style.setProperty('background-color', 'rgba(255,255,255,0.8)', 'important');
+      modeBadge.style.setProperty('border-color', 'rgba(100,116,139,0.35)', 'important');
+      modeBadge.style.setProperty('color', textColor, 'important');
+    }
+    if (statusBadge) {
+      statusBadge.style.setProperty('background-color', 'rgba(248,250,252,0.95)', 'important');
+      statusBadge.style.setProperty('border-color', 'rgba(100,116,139,0.35)', 'important');
+      statusBadge.style.setProperty('color', textColor, 'important');
+    }
+
+    const tooltipTitle = [
+      matchedEvent.title,
+      this.getEventDateRangeLabel(matchedEvent),
+      `${this.getEventModeLabel(matchedEvent)} • ${this.getEventStatusLabel(matchedEvent.status)}`,
+    ].join('\n');
+    el.setAttribute('title', tooltipTitle);
+  }
+
+  private renderCalendarEventContent(arg: EventContentArg): { html: string } {
+    const mode = (arg.event.extendedProps?.['modeLabel'] as string | undefined) || 'Presentiel';
+    const status = this.getShortCalendarStatusLabel((arg.event.extendedProps?.['statusLabel'] as string | undefined) || 'BROUILLON');
+    const time = this.formatCalendarTimeRange(arg.event.start ?? undefined, arg.event.end ?? undefined);
+    const title = this.escapeHtml(this.truncateCalendarTitle(arg.event.title || 'Evenement'));
+
+    return {
+      html: `
+        <div class="calendar-event-card">
+          <div class="calendar-event-title">${title}</div>
+          <div class="calendar-event-time">${this.escapeHtml(time)}</div>
+          <div class="calendar-event-meta">
+            <span class="calendar-event-meta-badge calendar-event-meta-badge--mode">${this.escapeHtml(mode)}</span>
+            <span class="calendar-event-meta-badge calendar-event-meta-badge--status">${this.escapeHtml(status)}</span>
+          </div>
+        </div>
+      `
+    };
+  }
+
+  private formatCalendarTimeRange(start?: Date, end?: Date): string {
+    if (!start) {
+      return '';
+    }
+
+    const startLabel = start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    if (!end) {
+      return startLabel;
+    }
+
+    const endLabel = end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `${startLabel} - ${endLabel}`;
+  }
+
+  private truncateCalendarTitle(value: string): string {
+    const compact = value.trim();
+    if (compact.length <= 34) {
+      return compact;
+    }
+    return `${compact.slice(0, 31)}...`;
+  }
+
+  private getShortCalendarStatusLabel(label: string): string {
+    const normalized = label.toUpperCase();
+    if (normalized.includes('PUBLIE')) {
+      return 'Publie';
+    }
+    if (normalized.includes('SOUMIS')) {
+      return 'Attente';
+    }
+    if (normalized.includes('ANNULE')) {
+      return 'Annule';
+    }
+    if (normalized.includes('TERMINE')) {
+      return 'Termine';
+    }
+    return 'Brouillon';
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   viewEvent(event: Event): void {
     this.selectedEvent = event;
     this.resetZoomJoinState();
+    this.clearOnlineJoinFeedback();
+    this.resetInternalInviteState();
     this.inviteFeedback = '';
     this.inviteFeedbackTone = 'success';
   }
@@ -1702,7 +2431,7 @@ export class EventsListComponent implements OnInit {
     this.calendarEventTitle = event.title;
     this.calendarEventDescription = event.description || '';
     this.calendarEventLocation = event.location || '';
-    this.calendarEventOnline = !!event.onlineEvent;
+    this.calendarEventMode = this.getResolvedEventMode(event);
     this.calendarEventZoomMeetingNumber = event.zoomMeetingNumber || '';
     this.calendarEventZoomPasscode = event.zoomPasscode || '';
     this.calendarEventType = event.type || 'MEETING';
@@ -1710,6 +2439,8 @@ export class EventsListComponent implements OnInit {
     this.calendarEventMaxParticipants = event.maxParticipants || 50;
     this.calendarEventStartDate = this.formatDateForInput(new Date(event.startDate));
     this.calendarEventEndDate = this.formatDateForInput(new Date(event.endDate));
+    this.calendarEventStartTime = this.formatTimeForInput(new Date(event.startDate), '09:00');
+    this.calendarEventEndTime = this.formatTimeForInput(new Date(event.endDate), '18:00');
     this.calendarEventLevel = this.getEventVisualLevel(event);
     this.calendarFormError = '';
     this.resetCalendarPartnerInviteState();
@@ -1717,13 +2448,19 @@ export class EventsListComponent implements OnInit {
     this.isCalendarModalOpen = true;
     this.selectedEvent = null;
     this.resetZoomJoinState();
+    this.clearOnlineJoinFeedback();
+    this.resetInternalInviteState();
     this.inviteFeedback = '';
     this.inviteFeedbackTone = 'success';
   }
 
   getEventStatusLabel(status: EventStatus): string {
     if (status === EventStatus.DRAFT) {
-      return 'EN ATTENTE';
+      return 'BROUILLON';
+    }
+
+    if (status === EventStatus.SUBMITTED) {
+      return 'SOUMIS';
     }
 
     if (status === EventStatus.PUBLISHED) {
@@ -1737,6 +2474,63 @@ export class EventsListComponent implements OnInit {
     return 'TERMINE';
   }
 
+  getEventModeText(mode: EventMode): string {
+    if (mode === 'PRESENTIEL') {
+      return 'Presentiel';
+    }
+    if (mode === 'EN_LIGNE') {
+      return 'En ligne';
+    }
+    return 'Hybride';
+  }
+
+  getResolvedEventMode(event: Event | null | undefined): EventMode {
+    if (event?.eventMode === 'PRESENTIEL' || event?.eventMode === 'EN_LIGNE' || event?.eventMode === 'HYBRIDE') {
+      return event.eventMode;
+    }
+    return event?.onlineEvent ? 'EN_LIGNE' : 'PRESENTIEL';
+  }
+
+  isOnlineMode(mode: EventMode): boolean {
+    return mode !== 'PRESENTIEL';
+  }
+
+  isPhysicalMode(mode: EventMode): boolean {
+    return mode !== 'EN_LIGNE';
+  }
+
+  isEventOnlineOnly(event: Event | null | undefined): boolean {
+    return this.getResolvedEventMode(event) === 'EN_LIGNE';
+  }
+
+  getEventModeLabel(event: Event | null | undefined): string {
+    return this.getEventModeText(this.getResolvedEventMode(event));
+  }
+
+  canOpenOnlineMeeting(event: Event | null | undefined): boolean {
+    if (!event) {
+      return false;
+    }
+
+    if (!this.isOnlineMode(this.getResolvedEventMode(event))) {
+      return false;
+    }
+
+    return !!this.resolveSafeOnlineMeetingUrl(event);
+  }
+
+  getOnlineJoinUnavailableReason(event: Event | null | undefined): string {
+    if (!event) {
+      return 'Evenement non selectionne.';
+    }
+
+    if (!this.isOnlineMode(this.getResolvedEventMode(event))) {
+      return 'Evenement presentiel: aucun lien en ligne.';
+    }
+
+    return 'Lien de reunion indisponible.';
+  }
+
   canCreateEvents(): boolean {
     return this.authService.hasPermission('CREATE_EVENT');
   }
@@ -1745,18 +2539,153 @@ export class EventsListComponent implements OnInit {
     return this.authService.hasPermission('VALIDATE_EVENT');
   }
 
+  canReviewWorkflowEvents(): boolean {
+    return this.canApproveEvents() || this.currentRole === 'SECURITY_MANAGER';
+  }
+
+  canDecideEvent(event: Event | null | undefined): boolean {
+    if (!event || !event.workflowStep) {
+      return false;
+    }
+
+    if (this.currentRole === 'ADMIN') {
+      return ['VALIDATION_MANAGER', 'VALIDATION_SECURITE', 'VALIDATION_DSN'].includes(event.workflowStep);
+    }
+
+    if (this.currentRole === 'MANAGER') {
+      return event.workflowStep === 'VALIDATION_MANAGER';
+    }
+
+    if (this.currentRole === 'SECURITY_MANAGER') {
+      return event.workflowStep === 'VALIDATION_SECURITE';
+    }
+
+    if (this.currentRole === 'DSN_DIRECTOR') {
+      return event.workflowStep === 'VALIDATION_DSN';
+    }
+
+    return false;
+  }
+
   canInvitePartners(): boolean {
     // Accept both English and French role names
     // Directeur DSN only validates, doesn't invite partners
-    return ['EMPLOYEE', 'EMPLOYE', 'MANAGER', 'CHEF_HIERARCHIQUE'].includes(this.currentRole);
+    return ['EMPLOYEE', 'EMPLOYE', 'MANAGER', 'CHEF_HIERARCHIQUE', 'ADMIN'].includes(this.currentRole);
   }
 
   canEditEvent(event: Event): boolean {
-    if (this.canApproveEvents()) {
+    if (this.isCurrentUserAdmin()) {
       return true;
     }
 
-    return event.organiserId === this.currentUserId;
+    return this.isEventOwnedByCurrentUser(event);
+  }
+
+  canSubmitEvent(event: Event | null | undefined): boolean {
+    if (!event) {
+      return false;
+    }
+
+    if (event.status !== EventStatus.DRAFT) {
+      return false;
+    }
+
+    return this.isEventOwnedByCurrentUser(event);
+  }
+
+  canDownloadEventPdf(event: Event | null | undefined): boolean {
+    if (!event) {
+      return false;
+    }
+
+    return event.status !== EventStatus.DRAFT;
+  }
+
+  getPdfUnavailableReason(event: Event | null | undefined): string {
+    if (!event) {
+      return 'Evenement non selectionne.';
+    }
+
+    if (event.status === EventStatus.DRAFT) {
+      return 'PDF disponible apres soumission du workflow.';
+    }
+
+    return 'Document officiel indisponible pour cet evenement.';
+  }
+
+  openEventInCalendar(event: Event): void {
+    this.viewMode = 'calendar';
+    this.viewEvent(event);
+  }
+
+  private isCurrentUserAdmin(): boolean {
+    return this.currentRole === 'ADMIN';
+  }
+
+  private isEventOwnedByCurrentUser(event: Event): boolean {
+    const organiserId = (event.organiserId || '').trim().toLowerCase();
+    if (!organiserId) {
+      return false;
+    }
+
+    const currentCandidates = [
+      this.currentUserId,
+      this.currentUsername,
+    ]
+      .map((value) => (value || '').trim().toLowerCase())
+      .filter((value) => !!value);
+
+    return currentCandidates.includes(organiserId);
+  }
+
+  submitEvent(event: Event | null | undefined): void {
+    if (!this.canSubmitEvent(event) || !event) {
+      this.calendarSubmissionFeedbackTone = 'error';
+      this.calendarSubmissionFeedback = 'Soumission impossible: vous devez etre l organisateur du brouillon.';
+      return;
+    }
+
+    this.eventService.submitEvent(event.id, 'Soumission depuis l interface utilisateur').subscribe({
+      next: (updated) => {
+        if (!updated) {
+          return;
+        }
+        this.loadEvents();
+        if (this.selectedEvent?.id === event.id) {
+          this.selectedEvent = updated;
+        }
+      },
+      error: (err) => {
+        this.calendarSubmissionFeedbackTone = 'error';
+        this.calendarSubmissionFeedback = this.extractBackendError(err, 'Soumission impossible pour le moment.');
+      }
+    });
+  }
+
+  downloadEventPdf(event: Event | null | undefined): void {
+    if (!event || !this.canDownloadEventPdf(event)) {
+      this.calendarSubmissionFeedbackTone = 'error';
+      this.calendarSubmissionFeedback = this.getPdfUnavailableReason(event);
+      return;
+    }
+
+    this.eventService.downloadLatestOfficialDocument(event.id).subscribe({
+      next: () => {
+        this.calendarSubmissionFeedback = `PDF officiel telecharge pour ${event.referenceCode || event.title}.`;
+        this.calendarSubmissionFeedbackTone = 'success';
+      },
+      error: () => {
+        this.calendarSubmissionFeedback = 'Aucun PDF officiel disponible pour cet evenement.';
+        this.calendarSubmissionFeedbackTone = 'error';
+      }
+    });
+  }
+
+  openPhotoAlbum(event: Event | null | undefined): void {
+    if (!event) {
+      return;
+    }
+    void this.router.navigate(['/events', event.id, 'album']);
   }
 
   closeEventDetails(): void {
@@ -1765,13 +2694,118 @@ export class EventsListComponent implements OnInit {
     } else {
       this.resetZoomJoinState();
     }
+    this.clearOnlineJoinFeedback();
+    this.resetInternalInviteState();
     this.selectedEvent = null;
     this.inviteFeedback = '';
     this.inviteFeedbackTone = 'success';
   }
 
+  openOnlineMeeting(event: Event): void {
+    this.clearOnlineJoinFeedback();
+    if (!this.isOnlineMode(this.getResolvedEventMode(event))) {
+      this.onlineJoinFeedbackTone = 'error';
+      this.onlineJoinFeedback = 'Cet evenement est presentiel. Aucun lien en ligne a ouvrir.';
+      return;
+    }
+
+    const safeUrl = this.resolveSafeOnlineMeetingUrl(event);
+    if (!safeUrl) {
+      this.onlineJoinFeedbackTone = 'error';
+      this.onlineJoinFeedback = 'Lien de reunion non disponible.';
+      return;
+    }
+
+    const opened = window.open(safeUrl, '_blank', 'noopener,noreferrer');
+    if (!opened) {
+      this.onlineJoinFeedbackTone = 'error';
+      this.onlineJoinFeedback = 'Le navigateur a bloque l ouverture. Autorisez les popups puis reessayez.';
+      return;
+    }
+
+    this.onlineJoinFeedbackTone = 'success';
+    this.onlineJoinFeedback = 'Lien de reunion ouvert dans un nouvel onglet.';
+  }
+
+  addInternalRecipient(): void {
+    const username = this.internalInviteRecipient.username.trim();
+    const name = this.internalInviteRecipient.name.trim();
+    const email = this.normalizePartnerEmail(this.internalInviteRecipient.email) || '';
+
+    if (!username || !name || !email) {
+      this.internalInviteFeedbackTone = 'error';
+      this.internalInviteFeedback = 'Nom utilisateur, nom complet et email valide sont obligatoires.';
+      return;
+    }
+
+    const alreadyExists = this.internalInviteRecipients.some((recipient) =>
+      recipient.username.toLowerCase() === username.toLowerCase() || recipient.email.toLowerCase() === email.toLowerCase(),
+    );
+    if (alreadyExists) {
+      this.internalInviteFeedbackTone = 'error';
+      this.internalInviteFeedback = 'Ce destinataire est deja ajoute.';
+      return;
+    }
+
+    this.internalInviteRecipients = [
+      ...this.internalInviteRecipients,
+      { username, email, name },
+    ];
+    this.internalInviteRecipient = { username: '', email: '', name: '' };
+    this.internalInviteFeedbackTone = 'success';
+    this.internalInviteFeedback = 'Destinataire ajoute.';
+  }
+
+  removeInternalRecipient(username: string): void {
+    this.internalInviteRecipients = this.internalInviteRecipients.filter((recipient) => recipient.username !== username);
+    this.internalInviteFeedbackTone = 'success';
+    this.internalInviteFeedback = 'Destinataire retire.';
+  }
+
+  sendInternalInvitations(event: Event): void {
+    if (this.internalInviteRecipients.length === 0) {
+      this.internalInviteFeedbackTone = 'error';
+      this.internalInviteFeedback = 'Ajoutez au moins un destinataire avant envoi.';
+      return;
+    }
+
+    this.isSendingInternalInvites = true;
+    this.internalInviteFeedback = '';
+    const recipients = this.internalInviteRecipients.map((recipient) => ({
+      userId: recipient.username,
+      email: recipient.email,
+      name: recipient.name,
+    }));
+
+    this.invitationService.sendBulkInvitations(
+      event.id,
+      recipients,
+      this.currentUserId,
+      this.currentUserName,
+      this.internalInviteMessage,
+    ).subscribe({
+      next: (created) => {
+        this.isSendingInternalInvites = false;
+        if (!created || created.length === 0) {
+          this.internalInviteFeedbackTone = 'error';
+          this.internalInviteFeedback = 'Aucune invitation creee.';
+          return;
+        }
+        this.internalInviteFeedbackTone = 'success';
+        this.internalInviteFeedback = `${created.length} invitation(s) employee envoyee(s).`;
+        this.internalInviteRecipients = [];
+        this.internalInviteMessage = '';
+      },
+      error: (error) => {
+        this.isSendingInternalInvites = false;
+        this.internalInviteFeedbackTone = 'error';
+        this.internalInviteFeedback = this.extractBackendError(error, 'Envoi des invitations impossible.');
+      },
+    });
+  }
+
   async joinZoomMeeting(event: Event): Promise<void> {
-    if (!event.onlineEvent) {
+    if (!this.isOnlineMode(this.getResolvedEventMode(event))) {
       this.zoomJoinState = 'error';
       this.zoomJoinError = 'Cet evenement n est pas configure en mode Zoom.';
       return;
@@ -1780,20 +2814,23 @@ export class EventsListComponent implements OnInit {
     this.zoomJoinState = 'loading';
     this.zoomJoinError = '';
 
-    const credentials = await firstValueFrom(this.eventService.getZoomMeetingCredentials(event.id));
-    if (!credentials) {
-      const zoomWebJoinOpened = this.openZoomWebClientFallback(event);
-      if (zoomWebJoinOpened) {
-        this.zoomJoinState = 'idle';
-        this.zoomJoinError = 'Signature Zoom SDK indisponible. Reunion ouverte via Zoom Web.';
-      } else {
-        this.zoomJoinState = 'error';
-        this.zoomJoinError = 'Impossible de recuperer la signature Zoom et aucun lien Zoom Web exploitable n a ete trouve.';
-      }
-      return;
-    }
-
     try {
+      const credentials = await firstValueFrom(this.eventService.getZoomMeetingCredentials(event.id));
+      const meetingNumber = this.normalizeZoomMeetingNumber(credentials.meetingNumber);
+      if (!this.isValidZoomMeetingNumber(meetingNumber)) {
+        throw new Error('ID de reunion Zoom invalide (9 a 11 chiffres requis).');
+      }
+
+      // Check if SDK is configured; if not, use web client fallback
+      if (!credentials.sdkConfigured) {
+        if (!credentials.fallbackWebUrl) {
+          throw new Error('Impossible de rejoindre la reunion: parametres manquants.');
+        }
+        window.open(credentials.fallbackWebUrl, '_blank', 'noopener,noreferrer');
+        this.zoomJoinState = 'opened_web_client';
+        return;
+      }
+
       await this.ensureZoomSdkLoaded();
 
       const zoomRoot = document.getElementById(this.zoomContainerId);
@@ -1818,8 +2855,7 @@ export class EventsListComponent implements OnInit {
 
       await this.zoomClient.join({
         signature: credentials.signature,
-        sdkKey: credentials.sdkKey,
-        meetingNumber: credentials.meetingNumber,
+        meetingNumber,
         password: credentials.passcode,
         userName: this.currentUserName || credentials.userName || 'Participant CNSTN'
       });
@@ -1853,7 +2889,7 @@ export class EventsListComponent implements OnInit {
   }
 
   private ensureZoomSdkLoaded(): Promise<void> {
-    if (window.ZoomMtgEmbedded) {
+    if (window.ZoomMtgEmbedded && typeof window.ZoomMtgEmbedded.createClient === 'function') {
       return Promise.resolve();
     }
 
@@ -1861,20 +2897,48 @@ export class EventsListComponent implements OnInit {
       return this.zoomSdkLoadPromise;
     }
 
-    this.zoomSdkLoadPromise = import('@zoom/meetingsdk')
-      .then((module: any) => {
-        const embeddedSdk = module?.ZoomMtgEmbedded || module?.default?.ZoomMtgEmbedded;
-        if (!embeddedSdk) {
-          throw new Error('Module Zoom SDK indisponible.');
-        }
+    this.zoomSdkLoadPromise = (async () => {
+      const loadedModules: any[] = [];
 
-        window.ZoomMtgEmbedded = embeddedSdk;
-      });
+      try {
+        loadedModules.push(await import('@zoom/meetingsdk/embedded'));
+      } catch {
+        // Fallback below for older package entrypoints.
+      }
+
+      if (!loadedModules.length) {
+        loadedModules.push(await import('@zoom/meetingsdk'));
+      }
+
+      for (const module of loadedModules) {
+        const embeddedSdk =
+          module?.ZoomMtgEmbedded ||
+          module?.default?.ZoomMtgEmbedded ||
+          module?.default ||
+          module;
+
+        if (embeddedSdk && typeof embeddedSdk.createClient === 'function') {
+          window.ZoomMtgEmbedded = embeddedSdk;
+          return;
+        }
+      }
+
+      throw new Error('Module Zoom SDK indisponible.');
+    })().catch((error) => {
+      this.zoomSdkLoadPromise = null;
+      throw error;
+    });
 
     return this.zoomSdkLoadPromise;
   }
 
   private toUserFriendlyZoomError(error: unknown): string {
+    const candidate = error as { reason?: string; type?: string; message?: string } | null;
+    if (candidate?.reason) {
+      const typePrefix = candidate.type ? `[${candidate.type}] ` : '';
+      return `Connexion Zoom echouee: ${typePrefix}${candidate.reason}`;
+    }
+
     if (error instanceof Error && error.message) {
       return `Connexion Zoom echouee: ${error.message}`;
     }
@@ -1882,7 +2946,7 @@ export class EventsListComponent implements OnInit {
   }
 
   private openZoomWebClientFallback(event: Event): boolean {
-    const meetingNumber = event.zoomMeetingNumber?.trim();
+    const meetingNumber = this.normalizeZoomMeetingNumber(event.zoomMeetingNumber || '');
     const passcode = event.zoomPasscode?.trim();
 
     if (!meetingNumber || !passcode) {
@@ -1904,44 +2968,98 @@ export class EventsListComponent implements OnInit {
     this.zoomJoinError = '';
   }
 
+  private normalizeZoomMeetingNumber(value: string): string {
+    return value.replace(/\D/g, '');
+  }
+
+  private isValidZoomMeetingNumber(value: string): boolean {
+    return /^\d{9,11}$/.test(value);
+  }
+
+  private resolveSafeOnlineMeetingUrl(event: Event): string | null {
+    const directUrl = (event.onlineMeetingUrl || '').trim();
+    if (this.isSafeHttpsUrl(directUrl)) {
+      return directUrl;
+    }
+
+    const meetingNumber = this.normalizeZoomMeetingNumber(event.zoomMeetingNumber || '');
+    if (!meetingNumber) {
+      return null;
+    }
+
+    const passcode = (event.zoomPasscode || '').trim();
+    const generatedUrl = passcode
+      ? `https://app.zoom.us/wc/join/${encodeURIComponent(meetingNumber)}?pwd=${encodeURIComponent(passcode)}`
+      : `https://zoom.us/j/${encodeURIComponent(meetingNumber)}`;
+
+    return this.isSafeHttpsUrl(generatedUrl) ? generatedUrl : null;
+  }
+
+  private isSafeHttpsUrl(value: string): boolean {
+    if (!value || !value.toLowerCase().startsWith('https://')) {
+      return false;
+    }
+
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }
+
+  private clearOnlineJoinFeedback(): void {
+    this.onlineJoinFeedback = '';
+    this.onlineJoinFeedbackTone = 'success';
+  }
+
+  private resetInternalInviteState(): void {
+    this.internalInviteRecipient = { username: '', email: '', name: '' };
+    this.internalInviteRecipients = [];
+    this.internalInviteMessage = '';
+    this.internalInviteFeedback = '';
+    this.internalInviteFeedbackTone = 'success';
+    this.isSendingInternalInvites = false;
+  }
+
   approveEvent(event: Event): void {
-    if (!this.canApproveEvents()) {
-      console.error('❌ User cannot approve events');
+    if (!this.canDecideEvent(event)) {
+      this.calendarSubmissionFeedbackTone = 'error';
+      this.calendarSubmissionFeedback = 'Validation non autorisee pour votre role ou cette etape.';
       return;
     }
 
-    console.log(`📍 Approving event ${event.id}: ${event.title}`);
     this.eventService.changeEventStatus(event.id, EventStatus.PUBLISHED).subscribe({
       next: (updated) => {
-        console.log('✅ Event approved:', updated);
         this.loadEvents();
         if (this.selectedEvent?.id === event.id) {
           this.selectedEvent = { ...event, status: EventStatus.PUBLISHED };
         }
       },
       error: (err) => {
-        console.error('❌ Failed to approve event:', err);
+        this.calendarSubmissionFeedbackTone = 'error';
+        this.calendarSubmissionFeedback = this.extractBackendError(err, 'Validation impossible pour le moment.');
       }
     });
   }
 
   rejectEvent(event: Event): void {
-    if (!this.canApproveEvents()) {
-      console.error('❌ User cannot reject events');
+    if (!this.canDecideEvent(event)) {
+      this.calendarSubmissionFeedbackTone = 'error';
+      this.calendarSubmissionFeedback = 'Refus non autorise pour votre role ou cette etape.';
       return;
     }
 
-    console.log(`📍 Rejecting event ${event.id}: ${event.title}`);
     this.eventService.changeEventStatus(event.id, EventStatus.CANCELLED).subscribe({
       next: (updated) => {
-        console.log('✅ Event rejected:', updated);
         this.loadEvents();
         if (this.selectedEvent?.id === event.id) {
           this.selectedEvent = { ...event, status: EventStatus.CANCELLED };
         }
       },
       error: (err) => {
-        console.error('❌ Failed to reject event:', err);
+        this.calendarSubmissionFeedbackTone = 'error';
+        this.calendarSubmissionFeedback = this.extractBackendError(err, 'Refus impossible pour le moment.');
       }
     });
   }
@@ -1979,32 +3097,31 @@ export class EventsListComponent implements OnInit {
       verifiedBy: undefined,
       verifiedAt: undefined,
       partnerOrganization: this.partnerInvite.organization.trim() || undefined
-    }).subscribe(() => {
-      this.inviteFeedbackTone = 'success';
-      this.inviteFeedback = 'Invitation partenaire envoyee. En attente de verification DSN.';
-      this.partnerInvite = {
-        name: '',
-        email: '',
-        organization: '',
-        message: ''
-      };
+    }).subscribe({
+      next: () => {
+        this.inviteFeedbackTone = 'success';
+        this.inviteFeedback = 'Invitation partenaire envoyee. En attente de verification DSN.';
+        this.partnerInvite = {
+          name: '',
+          email: '',
+          organization: '',
+          message: ''
+        };
+      },
+      error: () => {
+        this.inviteFeedbackTone = 'error';
+        this.inviteFeedback = 'Envoi impossible pour le moment. Verifiez les droits ou la disponibilite du service.';
+      },
     });
   }
 
-  private sortEvents(events: Event[]): Event[] {
-    const sorted = [...events];
-
+  private getSortQueryParam(): string {
     if (this.sortMode === 'title') {
-      sorted.sort((a, b) => a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' }));
-      return sorted;
+      return 'title,asc';
     }
-
     if (this.sortMode === 'status') {
-      sorted.sort((a, b) => this.getEventStatusLabel(a.status).localeCompare(this.getEventStatusLabel(b.status), 'fr', { sensitivity: 'base' }));
-      return sorted;
+      return 'status,asc';
     }
-
-    sorted.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
-    return sorted;
+    return 'startAt,desc';
   }
 }

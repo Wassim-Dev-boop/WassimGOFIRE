@@ -6,6 +6,8 @@ public record ZoomSignatureResponse(
         String meetingNumber,
         String passcode,
         String userName,
-        int role
+        int role,
+        String fallbackWebUrl,
+        boolean sdkConfigured
 ) {
 }

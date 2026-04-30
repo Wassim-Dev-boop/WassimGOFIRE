@@ -1,28 +1,24 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, QueryList, ViewChildren, ChangeDetectorRef } from '@angular/core';
-import { SidebarService } from '../../services/sidebar.service';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { NavigationEnd, Params, Router, RouterModule } from '@angular/router';
-import { SafeHtmlPipe } from '../../pipe/safe-html.pipe';
-import { combineLatest, Subscription } from 'rxjs';
+import { combineLatest, Subscription, filter } from 'rxjs';
+import { AppRole, InvitationStatus } from '../../../core/models';
 import { AuthService } from '../../../core/services/auth.service';
-import { AppRole } from '../../../core/models';
+import { InvitationService } from '../../../core/services/invitation.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { SafeHtmlPipe } from '../../pipe/safe-html.pipe';
+import { SidebarService } from '../../services/sidebar.service';
+import { ThemeService } from '../../services/theme.service';
 
 type NavItem = {
   name: string;
   icon: string;
-  path?: string;
-  new?: boolean;
-  count?: number;
-  countTone?: 'brand' | 'warning';
+  path: string;
   queryParams?: Params;
   roles?: AppRole[];
   permissions?: string[];
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean; icon?: string }[];
-};
-
-type NavSection = {
-  title: string;
-  items: NavItem[];
+  count?: number;
+  countTone?: 'brand' | 'warning';
 };
 
 const ALL_ROLES: AppRole[] = [
@@ -30,362 +26,280 @@ const ALL_ROLES: AppRole[] = [
   'EMPLOYEE',
   'MANAGER',
   'ROOM_MANAGER',
+  'IT_MANAGER',
   'SECURITY_MANAGER',
   'DSN_DIRECTOR',
-  'QUALITY_MANAGER'
+  'QUALITY_MANAGER',
 ];
 
+const RESERVATION_ROLES: AppRole[] = [
+  'ADMIN',
+  'EMPLOYEE',
+  'MANAGER',
+  'ROOM_MANAGER',
+  'SECURITY_MANAGER',
+  'DSN_DIRECTOR',
+  'QUALITY_MANAGER',
+];
+
+const DASHBOARD_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12L12 4L20 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path><path d="M6.5 10.5V19.5H17.5V10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>`;
+const GED_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 3.5H14L18.5 8V20.5H7C5.89543 20.5 5 19.6046 5 18.5V5.5C5 4.39543 5.89543 3.5 7 3.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path><path d="M14 3.5V8H18.5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>`;
+const EVENT_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3.5" y="5" width="17" height="15" rx="2" stroke="currentColor" stroke-width="1.8"></rect><path d="M8 3V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M16 3V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M3.5 10H20.5" stroke="currentColor" stroke-width="1.8"></path></svg>`;
+const INVITATION_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.8"></rect><path d="M3.5 7L12 13L20.5 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>`;
 const ROOM_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 10.5L12 3L21 10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path><path d="M5.5 9.5V20H18.5V9.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>`;
 const EQUIPMENT_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="7" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.8"></rect><path d="M9 7V5.5C9 4.67157 9.67157 4 10.5 4H13.5C14.3284 4 15 4.67157 15 5.5V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>`;
-const NOTIFICATION_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 17H20L18.6 15.6C18.225 15.225 18 14.7163 18 14.1863V11C18 7.68629 15.3137 5 12 5C8.68629 5 6 7.68629 6 11V14.1863C6 14.7163 5.775 15.225 5.4 15.6L4 17H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path><path d="M9.5 17C9.5 18.3807 10.6193 19.5 12 19.5C13.3807 19.5 14.5 18.3807 14.5 17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>`;
-const REPORTS_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 19.5H19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M7.5 18V11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M12 18V7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M16.5 18V13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>`;
+const INTERVENTION_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 6.5L17.5 3.5L20.5 6.5L17.5 9.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path><path d="M4 20L10.2 13.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M7.2 12.8L10.6 16.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M14.5 6.5L7.2 13.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>`;
+const NOTIFICATION_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 17H18L16.8 15.8C16.2861 15.2861 16 14.5891 16 13.8627V11C16 8.79086 14.2091 7 12 7C9.79086 7 8 8.79086 8 11V13.8627C8 14.5891 7.71392 15.2861 7.2 15.8L6 17Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path><path d="M10 18.5C10 19.6046 10.8954 20.5 12 20.5C13.1046 20.5 14 19.6046 14 18.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>`;
+const ADMIN_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5 2.8C11.4 2.3 12.6 2.3 13.5 2.8L15 3.7C15.3 3.9 15.7 4 16.1 4H17.8C18.9 4 19.8 4.9 19.8 6V7.9C19.8 8.3 19.9 8.7 20.1 9L21 10.5C21.5 11.4 21.5 12.6 21 13.5L20.1 15C19.9 15.3 19.8 15.7 19.8 16.1V17.8C19.8 18.9 18.9 19.8 17.8 19.8H16.1C15.7 19.8 15.3 19.9 15 20.1L13.5 21C12.6 21.5 11.4 21.5 10.5 21L9 20.1C8.7 19.9 8.3 19.8 7.9 19.8H6.2C5.1 19.8 4.2 18.9 4.2 17.8V16.1C4.2 15.7 4.1 15.3 3.9 15L3 13.5C2.5 12.6 2.5 11.4 3 10.5L3.9 9C4.1 8.7 4.2 8.3 4.2 7.9V6C4.2 4.9 5.1 4 6.2 4H7.9C8.3 4 8.7 3.9 9 3.7L10.5 2.8Z" stroke="currentColor" stroke-width="1.6"></path><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6"></circle></svg>`;
+const REPORTING_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 19H19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M7.5 16V10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M12 16V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M16.5 16V12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>`;
 
 @Component({
   selector: 'app-sidebar',
-  imports: [
-    CommonModule,
-    RouterModule,
-    SafeHtmlPipe
-  ],
+  imports: [CommonModule, RouterModule, SafeHtmlPipe],
   templateUrl: './app-sidebar.component.html',
 })
-export class AppSidebarComponent {
+export class AppSidebarComponent implements OnInit, OnDestroy {
+  unreadNotificationsCount = 0;
+  pendingInvitationsCount = 0;
 
-  // Main nav items
-  navItems: NavItem[] = [
-    {
-      icon: `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M5.5 3.25C4.25736 3.25 3.25 4.25736 3.25 5.5V8.99998C3.25 10.2426 4.25736 11.25 5.5 11.25H9C10.2426 11.25 11.25 10.2426 11.25 8.99998V5.5C11.25 4.25736 10.2426 3.25 9 3.25H5.5ZM4.75 5.5C4.75 5.08579 5.08579 4.75 5.5 4.75H9C9.41421 4.75 9.75 5.08579 9.75 5.5V8.99998C9.75 9.41419 9.41421 9.74998 9 9.74998H5.5C5.08579 9.74998 4.75 9.41419 4.75 8.99998V5.5ZM5.5 12.75C4.25736 12.75 3.25 13.7574 3.25 15V18.5C3.25 19.7426 4.25736 20.75 5.5 20.75H9C10.2426 20.75 11.25 19.7427 11.25 18.5V15C11.25 13.7574 10.2426 12.75 9 12.75H5.5ZM4.75 15C4.75 14.5858 5.08579 14.25 5.5 14.25H9C9.41421 14.25 9.75 14.5858 9.75 15V18.5C9.75 18.9142 9.41421 19.25 9 19.25H5.5C5.08579 19.25 4.75 18.9142 4.75 18.5V15ZM12.75 5.5C12.75 4.25736 13.7574 3.25 15 3.25H18.5C19.7426 3.25 20.75 4.25736 20.75 5.5V8.99998C20.75 10.2426 19.7426 11.25 18.5 11.25H15C13.7574 11.25 12.75 10.2426 12.75 8.99998V5.5ZM15 4.75C14.5858 4.75 14.25 5.08579 14.25 5.5V8.99998C14.25 9.41419 14.5858 9.74998 15 9.74998H18.5C18.9142 9.74998 19.25 9.41419 19.25 8.99998V5.5C19.25 5.08579 18.9142 4.75 18.5 4.75H15ZM15 12.75C13.7574 12.75 12.75 13.7574 12.75 15V18.5C12.75 19.7426 13.7574 20.75 15 20.75H18.5C19.7426 20.75 20.75 19.7427 20.75 18.5V15C20.75 13.7574 19.7426 12.75 18.5 12.75H15ZM14.25 15C14.25 14.5858 14.5858 14.25 15 14.25H18.5C18.9142 14.25 19.25 14.5858 19.25 15V18.5C19.25 18.9142 18.9142 19.25 18.5 19.25H15C14.5858 19.25 14.25 18.9142 14.25 18.5V15Z" fill="currentColor"></path></svg>`,
-      name: "Dashboard",
-      subItems: [
-        { name: "Ecommerce", path: "/" },
-        { 
-          name: "Enterprise Dashboard", 
-          path: "/dashboard", 
-          new: true,
-          icon: `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M5.5 3.25C4.25736 3.25 3.25 4.25736 3.25 5.5V8.99998C3.25 10.2426 4.25736 11.25 5.5 11.25H9C10.2426 11.25 11.25 10.2426 11.25 8.99998V5.5C11.25 4.25736 10.2426 3.25 9 3.25H5.5ZM4.75 5.5C4.75 5.08579 5.08579 4.75 5.5 4.75H9C9.41421 4.75 9.75 5.08579 9.75 5.5V8.99998C9.75 9.41419 9.41421 9.74998 9 9.74998H5.5C5.08579 9.74998 4.75 9.41419 4.75 8.99998V5.5Z" fill="currentColor"></path></svg>`
-        },
-      ],
-    },
-    { 
-      name: "Documents (GED)", 
-      path: "/documents", 
-      new: true,
-      roles: ALL_ROLES,
-      icon: `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M8.50391 4.25C8.50391 3.83579 8.83969 3.5 9.25391 3.5H15.2777C15.4766 3.5 15.6674 3.57902 15.8081 3.71967L18.2807 6.19234C18.4214 6.333 18.5004 6.52376 18.5004 6.72268V16.75C18.5004 17.1642 18.1646 17.5 17.7504 17.5H16.248V17.4993H14.748V17.5H9.25391C8.83969 17.5 8.50391 17.1642 8.50391 16.75V4.25ZM14.748 19H9.25391C8.01126 19 7.00391 17.9926 7.00391 16.75V6.49854H6.24805C5.83383 6.49854 5.49805 6.83432 5.49805 7.24854V19.75C5.49805 20.1642 5.83383 20.5 6.24805 20.5H13.998C14.4123 20.5 14.748 20.1642 14.748 19.75L14.748 19ZM7.00391 4.99854V4.25C7.00391 3.00736 8.01127 2 9.25391 2H15.2777C15.8745 2 16.4468 2.23705 16.8687 2.659L19.3414 5.13168C19.7634 5.55364 20.0004 6.12594 20.0004 6.72268V16.75C20.0004 17.9926 18.9931 19 17.7504 19H16.248L16.248 19.75C16.248 20.9926 15.2407 22 13.998 22H6.24805C5.00541 22 3.99805 20.9926 3.99805 19.75V7.24854C3.99805 6.00589 5.00541 4.99854 6.24805 4.99854H7.00391Z" fill="currentColor"></path></svg>`
-    },
-    { 
-      name: "Events", 
-      path: "/events", 
-      new: true,
-      roles: ['ADMIN', 'EMPLOYEE', 'MANAGER'],
-      icon: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M8 2C8.41421 2 8.75 2.33579 8.75 2.75V3.75H15.25V2.75C15.25 2.33579 15.5858 2 16 2C16.4142 2 16.75 2.33579 16.75 2.75V3.75H18.5C19.7426 3.75 20.75 4.75736 20.75 6V9V19C20.75 20.2426 19.7426 21.25 18.5 21.25H5.5C4.25736 21.25 3.25 20.2426 3.25 19V9V6C3.25 4.75736 4.25736 3.75 5.5 3.75H7.25V2.75C7.25 2.33579 7.58579 2 8 2ZM8 5.25H5.5C5.08579 5.25 4.75 5.58579 4.75 6V8.25H19.25V6C19.25 5.58579 18.9142 5.25 18.5 5.25H16H8ZM19.25 9.75H4.75V19C4.75 19.4142 5.08579 19.75 5.5 19.75H18.5C18.9142 19.75 19.25 19.4142 19.25 19V9.75Z" fill="currentColor"></path></svg>`
-    },
-    { 
-      name: "Invitations", 
-      path: "/invitations", 
-      new: true,
-      roles: ['ADMIN', 'EMPLOYEE', 'MANAGER', 'DSN_DIRECTOR'],
-      icon: `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M2 4C2 2.89543 2.89543 2 4 2H20C21.1046 2 22 2.89543 22 4V20C22 21.1046 21.1046 22 20 22H4C2.89543 22 2 21.1046 2 20V4ZM4 4H20V6.4L12 12.4L4 6.4V4ZM4 8.6V20H20V8.6L12 14.6L4 8.6Z" fill="currentColor"></path></svg>`
-    },
-    { 
-      name: "Reservations", 
-      path: "/reservations/salles", 
-      new: true,
-      roles: ALL_ROLES,
-      icon: `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M6 2C4.34315 2 3 3.34315 3 5V19C3 20.6569 4.34315 22 6 22H18C19.6569 22 21 20.6569 21 19V5C21 3.34315 19.6569 2 18 2H6ZM5 5C5 4.44772 5.44772 4 6 4H8V3C8 2.44772 8.44772 2 9 2C9.55228 2 10 2.44772 10 3V4H14V3C14 2.44772 14.4477 2 15 2C15.5523 2 16 2.44772 16 3V4H18C18.5523 4 19 4.44772 19 5V9H5V5ZM5 11H19V19C19 19.5523 18.5523 20 18 20H6C5.44772 20 5 19.5523 5 19V11Z" fill="currentColor"></path></svg>`
-    },
-    { 
-      name: "Interventions", 
-      path: "/interventions", 
-      new: true,
-      roles: ['ADMIN', 'EMPLOYEE', 'ROOM_MANAGER'],
-      icon: `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M11 2C10.4477 2 10 2.44772 10 3V4H6C4.89543 4 4 4.89543 4 6V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V6C20 4.89543 19.1046 4 18 4H14V3C14 2.44772 13.5523 2 13 2C12.4477 2 12 2.44772 12 3V4H11C10.4477 4 10 4.44772 10 5V6C10 6.55228 10.4477 7 11 7H13C13.5523 7 14 6.55228 14 6V5H15V7C15 7.55228 15.4477 8 16 8H18C19.1046 8 20 8.89543 20 10V20C20 21.1046 19.1046 22 18 22H6C4.89543 22 4 21.1046 4 20V10C4 8.89543 4.89543 8 6 8H9C9.55228 8 10 7.55228 10 7V5C10.4477 5 11 4.55228 11 4V3ZM6 10H18V20H6V10Z" fill="currentColor"></path></svg>`
-    },
-    { 
-      name: "Administration", 
-      path: "/admin", 
-      new: true,
-      roles: ['ADMIN'],
-      icon: `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM12 6C11.4477 6 11 6.44772 11 7V12C11 12.5523 11.4477 13 12 13C12.5523 13 13 12.5523 13 12V7C13 6.44772 12.5523 6 12 6ZM12 15C11.4477 15 11 15.4477 11 16C11 16.5523 11.4477 17 12 17C12.5523 17 13 16.5523 13 16C13 15.4477 12.5523 15 12 15Z" fill="currentColor"></path></svg>`
-    },
-    {
-      icon: `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 3.5C7.30558 3.5 3.5 7.30558 3.5 12C3.5 14.1526 4.3002 16.1184 5.61936 17.616C6.17279 15.3096 8.24852 13.5955 10.7246 13.5955H13.2746C15.7509 13.5955 17.8268 15.31 18.38 17.6167C19.6996 16.119 20.5 14.153 20.5 12C20.5 7.30558 16.6944 3.5 12 3.5ZM17.0246 18.8566V18.8455C17.0246 16.7744 15.3457 15.0955 13.2746 15.0955H10.7246C8.65354 15.0955 6.97461 16.7744 6.97461 18.8455V18.856C8.38223 19.8895 10.1198 20.5 12 20.5C13.8798 20.5 15.6171 19.8898 17.0246 18.8566ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM11.9991 7.25C10.8847 7.25 9.98126 8.15342 9.98126 9.26784C9.98126 10.3823 10.8847 11.2857 11.9991 11.2857C13.1135 11.2857 14.0169 10.3823 14.0169 9.26784C14.0169 8.15342 13.1135 7.25 11.9991 7.25ZM8.48126 9.26784C8.48126 7.32499 10.0563 5.75 11.9991 5.75C13.9419 5.75 15.5169 7.32499 15.5169 9.26784C15.5169 11.2107 13.9419 12.7857 11.9991 12.7857C10.0563 12.7857 8.48126 11.2107 8.48126 9.26784Z" fill="currentColor"></path></svg>`,
-      name: "User Profile",
-      roles: ALL_ROLES,
-      path: "/profile",
-    },
-  ];
-  // Others nav items
-  othersItems: NavItem[] = [];
-
-  // Sidebar content inspired by CPTR structure while preserving TailAdmin behavior.
-  sidebarSections: NavSection[] = [
-    {
-      title: 'PRINCIPAL',
-      items: [
-        {
-          name: 'Tableau de bord',
-          path: '/dashboard',
-          roles: ALL_ROLES,
-          permissions: ['VIEW_REPORTS_MODULE'],
-          icon: this.navItems[0].icon,
-        },
-      ],
-    },
-    {
-      title: 'GESTION DOCUMENTAIRE',
-      items: [
-        {
-          name: 'GED',
-          path: '/documents',
-          roles: ALL_ROLES,
-          permissions: ['VIEW_GED_MODULE'],
-          count: 12,
-          icon: this.navItems[1].icon,
-        },
-      ],
-    },
-    {
-      title: 'EVENEMENTS',
-      items: [
-        {
-          name: 'Evenements',
-          path: '/events',
-          roles: ALL_ROLES,
-          permissions: ['VIEW_EVENTS_MODULE'],
-          icon: this.navItems[2].icon,
-        },
-        {
-          name: 'Invitations',
-          path: '/invitations',
-          roles: ['ADMIN', 'EMPLOYEE', 'MANAGER', 'DSN_DIRECTOR'],
-          permissions: ['VIEW_EVENTS_MODULE'],
-          count: 3,
-          icon: this.navItems[3].icon,
-        },
-      ],
-    },
-    {
-      title: 'RESERVATIONS',
-      items: [
-        {
-          name: 'Salles',
-          path: '/reservations/salles',
-          roles: ALL_ROLES,
-          icon: ROOM_ICON,
-        },
-        {
-          name: 'Equipement',
-          path: '/reservations/equipements',
-          roles: ALL_ROLES,
-          icon: EQUIPMENT_ICON,
-        },
-      ],
-    },
-    {
-      title: 'TECHNIQUE',
-      items: [
-        {
-          name: 'Interventions',
-          path: '/interventions',
-          roles: ALL_ROLES,
-          permissions: ['VIEW_INTERVENTIONS_MODULE'],
-          count: 5,
-          countTone: 'warning',
-          icon: this.navItems[5].icon,
-        },
-      ],
-    },
-    {
-      title: 'SYSTEME',
-      items: [
-        {
-          name: 'Notifications',
-          path: '/notifications',
-          roles: ALL_ROLES,
-          count: 8,
-          icon: NOTIFICATION_ICON,
-        },
-        {
-          name: 'Administration',
-          path: '/admin',
-          roles: ['ADMIN'],
-          permissions: ['VIEW_USERS_MODULE'],
-          icon: this.navItems[6].icon,
-        },
-        {
-          name: 'Rapports',
-          path: '/bar-chart',
-          roles: ALL_ROLES,
-          permissions: ['VIEW_REPORTS_MODULE'],
-          icon: REPORTS_ICON,
-        },
-      ],
-    },
-  ];
-
-  openSubmenu: string | null | number = null;
-  subMenuHeights: { [key: string]: number } = {};
-  @ViewChildren('subMenu') subMenuRefs!: QueryList<ElementRef>;
+  navItems: NavItem[] = [];
+  currentTheme: 'light' | 'dark' = 'light';
 
   readonly isExpanded$;
   readonly isMobileOpen$;
   readonly isHovered$;
 
-  private subscription: Subscription = new Subscription();
+  private subscription = new Subscription();
+  private dynamicCountSubscription = new Subscription();
 
   constructor(
     public sidebarService: SidebarService,
     private router: Router,
     private cdr: ChangeDetectorRef,
-    private authService: AuthService
+    private authService: AuthService,
+    private notificationService: NotificationService,
+    private invitationService: InvitationService,
+    private themeService: ThemeService
   ) {
     this.isExpanded$ = this.sidebarService.isExpanded$;
     this.isMobileOpen$ = this.sidebarService.isMobileOpen$;
     this.isHovered$ = this.sidebarService.isHovered$;
   }
 
-  ngOnInit() {
-    // Subscribe to router events
+  ngOnInit(): void {
+    this.rebuildNavItems();
+
     this.subscription.add(
-      this.router.events.subscribe(event => {
-        if (event instanceof NavigationEnd) {
-          this.setActiveMenuFromRoute(this.router.url);
-        }
+      this.router.events
+        .pipe(filter((event) => event instanceof NavigationEnd))
+        .subscribe(() => this.cdr.markForCheck())
+    );
+
+    this.subscription.add(
+      this.authService.currentRole$.subscribe(() => {
+        this.rebuildNavItems();
+        this.loadDynamicCounts();
       })
     );
 
-    // Subscribe to combined observables to close submenus when all are false
+    this.subscription.add(
+      this.themeService.theme$.subscribe((theme) => {
+        this.currentTheme = theme;
+      })
+    );
+
     this.subscription.add(
       combineLatest([this.isExpanded$, this.isMobileOpen$, this.isHovered$]).subscribe(
-        ([isExpanded, isMobileOpen, isHovered]) => {
-          if (!isExpanded && !isMobileOpen && !isHovered) {
-            // this.openSubmenu = null;
-            // this.savedSubMenuHeights = { ...this.subMenuHeights };
-            // this.subMenuHeights = {};
-            this.cdr.detectChanges();
-          } else {
-            // Restore saved heights when reopening
-            // this.subMenuHeights = { ...this.savedSubMenuHeights };
-            // this.cdr.detectChanges();
-          }
-        }
+        () => this.cdr.markForCheck()
       )
     );
 
-    // Initial load
-    this.setActiveMenuFromRoute(this.router.url);
+    this.loadDynamicCounts();
   }
 
-  ngOnDestroy() {
-    // Clean up subscriptions
+  ngOnDestroy(): void {
+    this.dynamicCountSubscription.unsubscribe();
     this.subscription.unsubscribe();
   }
 
-  isActive(path: string): boolean {
-    return this.router.url === path;
+  get modeLabel(): string {
+    return this.currentTheme === 'dark' ? 'Mode sombre' : 'Mode clair';
   }
 
   canSeeNav(nav: NavItem): boolean {
     if (!nav.roles || nav.roles.length === 0) {
       return this.authService.hasAllPermissions(nav.permissions);
     }
-
     return this.authService.canAccess(nav.roles) && this.authService.hasAllPermissions(nav.permissions);
   }
 
-  get visibleSections(): NavSection[] {
-    return this.sidebarSections
-      .map((section) => ({
-        ...section,
-        items: section.items.filter((item) => this.canSeeNav(item)),
-      }))
-      .filter((section) => section.items.length > 0);
-  }
-
   isNavItemActive(nav: NavItem): boolean {
-    if (!nav.path) {
-      return false;
-    }
-
     const [currentPath] = this.router.url.split('?');
-    if (currentPath !== nav.path) {
-      return false;
+    const targetPath = nav.path;
+
+    if (targetPath === '/reporting') {
+      return currentPath === '/reporting';
     }
 
-    if (!nav.queryParams || Object.keys(nav.queryParams).length === 0) {
-      return true;
-    }
-
-    const currentQuery = this.router.parseUrl(this.router.url).queryParams;
-    return Object.entries(nav.queryParams).every(
-      ([key, value]) => String(currentQuery[key] ?? '') === String(value)
-    );
+    return currentPath === targetPath;
   }
 
-  toggleSubmenu(section: string, index: number) {
-    const key = `${section}-${index}`;
-
-    if (this.openSubmenu === key) {
-      this.openSubmenu = null;
-      this.subMenuHeights[key] = 0;
-    } else {
-      this.openSubmenu = key;
-
-      setTimeout(() => {
-        const el = document.getElementById(key);
-        if (el) {
-          this.subMenuHeights[key] = el.scrollHeight;
-          this.cdr.detectChanges(); // Ensure UI updates
-        }
-      });
-    }
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
   }
 
-  onSidebarMouseEnter() {
-    this.isExpanded$.subscribe(expanded => {
+  onSidebarMouseEnter(): void {
+    this.isExpanded$.subscribe((expanded) => {
       if (!expanded) {
         this.sidebarService.setHovered(true);
       }
     }).unsubscribe();
   }
 
-  private setActiveMenuFromRoute(currentUrl: string) {
-    const menuGroups = [
-      { items: this.navItems, prefix: 'main' },
-      { items: this.othersItems, prefix: 'others' },
-    ];
-
-    menuGroups.forEach(group => {
-      group.items.forEach((nav, i) => {
-        if (nav.subItems) {
-          nav.subItems.forEach(subItem => {
-            if (currentUrl === subItem.path) {
-              const key = `${group.prefix}-${i}`;
-              this.openSubmenu = key;
-
-              setTimeout(() => {
-                const el = document.getElementById(key);
-                if (el) {
-                  this.subMenuHeights[key] = el.scrollHeight;
-                  this.cdr.detectChanges(); // Ensure UI updates
-                }
-              });
-            }
-          });
-        }
-      });
-    });
-  }
-
-  onSubmenuClick() {
-    console.log('click submenu');
-    this.isMobileOpen$.subscribe(isMobile => {
-      if (isMobile) {
+  onLinkClick(): void {
+    this.isMobileOpen$.subscribe((isMobileOpen) => {
+      if (isMobileOpen) {
         this.sidebarService.setMobileOpen(false);
       }
     }).unsubscribe();
-  }  
+  }
 
-  
+  private loadDynamicCounts(): void {
+    this.dynamicCountSubscription.unsubscribe();
+    this.dynamicCountSubscription = new Subscription();
+
+    this.dynamicCountSubscription.add(
+      this.notificationService.getUnreadCount().subscribe({
+        next: (count) => {
+          this.unreadNotificationsCount = Math.max(0, Number(count) || 0);
+          this.rebuildNavItems();
+        },
+        error: () => {
+          this.unreadNotificationsCount = 0;
+          this.rebuildNavItems();
+        },
+      })
+    );
+
+    this.dynamicCountSubscription.add(
+      this.invitationService.getInvitations().subscribe({
+        next: (invitations) => {
+          this.pendingInvitationsCount = invitations.filter(
+            (invitation) => invitation.status === InvitationStatus.PENDING
+          ).length;
+          this.rebuildNavItems();
+        },
+        error: () => {
+          this.pendingInvitationsCount = 0;
+          this.rebuildNavItems();
+        },
+      })
+    );
+  }
+
+  private rebuildNavItems(): void {
+    const equipmentNavigation = this.resolveEquipmentNavigation();
+    const interventionsNavigation = this.resolveInterventionsNavigation();
+
+    this.navItems = [
+      {
+        name: 'Tableau de bord',
+        path: '/dashboard',
+        roles: ALL_ROLES,
+        permissions: ['VIEW_REPORTS_MODULE'],
+        icon: DASHBOARD_ICON,
+      },
+      {
+        name: 'GED',
+        path: '/documents',
+        roles: ALL_ROLES,
+        permissions: ['VIEW_GED_MODULE'],
+        icon: GED_ICON,
+      },
+      {
+        name: 'Evenements',
+        path: '/events',
+        roles: ALL_ROLES,
+        permissions: ['VIEW_EVENTS_MODULE'],
+        icon: EVENT_ICON,
+      },
+      {
+        name: 'Invitations',
+        path: '/invitations',
+        roles: ['ADMIN', 'EMPLOYEE', 'MANAGER', 'DSN_DIRECTOR', 'QUALITY_MANAGER', 'SECURITY_MANAGER'],
+        permissions: ['VIEW_EVENTS_MODULE'],
+        count: this.pendingInvitationsCount,
+        icon: INVITATION_ICON,
+      },
+      {
+        name: 'Salles',
+        path: '/reservations/salles',
+        roles: RESERVATION_ROLES,
+        icon: ROOM_ICON,
+      },
+      {
+        name: 'Equipements',
+        path: equipmentNavigation.path,
+        roles: equipmentNavigation.roles,
+        icon: EQUIPMENT_ICON,
+      },
+      {
+        name: 'Interventions',
+        path: interventionsNavigation.path,
+        roles: interventionsNavigation.roles,
+        permissions: ['VIEW_INTERVENTIONS_MODULE'],
+        icon: INTERVENTION_ICON,
+      },
+      {
+        name: 'Notifications',
+        path: '/notifications',
+        roles: ALL_ROLES,
+        count: this.unreadNotificationsCount,
+        countTone: 'warning',
+        icon: NOTIFICATION_ICON,
+      },
+      {
+        name: 'Administration',
+        path: '/admin',
+        roles: ['ADMIN'],
+        permissions: ['VIEW_USERS_MODULE'],
+        icon: ADMIN_ICON,
+      },
+      {
+        name: 'Reporting',
+        path: '/reporting',
+        roles: ALL_ROLES,
+        permissions: ['VIEW_REPORTS_MODULE'],
+        icon: REPORTING_ICON,
+      },
+    ];
+  }
+
+  private resolveEquipmentNavigation(): { path: string; roles: AppRole[] } {
+    if (this.authService.hasRole('ADMIN', 'IT_MANAGER')) {
+      return {
+        path: '/it/equipements',
+        roles: ['ADMIN', 'IT_MANAGER'],
+      };
+    }
+
+    return {
+      path: '/reservations/equipements',
+      roles: RESERVATION_ROLES,
+    };
+  }
+
+  private resolveInterventionsNavigation(): { path: string; roles: AppRole[] } {
+    if (this.authService.hasRole('ADMIN', 'ROOM_MANAGER')) {
+      return {
+        path: '/interventions',
+        roles: ['ADMIN', 'ROOM_MANAGER'],
+      };
+    }
+
+    return {
+      path: '/it/interventions',
+      roles: ['ADMIN', 'EMPLOYEE', 'MANAGER', 'DSN_DIRECTOR', 'IT_MANAGER'],
+    };
+  }
 }

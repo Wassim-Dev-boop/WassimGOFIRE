@@ -4,15 +4,18 @@ import com.cnstn.authuser.dto.MyPermissionsResponse;
 import com.cnstn.authuser.dto.PermissionDefinitionResponse;
 import com.cnstn.authuser.dto.UserPermissionsResponse;
 import com.cnstn.authuser.entity.PermissionEntity;
+import com.cnstn.authuser.entity.RoleEntity;
 import com.cnstn.authuser.entity.RoleName;
 import com.cnstn.authuser.entity.UserEntity;
 import com.cnstn.authuser.exception.BadRequestException;
 import com.cnstn.authuser.exception.ResourceNotFoundException;
 import com.cnstn.authuser.repository.PermissionRepository;
+import com.cnstn.authuser.repository.RoleRepository;
 import com.cnstn.authuser.repository.UserRepository;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -24,15 +27,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserPermissionService {
 
     private final PermissionRepository permissionRepository;
+    private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final UserAdminService userAdminService;
 
     public UserPermissionService(
             PermissionRepository permissionRepository,
+            RoleRepository roleRepository,
             UserRepository userRepository,
             UserAdminService userAdminService
     ) {
         this.permissionRepository = permissionRepository;
+        this.roleRepository = roleRepository;
         this.userRepository = userRepository;
         this.userAdminService = userAdminService;
     }
@@ -116,7 +122,7 @@ public class UserPermissionService {
         UserEntity user = findCurrentUserOrNull(principal);
         if (user == null) {
             Set<RoleName> normalizedRoles = UserPermissionPolicy.normalizeRoles(fallbackRoles);
-            Set<String> roleDerived = UserPermissionPolicy.resolveForRoles(normalizedRoles);
+            Set<String> roleDerived = resolveRolePermissions(normalizedRoles);
             return roleDerived.contains(safePermissionCode);
         }
 
@@ -131,7 +137,7 @@ public class UserPermissionService {
                 .stream()
                 .map(role -> role.getName())
                 .collect(Collectors.toSet());
-        Set<String> roleDerived = UserPermissionPolicy.resolveForRoles(roleNames);
+        Set<String> roleDerived = resolveRolePermissions(roleNames);
         return roleDerived.contains(safePermissionCode);
     }
 
@@ -145,7 +151,7 @@ public class UserPermissionService {
                 .stream()
                 .map(role -> role.getName())
                 .collect(Collectors.toSet());
-        Set<String> roleDerived = UserPermissionPolicy.resolveForRoles(roleNames);
+        Set<String> roleDerived = resolveRolePermissions(roleNames);
         Set<String> effective = user.isPermissionsCustomized() ? assigned : roleDerived;
 
         return new UserPermissionsResponse(
@@ -169,7 +175,7 @@ public class UserPermissionService {
                 .stream()
                 .map(role -> role.getName())
                 .collect(Collectors.toSet());
-        return UserPermissionPolicy.resolveForRoles(roles);
+        return resolveRolePermissions(roles);
     }
 
     private void validatePermissionCodes(Set<String> permissionCodes) {
@@ -199,5 +205,32 @@ public class UserPermissionService {
         return userRepository.findByUsernameIgnoreCase(principal)
                 .or(() -> userRepository.findByEmailIgnoreCase(principal))
                 .orElse(null);
+    }
+
+    private Set<String> resolveRolePermissions(Set<RoleName> roles) {
+        Set<RoleName> normalizedRoles = UserPermissionPolicy.normalizeRoles(roles);
+        if (normalizedRoles.isEmpty()) {
+            return new HashSet<>();
+        }
+
+        List<RoleEntity> roleEntities = roleRepository.findByNameIn(normalizedRoles);
+        Map<RoleName, RoleEntity> roleByName = roleEntities.stream()
+                .collect(Collectors.toMap(RoleEntity::getName, role -> role, (left, right) -> left));
+
+        Set<String> resolved = new HashSet<>();
+        normalizedRoles.forEach(roleName -> {
+            RoleEntity roleEntity = roleByName.get(roleName);
+            if (roleEntity == null) {
+                resolved.addAll(UserPermissionPolicy.resolveForRoles(Set.of(roleName)));
+                return;
+            }
+
+            roleEntity.getPermissions()
+                    .stream()
+                    .map(PermissionEntity::getCode)
+                    .forEach(resolved::add);
+        });
+
+        return resolved;
     }
 }

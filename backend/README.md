@@ -64,9 +64,7 @@ Voir la liste complète des routes:
 - `POST /api/v1/password/forgot` génère un token temporaire et envoie un email réel.
 - `POST /api/v1/password/reset` applique le nouveau mot de passe dans Keycloak.
 - L'envoi email est géré par `notification-service` via SMTP (`spring.mail.*`).
-- En mode Docker local, un serveur SMTP de dev `Mailpit` est inclus par défaut:
-  - SMTP: `localhost:1025`
-  - Inbox web: `http://localhost:8025`
+- En mode Docker local, le projet est configuré pour SMTP Gmail réel (pas de Mailpit).
 - Variables recommandées:
   - `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`
   - `MAIL_SMTP_AUTH=true`, `MAIL_SMTP_STARTTLS_ENABLE=true`, `MAIL_SMTP_STARTTLS_REQUIRED=true`
@@ -168,7 +166,6 @@ Endpoints principaux:
 - Eureka: `http://localhost:8761`
 - Config Server: `http://localhost:8888`
 - Keycloak: `http://localhost:8090` (admin/admin)
-- Mailpit (emails de dev): `http://localhost:8025`
 
 ## Exécution des tests
 

@@ -1,6 +1,8 @@
 package com.cnstn.intervention.entity;
 
+import com.cnstn.intervention.entity.converter.UuidStringAttributeConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -41,6 +43,54 @@ public class InterventionEntity {
 
     @Column(name = "validated_by", length = 120)
     private String validatedBy;
+
+    // IT Workflow fields
+    @Column(name = "equipment_id")
+    @Convert(converter = UuidStringAttributeConverter.class)
+    private UUID equipmentId;
+
+    @Column(name = "it_priority", length = 32)
+    private String itPriority;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "it_workflow_status", length = 64)
+    private ItWorkflowStatus itWorkflowStatus;
+
+    @Column(name = "manager_approved")
+    private Boolean managerApproved = false;
+
+    @Column(name = "manager_approved_at")
+    private Instant managerApprovedAt;
+
+    @Column(name = "manager_approval_note", length = 1000)
+    private String managerApprovalNote;
+
+    @Column(name = "manager_id", length = 120)
+    private String managerId;
+
+    @Column(name = "dsn_approved")
+    private Boolean dsnApproved = false;
+
+    @Column(name = "dsn_approved_at")
+    private Instant dsnApprovedAt;
+
+    @Column(name = "dsn_approval_note", length = 1000)
+    private String dsnApprovalNote;
+
+    @Column(name = "dsn_id", length = 120)
+    private String dsnId;
+
+    @Column(name = "it_responsible_id", length = 120)
+    private String itResponsibleId;
+
+    @Column(name = "it_processing_started_at")
+    private Instant itProcessingStartedAt;
+
+    @Column(name = "it_diagnostic_comment", length = 2000)
+    private String itDiagnosticComment;
+
+    @Column(name = "is_it_workflow")
+    private Boolean isItWorkflow = false;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -112,6 +162,126 @@ public class InterventionEntity {
 
     public void setValidatedBy(String validatedBy) {
         this.validatedBy = validatedBy;
+    }
+
+    public UUID getEquipmentId() {
+        return equipmentId;
+    }
+
+    public void setEquipmentId(UUID equipmentId) {
+        this.equipmentId = equipmentId;
+    }
+
+    public String getItPriority() {
+        return itPriority;
+    }
+
+    public void setItPriority(String itPriority) {
+        this.itPriority = itPriority;
+    }
+
+    public ItWorkflowStatus getItWorkflowStatus() {
+        return itWorkflowStatus;
+    }
+
+    public void setItWorkflowStatus(ItWorkflowStatus itWorkflowStatus) {
+        this.itWorkflowStatus = itWorkflowStatus;
+    }
+
+    public Boolean getManagerApproved() {
+        return managerApproved;
+    }
+
+    public void setManagerApproved(Boolean managerApproved) {
+        this.managerApproved = managerApproved;
+    }
+
+    public Instant getManagerApprovedAt() {
+        return managerApprovedAt;
+    }
+
+    public void setManagerApprovedAt(Instant managerApprovedAt) {
+        this.managerApprovedAt = managerApprovedAt;
+    }
+
+    public String getManagerApprovalNote() {
+        return managerApprovalNote;
+    }
+
+    public void setManagerApprovalNote(String managerApprovalNote) {
+        this.managerApprovalNote = managerApprovalNote;
+    }
+
+    public String getManagerId() {
+        return managerId;
+    }
+
+    public void setManagerId(String managerId) {
+        this.managerId = managerId;
+    }
+
+    public Boolean getDsnApproved() {
+        return dsnApproved;
+    }
+
+    public void setDsnApproved(Boolean dsnApproved) {
+        this.dsnApproved = dsnApproved;
+    }
+
+    public Instant getDsnApprovedAt() {
+        return dsnApprovedAt;
+    }
+
+    public void setDsnApprovedAt(Instant dsnApprovedAt) {
+        this.dsnApprovedAt = dsnApprovedAt;
+    }
+
+    public String getDsnApprovalNote() {
+        return dsnApprovalNote;
+    }
+
+    public void setDsnApprovalNote(String dsnApprovalNote) {
+        this.dsnApprovalNote = dsnApprovalNote;
+    }
+
+    public String getDsnId() {
+        return dsnId;
+    }
+
+    public void setDsnId(String dsnId) {
+        this.dsnId = dsnId;
+    }
+
+    public String getItResponsibleId() {
+        return itResponsibleId;
+    }
+
+    public void setItResponsibleId(String itResponsibleId) {
+        this.itResponsibleId = itResponsibleId;
+    }
+
+    public Instant getItProcessingStartedAt() {
+        return itProcessingStartedAt;
+    }
+
+    public void setItProcessingStartedAt(Instant itProcessingStartedAt) {
+        this.itProcessingStartedAt = itProcessingStartedAt;
+    }
+
+    public String getItDiagnosticComment() {
+        return itDiagnosticComment;
+    }
+
+    public void setItDiagnosticComment(String itDiagnosticComment) {
+        this.itDiagnosticComment = itDiagnosticComment;
+    }
+
+    public Boolean getIsItWorkflow() {
+        return isItWorkflow;
+    }
+
+    public void setIsItWorkflow(Boolean isItWorkflow) {
+        this.isItWorkflow = isItWorkflow;
     }
 
     public Instant getCreatedAt() {

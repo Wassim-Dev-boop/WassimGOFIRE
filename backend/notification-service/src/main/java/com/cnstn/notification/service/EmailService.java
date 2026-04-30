@@ -32,17 +32,20 @@ public class EmailService {
             throw new InvalidInternalApiKeyException();
         }
 
+        sendEmail(request.to().trim(), request.subject().trim(), request.body().trim(), Boolean.TRUE.equals(request.html()));
+    }
+
+    public void sendEmail(String to, String subject, String body, boolean html) {
         try {
             var mimeMessage = mailSender.createMimeMessage();
             var helper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
             helper.setFrom(fromAddress);
-            helper.setTo(request.to().trim());
-            helper.setSubject(request.subject().trim());
-            helper.setText(request.body().trim(), Boolean.TRUE.equals(request.html()));
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(body, html);
             mailSender.send(mimeMessage);
         } catch (jakarta.mail.MessagingException | MailException ex) {
             throw new EmailDeliveryException("Failed to deliver email", ex);
         }
     }
 }
-

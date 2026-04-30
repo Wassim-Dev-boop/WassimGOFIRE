@@ -13,7 +13,8 @@
       { "name": "RESPONSABLE_SALLE" },
       { "name": "RESPONSABLE_SECURITE" },
       { "name": "DIRECTEUR_DSN" },
-      { "name": "RESPONSABLE_QUALITE" }
+      { "name": "RESPONSABLE_QUALITE" },
+      { "name": "RESPONSABLE_IT" }
     ]
   },
   "clients": [
@@ -223,6 +224,21 @@
         }
       ],
       "realmRoles": ["RESPONSABLE_QUALITE", "EMPLOYE"]
+    },
+    {
+      "username": "it.cnstn",
+      "enabled": true,
+      "email": "it@cnstn.tn",
+      "firstName": "Responsable",
+      "lastName": "IT",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "User@12345",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["RESPONSABLE_IT"]
     },
     {
       "username": "service-account-cnstn-admin-cli",

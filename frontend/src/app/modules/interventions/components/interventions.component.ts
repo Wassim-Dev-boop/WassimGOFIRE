@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InterventionService } from '../../../core/services/intervention.service';
@@ -7,6 +7,7 @@ import { AppRole, Intervention, InterventionStatus, InterventionPriority } from 
 import { Option, SelectComponent } from '../../../shared/components/form/select/select.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { hasBackendToken } from '../../../core/config/backend-api.config';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-interventions',
@@ -15,8 +16,8 @@ import { hasBackendToken } from '../../../core/config/backend-api.config';
   template: `
     <div class="container mx-auto px-4 py-6">
       <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-800 mb-2">Technical Interventions</h1>
-        <p class="text-gray-600">Submit requests and manage intervention lifecycle by role</p>
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Interventions techniques</h1>
+        <p class="text-gray-600">Suivi des demandes et pilotage du cycle d intervention par role</p>
         <div class="mt-2 inline-flex rounded-full bg-brand-500/10 px-3 py-1 text-xs font-semibold text-brand-700">
           Role: {{ roleLabels[currentRole] }}
         </div>
@@ -36,29 +37,28 @@ import { hasBackendToken } from '../../../core/config/backend-api.config';
         (click)="showCreateForm = !showCreateForm"
         class="mb-6 px-6 py-3 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition font-semibold"
       >
-        + Create New Request
+        + Nouvelle demande
       </button>
 
       <div *ngIf="showCreateForm" class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 class="text-xl font-bold mb-4">Submit Technical Request</h2>
+        <h2 class="text-xl font-bold mb-4">Soumettre une demande technique</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input type="text" [(ngModel)]="newIntervention.title" placeholder="Issue Title" class="px-4 py-2 border border-gray-300 rounded-lg" />
+          <input type="text" [(ngModel)]="newIntervention.title" placeholder="Titre du probleme" class="px-4 py-2 border border-gray-300 rounded-lg" />
           <app-select
             [(ngModel)]="newIntervention.priority"
             [options]="createPriorityOptions"
-            placeholder="Priority"
+            placeholder="Priorite"
           ></app-select>
           <app-select
             [(ngModel)]="newIntervention.type"
             [options]="createTypeOptions"
             placeholder="Type"
           ></app-select>
-          <input type="text" [(ngModel)]="newIntervention.location" placeholder="Location" class="px-4 py-2 border border-gray-300 rounded-lg" />
-          <textarea [(ngModel)]="newIntervention.description" placeholder="Detailed description" rows="4" class="px-4 py-2 border border-gray-300 rounded-lg md:col-span-2"></textarea>
+          <textarea [(ngModel)]="newIntervention.description" placeholder="Description detaillee" rows="4" class="px-4 py-2 border border-gray-300 rounded-lg md:col-span-2"></textarea>
         </div>
         <div class="mt-4 flex gap-2">
-          <button (click)="createIntervention()" class="px-6 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition">Submit Request</button>
-          <button (click)="showCreateForm = false" class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition">Cancel</button>
+          <button (click)="createIntervention()" class="px-6 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition">Soumettre</button>
+          <button (click)="showCreateForm = false" class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition">Annuler</button>
         </div>
       </div>
 
@@ -68,35 +68,38 @@ import { hasBackendToken } from '../../../core/config/backend-api.config';
             [(ngModel)]="filterStatus"
             (ngModelChange)="applyFilters()"
             [options]="statusFilterOptions"
-            placeholder="All Status"
+            placeholder="Tous les statuts"
           ></app-select>
           <app-select
             [(ngModel)]="filterPriority"
             (ngModelChange)="applyFilters()"
             [options]="priorityFilterOptions"
-            placeholder="All Priority"
+            placeholder="Toutes les priorites"
           ></app-select>
-          <input type="text" [(ngModel)]="searchTerm" (input)="applyFilters()" placeholder="Search..." class="px-4 py-2 border border-gray-300 rounded-lg" />
+          <input type="text" [(ngModel)]="searchTerm" (input)="applyFilters()" placeholder="Rechercher..." class="px-4 py-2 border border-gray-300 rounded-lg" />
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow-md overflow-hidden">
+      <div class="bg-white rounded-lg shadow-md max-h-[68vh] overflow-auto">
         <table class="w-full">
           <thead class="bg-gray-100 border-b">
             <tr>
-              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Title</th>
-              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Priority</th>
-              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
-              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Assigned To</th>
-              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Created</th>
+              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Titre</th>
+              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Priorite</th>
+              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Statut</th>
+              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Assigne a</th>
+              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Creation</th>
               <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
             </tr>
           </thead>
           <tbody>
+            <tr *ngIf="isLoading">
+              <td colspan="6" class="px-6 py-8 text-center text-gray-500">Chargement des interventions...</td>
+            </tr>
             <tr *ngFor="let intervention of filteredInterventions" class="border-b hover:bg-gray-50">
               <td class="px-6 py-4">
                 <div class="font-medium text-gray-900">{{ intervention.title }}</div>
-                <div class="text-sm text-gray-500">{{ intervention.location }}</div>
+                <div class="text-sm text-gray-500">Type: {{ getInterventionTypeLabel(intervention.type) }}</div>
               </td>
               <td class="px-6 py-4">
                 <span
@@ -128,22 +131,60 @@ import { hasBackendToken } from '../../../core/config/backend-api.config';
               <td class="px-6 py-4 text-sm text-gray-600">{{ intervention.assignment?.technicianName || '-' }}</td>
               <td class="px-6 py-4 text-sm text-gray-600">{{ intervention.createdAt | date:'short' }}</td>
               <td class="px-6 py-4 text-sm">
-                <button (click)="viewIntervention(intervention)" class="text-brand-500 hover:text-brand-700 mr-3">View</button>
-                <button *ngIf="canManageInterventions() && intervention.status === 'OPEN'" (click)="assignIntervention(intervention)" class="text-indigo-500 hover:text-indigo-700 mr-3">Assign</button>
-                <button *ngIf="canManageInterventions() && intervention.status === 'ASSIGNED'" (click)="startIntervention(intervention)" class="text-purple-500 hover:text-purple-700 mr-3">Start</button>
-                <button *ngIf="canManageInterventions() && intervention.status === 'IN_PROGRESS'" (click)="resolveIntervention(intervention)" class="text-success-600 hover:text-success-700 mr-3">Resolve</button>
-                <button *ngIf="canManageInterventions() && intervention.status === 'RESOLVED'" (click)="closeIntervention(intervention)" class="text-gray-600 hover:text-gray-700">Close</button>
+                <button (click)="viewIntervention(intervention)" class="text-brand-500 hover:text-brand-700 mr-3">Voir</button>
+                <button *ngIf="canManageInterventions() && intervention.status === 'OPEN'" (click)="assignIntervention(intervention)" class="text-indigo-500 hover:text-indigo-700 mr-3">Affecter</button>
+                <button *ngIf="canManageInterventions() && intervention.status === 'ASSIGNED'" (click)="startIntervention(intervention)" class="text-purple-500 hover:text-purple-700 mr-3">Demarrer</button>
+                <button *ngIf="canManageInterventions() && intervention.status === 'IN_PROGRESS'" (click)="resolveIntervention(intervention)" class="text-success-600 hover:text-success-700 mr-3">Resoudre</button>
+                <button *ngIf="canManageInterventions() && intervention.status === 'RESOLVED'" (click)="closeIntervention(intervention)" class="text-gray-600 hover:text-gray-700">Clore</button>
               </td>
             </tr>
           </tbody>
         </table>
-        <div *ngIf="filteredInterventions.length === 0" class="text-center py-12 text-gray-500">No interventions found</div>
+        <div *ngIf="!isLoading && filteredInterventions.length === 0" class="text-center py-12 text-gray-500">Aucune intervention trouvee</div>
+      </div>
+
+      <div
+        *ngIf="!isLoading && totalElements > 0"
+        class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3"
+      >
+        <p class="text-sm text-gray-600">
+          Affichage {{ getPaginationStart(currentPage, pageSize, totalElements) }}-{{ getPaginationEnd(currentPage, pageSize, totalElements) }} sur {{ totalElements }} éléments
+        </p>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            (click)="previousPage()"
+            [disabled]="currentPage === 0"
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Precedent
+          </button>
+          <button
+            *ngFor="let page of getVisiblePages(currentPage, totalPages)"
+            type="button"
+            (click)="goToPage(page)"
+            class="rounded-lg border px-3 py-2 text-sm font-semibold transition"
+            [ngClass]="page === currentPage
+              ? 'border-brand-500 bg-brand-500 text-white'
+              : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
+          >
+            {{ page + 1 }}
+          </button>
+          <button
+            type="button"
+            (click)="nextPage()"
+            [disabled]="currentPage + 1 >= totalPages"
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Suivant
+          </button>
+        </div>
       </div>
     </div>
   `,
   styles: []
 })
-export class InterventionsComponent implements OnInit {
+export class InterventionsComponent implements OnInit, OnDestroy {
   interventions: Intervention[] = [];
   filteredInterventions: Intervention[] = [];
   showCreateForm = false;
@@ -160,46 +201,53 @@ export class InterventionsComponent implements OnInit {
   currentUserEmail = '';
   submissionMessage = '';
   submissionMessageType: 'success' | 'error' = 'success';
+  currentPage = 0;
+  pageSize = 10;
+  totalElements = 0;
+  totalPages = 0;
+  isLoading = false;
+  private pageStateSubscription?: Subscription;
 
   readonly roleLabels: Record<AppRole, string> = {
     ADMIN: 'Administrateur',
     EMPLOYEE: 'Employe',
     MANAGER: 'Chef hierarchique',
     ROOM_MANAGER: 'Responsable salle',
+    IT_MANAGER: 'Responsable IT',
     SECURITY_MANAGER: 'Responsable securite',
     DSN_DIRECTOR: 'Directeur DSN',
     QUALITY_MANAGER: 'Responsable qualite'
   };
 
   readonly createPriorityOptions: Option[] = [
-    { value: 'LOW', label: 'Low Priority' },
-    { value: 'MEDIUM', label: 'Medium Priority' },
-    { value: 'HIGH', label: 'High Priority' },
-    { value: 'CRITICAL', label: 'Critical' },
+    { value: 'LOW', label: 'Priorite basse' },
+    { value: 'MEDIUM', label: 'Priorite moyenne' },
+    { value: 'HIGH', label: 'Priorite haute' },
+    { value: 'CRITICAL', label: 'Critique' },
   ];
 
   readonly createTypeOptions: Option[] = [
     { value: 'MAINTENANCE', label: 'Maintenance' },
-    { value: 'REPAIR', label: 'Repair' },
+    { value: 'REPAIR', label: 'Reparation' },
     { value: 'SUPPORT', label: 'Support' },
     { value: 'INSTALLATION', label: 'Installation' },
   ];
 
   readonly statusFilterOptions: Option[] = [
-    { value: '', label: 'All Status' },
-    { value: 'OPEN', label: 'Open' },
-    { value: 'ASSIGNED', label: 'Assigned' },
-    { value: 'IN_PROGRESS', label: 'In Progress' },
-    { value: 'RESOLVED', label: 'Resolved' },
-    { value: 'CLOSED', label: 'Closed' },
+    { value: '', label: 'Tous les statuts' },
+    { value: 'OPEN', label: 'Nouveau' },
+    { value: 'ASSIGNED', label: 'Affectee' },
+    { value: 'IN_PROGRESS', label: 'En cours' },
+    { value: 'RESOLVED', label: 'Resolue' },
+    { value: 'CLOSED', label: 'Fermee' },
   ];
 
   readonly priorityFilterOptions: Option[] = [
-    { value: '', label: 'All Priority' },
-    { value: 'LOW', label: 'Low' },
-    { value: 'MEDIUM', label: 'Medium' },
-    { value: 'HIGH', label: 'High' },
-    { value: 'CRITICAL', label: 'Critical' },
+    { value: '', label: 'Toutes les priorites' },
+    { value: 'LOW', label: 'Basse' },
+    { value: 'MEDIUM', label: 'Moyenne' },
+    { value: 'HIGH', label: 'Haute' },
+    { value: 'CRITICAL', label: 'Critique' },
   ];
 
   newIntervention: {
@@ -207,13 +255,11 @@ export class InterventionsComponent implements OnInit {
     description: string;
     type: Intervention['type'];
     priority: InterventionPriority;
-    location: string;
   } = {
     title: '',
     description: '',
     type: 'SUPPORT',
     priority: InterventionPriority.MEDIUM,
-    location: ''
   };
 
   constructor(
@@ -222,6 +268,15 @@ export class InterventionsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.pageStateSubscription = this.interventionService.interventionPageState$.subscribe((pageState) => {
+      this.currentPage = pageState.page;
+      this.pageSize = pageState.size;
+      this.totalElements = pageState.totalElements;
+      const safeSize = pageState.size > 0 ? pageState.size : this.pageSize || 1;
+      const computedPages = pageState.totalElements > 0 ? Math.ceil(pageState.totalElements / safeSize) : 0;
+      this.totalPages = Math.max(pageState.totalPages, computedPages);
+    });
+
     this.authService.currentUser$.subscribe(user => {
       if (!user) {
         this.isAuthenticated = false;
@@ -238,8 +293,13 @@ export class InterventionsComponent implements OnInit {
       this.currentUserName = `${user.firstName} ${user.lastName}`.trim();
       this.currentUserEmail = user.email;
       this.clearSubmissionMessage();
+      this.currentPage = 0;
       this.loadInterventions();
     });
+  }
+
+  ngOnDestroy(): void {
+    this.pageStateSubscription?.unsubscribe();
   }
 
   canCreateIntervention(): boolean {
@@ -253,17 +313,7 @@ export class InterventionsComponent implements OnInit {
   }
 
   loadInterventions(): void {
-    const mineOnly = !this.canManageInterventions();
-    this.interventionService.getInterventions({ mine: mineOnly }).subscribe({
-      next: (interventions) => {
-        this.interventions = Array.isArray(interventions) ? interventions : [];
-        this.applyFilters();
-      },
-      error: (error) => {
-        console.error('Interventions loading failed', error);
-        this.setSubmissionError(this.toLoadErrorMessage(error));
-      }
-    });
+    this.reloadCurrentPage();
   }
 
   createIntervention(): void {
@@ -286,6 +336,7 @@ export class InterventionsComponent implements OnInit {
 
     this.interventionService.createIntervention({
       ...this.newIntervention,
+      location: '',
       requesterId: this.currentUserId,
       requesterName: this.currentUserName,
       requesterEmail: this.currentUserEmail
@@ -301,7 +352,6 @@ export class InterventionsComponent implements OnInit {
           description: '',
           type: 'SUPPORT',
           priority: InterventionPriority.MEDIUM,
-          location: ''
         };
       },
       error: (error) => {
@@ -369,25 +419,111 @@ export class InterventionsComponent implements OnInit {
   }
 
   applyFilters(): void {
-    let filtered = this.getRoleScopedInterventions();
+    this.currentPage = 0;
+    this.reloadCurrentPage();
+  }
 
-    if (this.filterStatus) {
-      filtered = filtered.filter(item => item.status === this.filterStatus);
+  nextPage(): void {
+    if (this.currentPage + 1 >= this.totalPages) {
+      return;
+    }
+    this.currentPage += 1;
+    this.reloadCurrentPage();
+  }
+
+  goToPage(page: number): void {
+    if (page < 0 || page >= this.totalPages || page === this.currentPage) {
+      return;
+    }
+    this.currentPage = page;
+    this.reloadCurrentPage();
+  }
+
+  getVisiblePages(currentPage: number, totalPages: number): number[] {
+    if (totalPages <= 0) {
+      return [];
     }
 
-    if (this.filterPriority) {
-      filtered = filtered.filter(item => item.priority === this.filterPriority);
+    const maxButtons = 5;
+    const half = Math.floor(maxButtons / 2);
+    let start = Math.max(0, currentPage - half);
+    let end = Math.min(totalPages - 1, start + maxButtons - 1);
+
+    if ((end - start + 1) < maxButtons) {
+      start = Math.max(0, end - maxButtons + 1);
     }
 
-    if (this.searchTerm.trim()) {
-      const term = this.searchTerm.toLowerCase();
-      filtered = filtered.filter(item =>
-        item.title.toLowerCase().includes(term) ||
-        item.description.toLowerCase().includes(term)
-      );
+    const pages: number[] = [];
+    for (let page = start; page <= end; page += 1) {
+      pages.push(page);
     }
+    return pages;
+  }
 
-    this.filteredInterventions = filtered;
+  getPaginationStart(page: number, size: number, total: number): number {
+    if (total <= 0) {
+      return 0;
+    }
+    return page * size + 1;
+  }
+
+  getPaginationEnd(page: number, size: number, total: number): number {
+    if (total <= 0) {
+      return 0;
+    }
+    return Math.min((page + 1) * size, total);
+  }
+
+  getInterventionTypeLabel(type: Intervention['type']): string {
+    if (type === 'MAINTENANCE') {
+      return 'Maintenance';
+    }
+    if (type === 'REPAIR') {
+      return 'Réparation';
+    }
+    if (type === 'INSTALLATION') {
+      return 'Installation';
+    }
+    if (type === 'SUPPORT') {
+      return 'Support';
+    }
+    return 'Autre';
+  }
+
+  previousPage(): void {
+    if (this.currentPage <= 0) {
+      return;
+    }
+    this.currentPage -= 1;
+    this.reloadCurrentPage();
+  }
+
+  private reloadCurrentPage(): void {
+    const mineOnly = !this.canManageInterventions();
+    this.isLoading = true;
+    this.interventionService.getInterventions({
+      mine: mineOnly,
+      page: this.currentPage,
+      size: this.pageSize,
+      sort: 'createdAt,desc',
+      search: this.searchTerm || undefined,
+      status: this.filterStatus ? (this.filterStatus as InterventionStatus) : undefined,
+    }).subscribe({
+      next: (interventions) => {
+        this.interventions = Array.isArray(interventions) ? interventions : [];
+        let filtered = this.getRoleScopedInterventions();
+        if (this.filterPriority) {
+          filtered = filtered.filter(item => item.priority === this.filterPriority);
+        }
+        this.filteredInterventions = filtered;
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Interventions loading failed', error);
+        this.setSubmissionError(this.toLoadErrorMessage(error));
+        this.isLoading = false;
+      }
+    });
   }
 
   viewIntervention(intervention: Intervention): void {
@@ -399,7 +535,7 @@ export class InterventionsComponent implements OnInit {
       return;
     }
 
-    const technicianName = prompt('Technician name', intervention.assignment?.technicianName || 'Tech Team');
+    const technicianName = prompt('Nom du technicien', intervention.assignment?.technicianName || 'Equipe technique');
     if (!technicianName || !technicianName.trim()) {
       return;
     }
@@ -427,7 +563,7 @@ export class InterventionsComponent implements OnInit {
       return;
     }
 
-    const resolution = prompt('Resolution details', 'Issue fixed and validated.');
+    const resolution = prompt('Details de resolution', 'Incident corrige et valide.');
     if (!resolution || !resolution.trim()) {
       return;
     }

@@ -55,4 +55,27 @@ public class AuthUserPermissionClient {
             throw new IllegalStateException("Permission check failed", ex);
         }
     }
+
+    public InternalUserSummaryResponse fetchUserSummary(String username) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Api-Key", properties.getInternalApiKey());
+
+        try {
+            return authUserRestTemplate.exchange(
+                    "/api/v1/internal/users/{username}/summary",
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    InternalUserSummaryResponse.class,
+                    username
+            ).getBody();
+        } catch (RestClientResponseException ex) {
+            throw new IllegalStateException(
+                    "User summary fetch failed: status=" + ex.getStatusCode().value()
+                            + ", body=" + ex.getResponseBodyAsString(),
+                    ex
+            );
+        } catch (RestClientException ex) {
+            throw new IllegalStateException("User summary fetch failed", ex);
+        }
+    }
 }

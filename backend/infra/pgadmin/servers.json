@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "CNSTN PostgreSQL",
+      "Group": "CNSTN",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "postgres",
+      "Username": "postgres",
+      "SSLMode": "prefer",
+      "ConnectNow": false
+    }
+  }
+}
