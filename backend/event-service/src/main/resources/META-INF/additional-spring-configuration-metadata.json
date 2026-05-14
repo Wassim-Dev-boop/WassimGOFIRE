@@ -1,16 +1,6 @@
 {
   "properties": [
     {
-      "name": "zoom.sdk.key",
-      "type": "java.lang.String",
-      "description": "Zoom Meeting SDK key used to sign embedded meeting tokens."
-    },
-    {
-      "name": "zoom.sdk.secret",
-      "type": "java.lang.String",
-      "description": "Zoom Meeting SDK secret used to sign embedded meeting tokens."
-    },
-    {
       "name": "app.notification.base-url",
       "type": "java.lang.String",
       "description": "Base URL of the notification-service internal API."

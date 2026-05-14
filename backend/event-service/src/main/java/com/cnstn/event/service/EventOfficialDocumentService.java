@@ -82,6 +82,7 @@ public class EventOfficialDocumentService {
             case DECISION_MANAGER -> "-MGR";
             case DECISION_SECURITE -> "-SEC";
             case DECISION_DSN -> "-DSN";
+            case DECISION_SALLE -> "-SAL";
             default -> "-DEC";
         };
         String documentReference = eventReference + suffix + "-v" + businessVersion;
@@ -132,28 +133,30 @@ public class EventOfficialDocumentService {
     }
 
     @Transactional(readOnly = true)
-    public EventDocumentContent download(UUID eventId, UUID documentId) {
+    public EventDocumentContent download(EventEntity event, UUID documentId) {
+        EventEntity safeEvent = Objects.requireNonNull(event);
         EventOfficialDocumentEntity entity = documentRepository.findByIdAndEventId(
                         Objects.requireNonNull(documentId),
-                        Objects.requireNonNull(eventId)
+                        safeEvent.getId()
                 )
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Document officiel evenement introuvable: " + documentId
                 ));
 
-        return new EventDocumentContent(entity.getFileName(), entity.getMimeType(), entity.getContent());
+        return new EventDocumentContent(entity.getFileName(), entity.getMimeType(), renderFromMetadata(safeEvent, entity));
     }
 
     @Transactional(readOnly = true)
-    public EventDocumentContent downloadLatest(UUID eventId) {
+    public EventDocumentContent downloadLatest(EventEntity event) {
+        EventEntity safeEvent = Objects.requireNonNull(event);
         EventOfficialDocumentEntity entity = documentRepository.findFirstByEventIdOrderByGeneratedAtDesc(
-                        Objects.requireNonNull(eventId)
+                        safeEvent.getId()
                 )
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Aucun document officiel disponible pour l evenement: " + eventId
+                        "Aucun document officiel disponible pour l evenement: " + safeEvent.getId()
                 ));
 
-        return new EventDocumentContent(entity.getFileName(), entity.getMimeType(), entity.getContent());
+        return new EventDocumentContent(entity.getFileName(), entity.getMimeType(), renderFromMetadata(safeEvent, entity));
     }
 
     private EventDocumentResponse toResponse(EventOfficialDocumentEntity entity) {
@@ -172,6 +175,33 @@ public class EventOfficialDocumentService {
                 entity.getDecisionValue(),
                 entity.getDecisionComment(),
                 entity.getRejectionReason()
+        );
+    }
+
+    private byte[] renderFromMetadata(EventEntity event, EventOfficialDocumentEntity entity) {
+        if (entity.getDocumentType() == EventOfficialDocumentType.SOUMISSION_EVENEMENT) {
+            return pdfRenderer.renderSubmissionPdf(
+                    event,
+                    entity.getDocumentReference(),
+                    entity.getBusinessVersion(),
+                    normalizeOrFallback(entity.getGeneratedBy(), event.getRequestedBy()),
+                    normalizeOrFallback(entity.getDecisionComment(), "Aucun commentaire"),
+                    normalizeInstant(entity.getGeneratedAt())
+            );
+        }
+
+        return pdfRenderer.renderDecisionPdf(
+                event,
+                entity.getDocumentType(),
+                entity.getDocumentReference(),
+                entity.getBusinessVersion(),
+                normalizeOrFallback(entity.getGeneratedBy(), "Systeme CNSTN"),
+                normalizeOrFallback(entity.getDecisionRole(), "N/A"),
+                normalizeOrFallback(entity.getDecisionName(), entity.getGeneratedBy()),
+                normalizeOrFallback(entity.getDecisionValue(), "N/A"),
+                entity.getDecisionComment(),
+                entity.getRejectionReason(),
+                normalizeInstant(entity.getDecisionAt() == null ? entity.getGeneratedAt() : entity.getDecisionAt())
         );
     }
 
@@ -202,5 +232,9 @@ public class EventOfficialDocumentService {
         }
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private Instant normalizeInstant(Instant value) {
+        return value == null ? Instant.now() : value;
     }
 }

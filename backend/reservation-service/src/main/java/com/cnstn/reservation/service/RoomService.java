@@ -54,6 +54,7 @@ public class RoomService {
         room.setName(request.name().trim());
         room.setLocation(request.location().trim());
         room.setDescription(normalizeOrNull(request.description()));
+        room.setImageUrl(normalizeOrNull(request.imageUrl()));
         room.setCapacity(request.capacity());
         RoomOperationalStatus status = request.status() == null ? RoomOperationalStatus.DISPONIBLE : request.status();
         room.setStatus(status);
@@ -71,6 +72,7 @@ public class RoomService {
         room.setName(request.name().trim());
         room.setLocation(request.location().trim());
         room.setDescription(normalizeOrNull(request.description()));
+        room.setImageUrl(normalizeOrNull(request.imageUrl()));
         room.setCapacity(request.capacity());
         RoomOperationalStatus status = request.status() == null ? room.getStatus() : request.status();
         room.setStatus(status);

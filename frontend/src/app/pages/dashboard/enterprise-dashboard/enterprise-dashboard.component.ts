@@ -1,8 +1,20 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  NgZone,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  computed,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { catchError, combineLatest, map, of, Subscription } from 'rxjs';
-import { DocumentService, GedAuditLogEntry } from '../../../core/services/document.service';
+import { NgApexchartsModule } from 'ng-apexcharts';
+import { catchError, forkJoin, map, of, shareReplay, Subscription } from 'rxjs';
+import { ApiPageResponse } from '../../../core/config/backend-api.config';
+import { DocumentService, GedFolderTreeNode } from '../../../core/services/document.service';
 import { EventService } from '../../../core/services/event.service';
 import { ReservationService } from '../../../core/services/reservation.service';
 import { InterventionService } from '../../../core/services/intervention.service';
@@ -15,61 +27,75 @@ import { ItInterventionService } from '../../../core/services/it-intervention.se
 import {
   AppRole,
   Document as GedDocument,
+  Equipment,
   EquipmentReservation,
   Event as EnterpriseEvent,
-  Invitation,
-  InvitationStatus,
+  EventStatus,
   Intervention,
   InterventionStatus,
+  Invitation,
+  InvitationStatus,
+  ItEquipment,
+  ItEquipmentAssignment,
+  ItIntervention,
   Notification as AppNotification,
-  Equipment,
   Room,
   RoomReservation,
   UserStatistics,
-  ItEquipment,
-  ItIntervention,
 } from '../../../core/models';
-import { SafeHtmlPipe } from '../../../shared/pipe/safe-html.pipe';
-import { ActivityChartComponent } from '../../../shared/components/dashboard/activity-chart/activity-chart.component';
-import { MonthlyPerformanceComponent } from '../../../shared/components/dashboard/monthly-performance/monthly-performance.component';
 
-type DeltaTone = 'positive' | 'negative';
+type ApexOptions = Record<string, unknown>;
+type KpiTone = 'success' | 'warning' | 'danger' | 'brand' | 'neutral';
+type AmChartKind = 'treemap' | 'calendar' | 'sankey' | 'timeline' | 'force' | 'map' | 'sunburst' | 'network';
 
-interface DashboardKpiCard {
+interface KpiCard {
   label: string;
-  value: number;
-  delta: string;
-  deltaTone: DeltaTone;
-  icon: string;
-  iconColorClass: string;
+  value: string;
+  hint: string;
+  tone: KpiTone;
 }
 
-interface ReservationMonthPoint {
-  month: string;
-  rooms: number;
-  equipment: number;
-}
-
-interface StatusSegment {
-  label: string;
-  percentage: number;
-  color: string;
-}
-
-interface ActivityItem {
+interface DashboardChart {
+  id: string;
   title: string;
-  timestamp: Date;
-  timeAgo: string;
-  tag: string;
-  tagClass: string;
-  dotClass: string;
+  description: string;
+  options: ApexOptions;
+  empty: boolean;
 }
 
-interface QuickAction {
-  label: string;
-  route: string;
-  icon: string;
-  queryParams?: Record<string, string>;
+interface AmChartPanel {
+  id: string;
+  title: string;
+  description: string;
+  kind: AmChartKind;
+  empty: boolean;
+}
+
+interface DashboardVm {
+  role: AppRole;
+  title: string;
+  subtitle: string;
+  kpis: KpiCard[];
+  charts: DashboardChart[];
+  amChart: AmChartPanel;
+  emptyNote: string;
+}
+
+interface DashboardData {
+  userStats: UserStatistics;
+  documents: GedDocument[];
+  folderTree: GedFolderTreeNode[];
+  events: EnterpriseEvent[];
+  interventions: Intervention[];
+  itInterventions: ItIntervention[];
+  itEquipments: ItEquipment[];
+  itAssignments: ItEquipmentAssignment[];
+  invitations: Invitation[];
+  notifications: AppNotification[];
+  roomReservations: RoomReservation[];
+  equipmentReservations: EquipmentReservation[];
+  rooms: Room[];
+  equipment: Equipment[];
 }
 
 interface DashboardTaskItem {
@@ -90,6 +116,21 @@ interface UpcomingEventItem {
   route: string;
 }
 
+interface ActivityItem {
+  title: string;
+  timestamp: Date;
+  timeAgo: string;
+  tag: string;
+  tagClass: string;
+  dotClass: string;
+}
+
+interface QuickAction {
+  label: string;
+  route: string;
+  queryParams?: Record<string, string>;
+}
+
 interface MiniCalendarCell {
   date: Date | null;
   dayNumber: number | null;
@@ -98,2171 +139,1315 @@ interface MiniCalendarCell {
   eventCount: number;
 }
 
-const MANAGER_RESPONSIBLE_ROLES: AppRole[] = [
+const ROLE_PRIORITY: AppRole[] = [
+  'ADMIN',
   'MANAGER',
   'ROOM_MANAGER',
-  'IT_MANAGER',
   'SECURITY_MANAGER',
   'DSN_DIRECTOR',
   'QUALITY_MANAGER',
+  'IT_MANAGER',
+  'EMPLOYEE',
 ];
 
-const USERS_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 19C16 16.7909 14.2091 15 12 15H8C5.79086 15 4 16.7909 4 19" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path><circle cx="10" cy="8" r="3" stroke="currentColor" stroke-width="1.7"></circle><path d="M20 8V14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path><path d="M23 11H17" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>`;
-const RESERVATION_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3.5" y="5" width="17" height="15" rx="2" stroke="currentColor" stroke-width="1.7"></rect><path d="M8 3V7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path><path d="M16 3V7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path><path d="M3.5 10H20.5" stroke="currentColor" stroke-width="1.7"></path></svg>`;
-const INVITATION_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.7"></rect><path d="M3.5 7L12 13L20.5 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>`;
-const INTERVENTION_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 6.5L17.5 3.5L20.5 6.5L17.5 9.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path><path d="M4 20L10.2 13.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path><path d="M7.2 12.8L10.6 16.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path><path d="M14.5 6.5L7.2 13.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>`;
-const DOCUMENT_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 3.5H14L18.5 8V20.5H7C5.89543 20.5 5 19.6046 5 18.5V5.5C5 4.39543 5.89543 3.5 7 3.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M14 3.5V8H18.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>`;
-const NOTIFICATION_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 17H18L16.8 15.8C16.2861 15.2861 16 14.5891 16 13.8627V11C16 8.79086 14.2091 7 12 7C9.79086 7 8 8.79086 8 11V13.8627C8 14.5891 7.71392 15.2861 7.2 15.8L6 17Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M10 18.5C10 19.6046 10.8954 20.5 12 20.5C13.1046 20.5 14 19.6046 14 18.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>`;
-const USER_ACTION_ICON = `<svg width="1em" height="1em" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 16C14 13.7909 12.2091 12 10 12H6C3.79086 12 2 13.7909 2 16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><circle cx="8" cy="6" r="3" stroke="currentColor" stroke-width="1.6"></circle><path d="M15 5V11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M18 8H12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>`;
-const RESERVATION_ACTION_ICON = `<svg width="1em" height="1em" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2.5" y="4" width="15" height="13" rx="2" stroke="currentColor" stroke-width="1.6"></rect><path d="M6 2.5V5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M14 2.5V5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M2.5 8H17.5" stroke="currentColor" stroke-width="1.6"></path></svg>`;
-const TOOL_ACTION_ICON = `<svg width="1em" height="1em" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 5.5L15.5 2.5L17.5 4.5L14.5 7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M3 17L8.2 11.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M5.8 10.8L8.8 13.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M12.5 5.5L5.8 12.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>`;
-const REPORT_ACTION_ICON = `<svg width="1em" height="1em" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 16.5H15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M6.5 14.5V8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M10 14.5V5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M13.5 14.5V10.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>`;
-const EVENT_ACTION_ICON = `<svg width="1em" height="1em" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2.5" y="4" width="15" height="13" rx="2" stroke="currentColor" stroke-width="1.6"></rect><path d="M6 2.5V5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M14 2.5V5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M2.5 8H17.5" stroke="currentColor" stroke-width="1.6"></path></svg>`;
+const ROLE_LABELS: Record<AppRole, string> = {
+  ADMIN: 'ADMIN',
+  EMPLOYEE: 'EMPLOYE',
+  MANAGER: 'CHEF_HIERARCHIQUE',
+  ROOM_MANAGER: 'RESPONSABLE_SALLE',
+  SECURITY_MANAGER: 'RESPONSABLE_SECURITE',
+  DSN_DIRECTOR: 'DIRECTEUR_DSN',
+  QUALITY_MANAGER: 'RESPONSABLE_QUALITE',
+  IT_MANAGER: 'RESPONSABLE_IT',
+};
+
+const ROLE_COLORS = ['#0C488C', '#D8A528', '#10B981', '#EF4444', '#F59E0B', '#6B7280', '#2563EB', '#7C3AED'];
+const STATUS_COLORS = ['#0C488C', '#F59E0B', '#10B981', '#EF4444', '#6B7280'];
+const EMPTY_USER_STATS: UserStatistics = {
+  totalUsers: 0,
+  activeUsers: 0,
+  inactiveUsers: 0,
+  usersByRole: [],
+  newUsersThisMonth: 0,
+  userActivityChart: [],
+};
 
 @Component({
   selector: 'app-enterprise-dashboard',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterModule,
-    SafeHtmlPipe,
-    ActivityChartComponent,
-    MonthlyPerformanceComponent,
-  ],
+  imports: [CommonModule, RouterModule, NgApexchartsModule],
   templateUrl: './enterprise-dashboard.component.html',
-  styleUrls: ['./enterprise-dashboard.component.css']
+  styleUrls: ['./enterprise-dashboard.component.css'],
 })
-export class EnterpriseDashboardComponent implements OnInit, OnDestroy {
-  isAdminView = false;
-  isEmployeeView = false;
-  isManagerResponsibleView = false;
-  isLoading = true;
-  hasError = false;
-  loadErrorMessage = '';
-  currentRole: AppRole = 'EMPLOYEE';
-  dashboardTitle = 'Tableau de bord';
-  dashboardMotionReady = false;
-  chartsAnimated = false;
+export class EnterpriseDashboardComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('amChartHost') private amChartHost?: ElementRef<HTMLDivElement>;
 
-  kpiCards: DashboardKpiCard[] = [];
-  animatedKpiValues: number[] = [];
-  reservationSeries: ReservationMonthPoint[] = [];
-  statusSegments: StatusSegment[] = [];
-  animatedStatusSegments: StatusSegment[] = [];
-  statusChartGradient =
-    'conic-gradient(#ef4444 0% 18%, #f59e0b 18% 45%, #3b82f6 45% 80%, #65a30d 80% 100%)';
-  animatedStatusChartGradient = this.statusChartGradient;
-  recentActivities: ActivityItem[] = [];
-  maxReservationValue = 1;
+  readonly isLoading = signal(true);
+  readonly hasError = signal(false);
+  readonly loadErrorMessage = signal('');
+  readonly selectedRole = signal<AppRole>('EMPLOYEE');
+  readonly dashboardData = signal<DashboardData | null>(null);
+  readonly adminDemoRoles = ROLE_PRIORITY;
 
-  monthlyActivityTitle = "Flux d'activite mensuel";
-  monthlyActivitySeriesName = 'Operations';
-  monthlyActivityCategories: string[] | null = null;
-  monthlyActivityData: number[] | null = null;
-
-  monthlyTargetTitle = 'Objectif mensuel';
-  monthlyTargetSubtitle = 'Suivi reel des demandes traitees';
-  monthlyTargetProgress = 0;
-  monthlyTargetDeltaPercent = 0;
-  monthlyTargetSummaryText =
-    'Aucune activite enregistree pour le moment.';
-  monthlyTargetValue = 0;
-  monthlyTargetRevenueValue = 0;
-  monthlyTargetTodayValue = 0;
-  monthlyTargetLabel = 'Objectif';
-  monthlyRevenueLabel = 'Traite';
-  monthlyTodayLabel = "Auj.";
-  monthlyTargetValueFormat: 'currency' | 'number' = 'number';
-  monthlyTargetTrend: 'up' | 'down' = 'down';
-  monthlyRevenueTrend: 'up' | 'down' = 'up';
-  monthlyTodayTrend: 'up' | 'down' = 'up';
-
-  quickActions: QuickAction[] = [];
-  roleTasks: DashboardTaskItem[] = [];
-  upcomingEvents: UpcomingEventItem[] = [];
-  miniCalendarCells: MiniCalendarCell[] = [];
-  miniCalendarMonthLabel = '';
-  canViewEventsForRole = false;
-  canViewItForRole = false;
-
-  private readonly adminQuickActions: QuickAction[] = [
-    {
-      label: 'Gerer les utilisateurs',
-      route: '/admin',
-      icon: USER_ACTION_ICON,
-    },
-    {
-      label: 'Voir toutes les reservations',
-      route: '/reservations/salles',
-      icon: RESERVATION_ACTION_ICON,
-    },
-    {
-      label: 'Interventions en attente',
-      route: '/interventions',
-      icon: TOOL_ACTION_ICON,
-    },
-    {
-      label: 'Consulter les notifications',
-      route: '/notifications',
-      icon: NOTIFICATION_ICON,
-    },
-  ];
-
-  private readonly employeeQuickActions: QuickAction[] = [
-    {
-      label: 'Reserver une salle',
-      route: '/reservations/salles',
-      icon: RESERVATION_ACTION_ICON,
-    },
-    {
-      label: 'Reserver un equipement',
-      route: '/reservations/equipements',
-      icon: RESERVATION_ACTION_ICON,
-    },
-    {
-      label: 'Declarer une intervention',
-      route: '/it/interventions',
-      icon: TOOL_ACTION_ICON,
-    },
-    {
-      label: 'Parcourir la GED',
-      route: '/documents',
-      icon: DOCUMENT_ICON,
-    },
-  ];
-
-  private readonly managerResponsibleQuickActions: QuickAction[] = [
-    {
-      label: 'Reserver une salle',
-      route: '/reservations/salles',
-      icon: RESERVATION_ACTION_ICON,
-    },
-    {
-      label: 'Voir mon equipe',
-      route: '/profile',
-      icon: USER_ACTION_ICON,
-    },
-    {
-      label: 'Creer un evenement',
-      route: '/events',
-      icon: EVENT_ACTION_ICON,
-    },
-    {
-      label: 'Envoyer invitations',
-      route: '/invitations',
-      icon: INVITATION_ICON,
-    },
-  ];
+  readonly isAdminUser = computed(() => this.resolveHighestRole() === 'ADMIN');
+  readonly currentRoleLabel = computed(() => ROLE_LABELS[this.selectedRole()]);
+  readonly vm = computed(() => {
+    const data = this.dashboardData();
+    return data ? this.buildRoleDashboard(this.selectedRole(), data) : null;
+  });
 
   private readonly subscription = new Subscription();
-  private readonly prefersReducedMotion =
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  private dashboardRevealTimeoutId: ReturnType<typeof setTimeout> | null = null;
-  private kpiAnimationFrameId: number | null = null;
-  private chartAnimationFrameId: number | null = null;
-  private chartAnimationTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private observer?: IntersectionObserver;
+  private amRoot?: { dispose: () => void };
+  private activeAmChartId = '';
 
   constructor(
-    private documentService: DocumentService,
-    private eventService: EventService,
-    private reservationService: ReservationService,
-    private interventionService: InterventionService,
-    private adminService: AdminService,
-    private authService: AuthService,
-    private invitationService: InvitationService,
-    private notificationService: NotificationService,
-    private itEquipmentService: ItEquipmentService,
-    private itInterventionService: ItInterventionService
+    private readonly documentService: DocumentService,
+    private readonly eventService: EventService,
+    private readonly reservationService: ReservationService,
+    private readonly interventionService: InterventionService,
+    private readonly adminService: AdminService,
+    private readonly authService: AuthService,
+    private readonly invitationService: InvitationService,
+    private readonly notificationService: NotificationService,
+    private readonly itEquipmentService: ItEquipmentService,
+    private readonly itInterventionService: ItInterventionService,
+    private readonly zone: NgZone,
   ) {}
 
   ngOnInit(): void {
-    this.currentRole = this.authService.currentRole;
-    this.dashboardTitle = this.getDashboardTitle(this.currentRole);
-
-    const canViewReports = this.authService.hasPermission('VIEW_REPORTS_MODULE');
-    this.isAdminView = canViewReports && this.currentRole === 'ADMIN';
-    this.isEmployeeView = canViewReports && this.currentRole === 'EMPLOYEE';
-    this.isManagerResponsibleView = canViewReports && MANAGER_RESPONSIBLE_ROLES.includes(
-      this.currentRole
-    );
+    this.selectedRole.set(this.resolveHighestRole());
     this.loadDashboardData();
+  }
+
+  ngAfterViewInit(): void {
+    this.setupLazyAmChart();
   }
 
   ngOnDestroy(): void {
-    this.stopDashboardAnimations();
     this.subscription.unsubscribe();
+    this.observer?.disconnect();
+    this.disposeAmChart();
   }
 
   reloadDashboard(): void {
-    this.isLoading = true;
-    this.hasError = false;
-    this.loadErrorMessage = '';
-    this.stopDashboardAnimations();
     this.loadDashboardData();
   }
 
-  getBarHeight(value: number): number {
-    if (this.maxReservationValue <= 0 || value <= 0) {
-      return 0;
-    }
-
-    return (value / this.maxReservationValue) * 100;
+  changeDemoRole(role: AppRole): void {
+    this.selectedRole.set(role);
+    this.activeAmChartId = '';
+    setTimeout(() => this.renderAmChartIfVisible(), 0);
   }
 
-  getAnimatedBarHeight(value: number): number {
-    if (!this.chartsAnimated) {
-      return 0;
-    }
-
-    return this.getBarHeight(value);
+  kpiToneClass(tone: KpiTone): string {
+    const classes: Record<KpiTone, string> = {
+      brand: 'border-[#0C488C]/20 bg-[#0C488C]/5 text-[#0C488C] dark:border-[#0C488C]/50 dark:bg-[#0C488C]/20 dark:text-blue-200',
+      success: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-200',
+      warning: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200',
+      danger: 'border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-200',
+      neutral: 'border-gray-200 bg-gray-50 text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200',
+    };
+    return classes[tone];
   }
 
-  getAnimatedKpiValue(index: number, fallback: number): number {
-    return this.animatedKpiValues.length > index
-      ? this.animatedKpiValues[index]
-      : fallback;
+  chartSeries(chart: DashboardChart): any {
+    return chart.options['series'];
   }
 
-  get currentRoleLabel(): string {
-    return this.authService.roleLabels[this.currentRole] ?? this.currentRole;
+  chartOption(chart: DashboardChart, key: string): any {
+    return chart.options[key];
   }
 
-  get quickActionsWithState(): Array<QuickAction & { disabled: boolean; disabledReason: string }> {
-    return this.quickActions.map((action) => {
-      const disabledReason = this.getQuickActionDisabledReason(action.route);
-      return {
-        ...action,
-        disabled: !!disabledReason,
-        disabledReason: disabledReason ?? '',
-      };
-    });
-  }
+  legacyTasks(data: DashboardData, role: AppRole): DashboardTaskItem[] {
+    const pendingDocuments = data.documents.filter((item) => item.gedStatus === 'En attente qualite').length;
+    const pendingEvents = data.events.filter((item) => item.status === EventStatus.SUBMITTED).length;
+    const pendingRooms = data.roomReservations.filter((item) => item.status === 'PENDING').length;
+    const openInterventions = data.interventions.filter((item) => !this.isClosedStatus(item.status)).length;
+    const openItInterventions = data.itInterventions.filter((item) => !this.isClosedStatus(item.itWorkflowStatus)).length;
 
-  getTaskToneClass(task: DashboardTaskItem): string {
-    if (task.tone === 'high') {
-      return 'bg-error-50 text-error-700';
-    }
-    if (task.tone === 'medium') {
-      return 'bg-warning-50 text-warning-700';
-    }
-    return 'bg-success-50 text-success-700';
-  }
-
-  getUpcomingEmptyMessage(): string {
-    if (!this.canViewEventsForRole) {
-      return "Votre role n'a pas acces au module Evenements.";
-    }
-
-    return 'Aucun evenement a venir.';
-  }
-
-  private getDashboardTitle(role: AppRole): string {
+    const tasks: DashboardTaskItem[] = [];
     if (role === 'ADMIN') {
-      return 'Tableau de bord administrateur';
-    }
-    if (role === 'EMPLOYEE') {
-      return 'Tableau de bord employé';
-    }
-    if (role === 'MANAGER') {
-      return 'Tableau de bord chef hiérarchique';
-    }
-    if (role === 'SECURITY_MANAGER') {
-      return 'Tableau de bord responsable sécurité';
-    }
-    if (role === 'ROOM_MANAGER') {
-      return 'Tableau de bord responsable salle';
-    }
-    if (role === 'IT_MANAGER') {
-      return 'Tableau de bord responsable IT';
-    }
-    if (role === 'QUALITY_MANAGER') {
-      return 'Tableau de bord responsable qualité';
-    }
-    if (role === 'DSN_DIRECTOR') {
-      return 'Tableau de bord directeur DSN';
-    }
-    return 'Tableau de bord';
-  }
-
-  private configureDashboardCharts(
-    documents: GedDocument[],
-    events: EnterpriseEvent[],
-    roomReservations: RoomReservation[],
-    equipmentReservations: EquipmentReservation[],
-    interventions: Intervention[],
-    invitations: Invitation[]
-  ): void {
-    const { categories, series } = this.buildMonthlyActivityPayload(
-      documents,
-      events,
-      roomReservations,
-      equipmentReservations,
-      interventions,
-      invitations
-    );
-
-    this.monthlyActivityCategories = categories;
-    this.monthlyActivityData = series;
-
-    const currentMonth = new Date();
-    const previousMonth = new Date(
-      currentMonth.getFullYear(),
-      currentMonth.getMonth() - 1,
-      1
-    );
-
-    const incomingThisMonth = this.countIncomingOperationsForMonth(
-      currentMonth,
-      documents,
-      events,
-      roomReservations,
-      equipmentReservations,
-      interventions,
-      invitations
-    );
-    const processedThisMonth = this.countProcessedOperationsForMonth(
-      currentMonth,
-      documents,
-      roomReservations,
-      equipmentReservations,
-      interventions,
-      invitations
-    );
-    const processedPreviousMonth = this.countProcessedOperationsForMonth(
-      previousMonth,
-      documents,
-      roomReservations,
-      equipmentReservations,
-      interventions,
-      invitations
-    );
-
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-
-    const processedToday = this.countProcessedOperationsForDay(
-      today,
-      documents,
-      roomReservations,
-      equipmentReservations,
-      interventions,
-      invitations
-    );
-    const processedYesterday = this.countProcessedOperationsForDay(
-      yesterday,
-      documents,
-      roomReservations,
-      equipmentReservations,
-      interventions,
-      invitations
-    );
-
-    this.monthlyTargetValue = incomingThisMonth;
-    this.monthlyTargetRevenueValue = processedThisMonth;
-    this.monthlyTargetTodayValue = processedToday;
-    this.monthlyTargetProgress =
-      incomingThisMonth > 0
-        ? (processedThisMonth / incomingThisMonth) * 100
-        : 0;
-
-    const monthlyDelta =
-      processedPreviousMonth > 0
-        ? ((processedThisMonth - processedPreviousMonth) / processedPreviousMonth) *
-          100
-        : processedThisMonth > 0
-          ? 100
-          : 0;
-
-    this.monthlyTargetDeltaPercent = Number(monthlyDelta.toFixed(1));
-    this.monthlyTargetTrend =
-      incomingThisMonth > 0 && processedThisMonth >= incomingThisMonth
-        ? 'up'
-        : 'down';
-    this.monthlyRevenueTrend = monthlyDelta >= 0 ? 'up' : 'down';
-
-    const todayDelta =
-      processedYesterday > 0
-        ? ((processedToday - processedYesterday) / processedYesterday) * 100
-        : processedToday > 0
-          ? 100
-          : 0;
-    this.monthlyTodayTrend = todayDelta >= 0 ? 'up' : 'down';
-
-    if (incomingThisMonth === 0 && processedThisMonth === 0) {
-      this.monthlyTargetSummaryText =
-        'Aucune demande ce mois. Les indicateurs se mettront a jour automatiquement.';
-      return;
-    }
-
-    const direction = this.monthlyTargetDeltaPercent >= 0 ? 'hausse' : 'baisse';
-    const volumeLabel =
-      processedToday > 1 ? 'demandes traitees' : 'demande traitee';
-    this.monthlyTargetSummaryText = `${processedToday} ${volumeLabel} aujourd'hui. ${Math.abs(
-      this.monthlyTargetDeltaPercent
-    ).toFixed(1)}% de ${direction} vs mois precedent.`;
-  }
-
-  private buildMonthlyActivityPayload(
-    documents: GedDocument[],
-    events: EnterpriseEvent[],
-    roomReservations: RoomReservation[],
-    equipmentReservations: EquipmentReservation[],
-    interventions: Intervention[],
-    invitations: Invitation[]
-  ): {
-    categories: string[];
-    series: number[];
-  } {
-    const monthLabels = [
-      'Jan',
-      'Fev',
-      'Mar',
-      'Avr',
-      'Mai',
-      'Juin',
-      'Juil',
-      'Aou',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-
-    const now = new Date();
-    const categories: string[] = [];
-    const keys: string[] = [];
-    const series: number[] = [];
-
-    for (let offset = 11; offset >= 0; offset -= 1) {
-      const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-      categories.push(monthLabels[date.getMonth()]);
-      keys.push(`${date.getFullYear()}-${date.getMonth()}`);
-      series.push(0);
-    }
-
-    const monthIndex = new Map(
-      keys.map((key, index) => [key, index] as const)
-    );
-
-    const incrementMonth = (date: Date): void => {
-      const key = `${date.getFullYear()}-${date.getMonth()}`;
-      const index = monthIndex.get(key);
-      if (index === undefined) {
-        return;
-      }
-
-      series[index] += 1;
-    };
-
-    documents.forEach((document) => incrementMonth(document.uploadedAt));
-    events.forEach((event) => incrementMonth(event.createdAt));
-    roomReservations.forEach((reservation) => incrementMonth(reservation.createdAt));
-    equipmentReservations.forEach((reservation) =>
-      incrementMonth(reservation.createdAt)
-    );
-    interventions.forEach((intervention) =>
-      incrementMonth(intervention.createdAt)
-    );
-    invitations.forEach((invitation) => incrementMonth(invitation.sentAt));
-
-    return {
-      categories,
-      series,
-    };
-  }
-
-  private countIncomingOperationsForMonth(
-    referenceMonth: Date,
-    documents: GedDocument[],
-    events: EnterpriseEvent[],
-    roomReservations: RoomReservation[],
-    equipmentReservations: EquipmentReservation[],
-    interventions: Intervention[],
-    invitations: Invitation[]
-  ): number {
-    const documentIncoming = documents.filter((document) =>
-      this.isInMonth(document.uploadedAt, referenceMonth)
-    ).length;
-    const eventIncoming = events.filter((event) =>
-      this.isInMonth(event.createdAt, referenceMonth)
-    ).length;
-    const roomIncoming = roomReservations.filter((reservation) =>
-      this.isInMonth(reservation.createdAt, referenceMonth)
-    ).length;
-    const equipmentIncoming = equipmentReservations.filter((reservation) =>
-      this.isInMonth(reservation.createdAt, referenceMonth)
-    ).length;
-    const interventionIncoming = interventions.filter((intervention) =>
-      this.isInMonth(intervention.createdAt, referenceMonth)
-    ).length;
-    const invitationIncoming = invitations.filter((invitation) =>
-      this.isInMonth(invitation.sentAt, referenceMonth)
-    ).length;
-
-    return (
-      documentIncoming +
-      eventIncoming +
-      roomIncoming +
-      equipmentIncoming +
-      interventionIncoming +
-      invitationIncoming
-    );
-  }
-
-  private countProcessedOperationsForMonth(
-    referenceMonth: Date,
-    documents: GedDocument[],
-    roomReservations: RoomReservation[],
-    equipmentReservations: EquipmentReservation[],
-    interventions: Intervention[],
-    invitations: Invitation[]
-  ): number {
-    const roomProcessed = roomReservations.filter(
-      (reservation) =>
-        reservation.status !== 'PENDING' &&
-        this.isInMonth(reservation.updatedAt, referenceMonth)
-    ).length;
-
-    const equipmentProcessed = equipmentReservations.filter(
-      (reservation) =>
-        reservation.status !== 'PENDING' &&
-        this.isInMonth(reservation.updatedAt, referenceMonth)
-    ).length;
-
-    const interventionProcessed = interventions.filter(
-      (intervention) =>
-        [InterventionStatus.RESOLVED, InterventionStatus.CLOSED].includes(
-          intervention.status
-        ) && this.isInMonth(intervention.updatedAt, referenceMonth)
-    ).length;
-
-    const documentProcessed = documents.filter(
-      (document) =>
-        this.isDocumentProcessed(document) &&
-        this.isInMonth(document.updatedAt, referenceMonth)
-    ).length;
-
-    const invitationProcessed = invitations.filter(
-      (invitation) =>
-        invitation.status !== InvitationStatus.PENDING &&
-        invitation.respondedAt !== undefined &&
-        this.isInMonth(invitation.respondedAt, referenceMonth)
-    ).length;
-
-    return (
-      roomProcessed +
-      equipmentProcessed +
-      interventionProcessed +
-      documentProcessed +
-      invitationProcessed
-    );
-  }
-
-  private countProcessedOperationsForDay(
-    day: Date,
-    documents: GedDocument[],
-    roomReservations: RoomReservation[],
-    equipmentReservations: EquipmentReservation[],
-    interventions: Intervention[],
-    invitations: Invitation[]
-  ): number {
-    const roomProcessed = roomReservations.filter(
-      (reservation) =>
-        reservation.status !== 'PENDING' &&
-        this.isSameDay(reservation.updatedAt, day)
-    ).length;
-
-    const equipmentProcessed = equipmentReservations.filter(
-      (reservation) =>
-        reservation.status !== 'PENDING' &&
-        this.isSameDay(reservation.updatedAt, day)
-    ).length;
-
-    const interventionProcessed = interventions.filter(
-      (intervention) =>
-        [InterventionStatus.RESOLVED, InterventionStatus.CLOSED].includes(
-          intervention.status
-        ) && this.isSameDay(intervention.updatedAt, day)
-    ).length;
-
-    const documentProcessed = documents.filter(
-      (document) =>
-        this.isDocumentProcessed(document) &&
-        this.isSameDay(document.updatedAt, day)
-    ).length;
-
-    const invitationProcessed = invitations.filter(
-      (invitation) =>
-        invitation.status !== InvitationStatus.PENDING &&
-        invitation.respondedAt !== undefined &&
-        this.isSameDay(invitation.respondedAt, day)
-    ).length;
-
-    return (
-      roomProcessed +
-      equipmentProcessed +
-      interventionProcessed +
-      documentProcessed +
-      invitationProcessed
-    );
-  }
-
-  private isDocumentProcessed(document: GedDocument): boolean {
-    if (document.isArchived) {
-      return true;
-    }
-
-    return [
-      'Publie',
-      'Valide qualite',
-      'Valide qualite (publiable)',
-      'Archive',
-      'Obsolete',
-    ].includes(document.gedStatus ?? '');
-  }
-
-  private isInMonth(date: Date, referenceMonth: Date): boolean {
-    return (
-      date.getFullYear() === referenceMonth.getFullYear() &&
-      date.getMonth() === referenceMonth.getMonth()
-    );
-  }
-
-  private loadDashboardData(): void {
-    const canViewGed = this.hasEffectivePermission('VIEW_GED_MODULE');
-    const canViewEvents = this.hasEffectivePermission('VIEW_EVENTS_MODULE');
-    const canViewInterventions = this.hasEffectivePermission('VIEW_INTERVENTIONS_MODULE');
-    const canViewItOperations =
-      this.currentRole === 'ADMIN' ||
-      this.currentRole === 'IT_MANAGER';
-    const canViewReservations = ['ADMIN', 'EMPLOYEE', 'MANAGER', 'ROOM_MANAGER', 'SECURITY_MANAGER', 'DSN_DIRECTOR', 'QUALITY_MANAGER']
-      .includes(this.currentRole);
-    const canViewOperationalInterventions = canViewInterventions
-      && ['ADMIN', 'EMPLOYEE', 'MANAGER', 'ROOM_MANAGER', 'DSN_DIRECTOR', 'QUALITY_MANAGER'].includes(this.currentRole);
-    const canViewNotifications = [
-      'ADMIN',
-      'EMPLOYEE',
-      'MANAGER',
-      'ROOM_MANAGER',
-      'SECURITY_MANAGER',
-      'DSN_DIRECTOR',
-      'QUALITY_MANAGER',
-      'IT_MANAGER',
-    ].includes(this.currentRole);
-    const canViewGedAudits = this.currentRole === 'ADMIN' || this.currentRole === 'QUALITY_MANAGER';
-    this.canViewEventsForRole = canViewEvents;
-    this.canViewItForRole = canViewItOperations;
-    this.hasError = false;
-    this.loadErrorMessage = '';
-
-    const defaultUserStats: UserStatistics = {
-      totalUsers: 0,
-      activeUsers: 0,
-      inactiveUsers: 0,
-      usersByRole: [],
-      newUsersThisMonth: 0,
-      userActivityChart: [],
-    };
-
-    const userStats$ = (this.isAdminView
-      ? this.adminService.getUserStatistics()
-      : of(defaultUserStats)
-    ).pipe(
-      catchError(() => of(defaultUserStats)),
-    );
-
-    const documents$ = (canViewGed
-      ? this.documentService.getDocuments()
-      : of([] as GedDocument[])
-    ).pipe(
-      catchError(() => of([] as GedDocument[])),
-    );
-
-    const events$ = (canViewEvents
-      ? this.eventService.getEvents()
-      : of([] as EnterpriseEvent[])
-    ).pipe(
-      catchError(() => of([] as EnterpriseEvent[])),
-    );
-
-    const interventions$ = (canViewOperationalInterventions
-      ? this.interventionService.getInterventions()
-      : of([] as Intervention[])
-    ).pipe(
-      catchError(() => of([] as Intervention[])),
-    );
-
-    const invitations$ = (canViewEvents
-      ? this.invitationService.getInvitations()
-      : of([] as Invitation[])
-    ).pipe(
-      catchError(() => of([] as Invitation[])),
-    );
-
-    const roomReservations$ = (canViewReservations
-      ? this.reservationService.getRoomReservations()
-      : of([] as RoomReservation[])
-    ).pipe(
-      catchError(() => of([] as RoomReservation[])),
-    );
-
-    const equipmentReservations$ = (canViewReservations
-      ? this.reservationService.getEquipmentReservations()
-      : of([] as EquipmentReservation[])
-    ).pipe(
-      catchError(() => of([] as EquipmentReservation[])),
-    );
-
-    const notifications$ = (canViewNotifications
-      ? this.notificationService.getNotifications({
-        page: 0,
-        size: 500,
-        sort: 'createdAt,desc',
-      })
-      : of([] as AppNotification[])
-    ).pipe(
-      catchError(() => of([] as AppNotification[])),
-    );
-
-    const rooms$ = (canViewReservations
-      ? this.reservationService.getRooms({
-        page: 0,
-        size: 200,
-        sort: 'name,asc',
-      })
-      : of([] as Room[])
-    ).pipe(
-      catchError(() => of([] as Room[])),
-    );
-
-    const equipment$ = (canViewReservations
-      ? this.reservationService.getEquipment({
-        page: 0,
-        size: 200,
-        sort: 'name,asc',
-      })
-      : of([] as Equipment[])
-    ).pipe(
-      catchError(() => of([] as Equipment[])),
-    );
-
-    const auditLogs$ = (canViewGed && canViewGedAudits
-      ? this.documentService.listAuditLogs({ page: 0, size: 200 }).pipe(
-        map((response) => response.content ?? []),
-      )
-      : of([] as GedAuditLogEntry[])
-    ).pipe(
-      catchError(() => of([] as GedAuditLogEntry[])),
-    );
-
-    const itEquipments$ = (canViewItOperations
-      ? this.itEquipmentService.listEquipments({ page: 0, size: 200 }).pipe(
-        map((response) => response.content ?? []),
-      )
-      : of([] as ItEquipment[])
-    ).pipe(
-      catchError(() => of([] as ItEquipment[])),
-    );
-
-    const itInterventions$ = (canViewItOperations
-      ? this.itInterventionService.listAll(0, 200).pipe(
-        map((response) => response.content ?? []),
-      )
-      : of([] as ItIntervention[])
-    ).pipe(
-      catchError(() => of([] as ItIntervention[])),
-    );
-
-    this.subscription.add(
-      combineLatest([
-        documents$,
-        events$,
-        roomReservations$,
-        equipmentReservations$,
-        interventions$,
-        userStats$,
-        invitations$,
-        notifications$,
-        rooms$,
-        equipment$,
-        auditLogs$,
-        itEquipments$,
-        itInterventions$,
-      ]).subscribe({
-        next: ([
-          documents,
-          events,
-          roomReservations,
-          equipmentReservations,
-          interventions,
-          userStats,
-          invitations,
-          notifications,
-          rooms,
-          equipment,
-          auditLogs,
-          itEquipments,
-          itInterventions,
-        ]) => {
-          const safeDocuments = Array.isArray(documents) ? documents : [];
-          const safeEvents = Array.isArray(events) ? events : [];
-          const safeRoomReservations = Array.isArray(roomReservations) ? roomReservations : [];
-          const safeEquipmentReservations = Array.isArray(equipmentReservations) ? equipmentReservations : [];
-          const safeInterventions = Array.isArray(interventions) ? interventions : [];
-          const safeInvitations = Array.isArray(invitations) ? invitations : [];
-          const safeNotifications = Array.isArray(notifications) ? notifications : [];
-          const safeRooms = Array.isArray(rooms) ? rooms : [];
-          const safeEquipment = Array.isArray(equipment) ? equipment : [];
-          const safeAuditLogs = Array.isArray(auditLogs) ? auditLogs : [];
-          const safeItEquipments = Array.isArray(itEquipments) ? itEquipments : [];
-          const safeItInterventions = Array.isArray(itInterventions) ? itInterventions : [];
-          const safeUserStats: UserStatistics = userStats ?? defaultUserStats;
-
-          this.reservationSeries = this.buildReservationSeries(
-            safeRoomReservations,
-            safeEquipmentReservations
-          );
-          this.maxReservationValue = this.reservationSeries.length > 0
-            ? Math.max(
-              ...this.reservationSeries.map((point) =>
-                Math.max(point.rooms, point.equipment)
-              )
-            )
-            : 0;
-
-          this.configureDashboardCharts(
-            safeDocuments,
-            safeEvents,
-            safeRoomReservations,
-            safeEquipmentReservations,
-            safeInterventions,
-            safeInvitations
-          );
-
-          this.statusSegments = this.buildStatusSegments(safeInterventions);
-          this.statusChartGradient = this.buildStatusGradient(this.statusSegments);
-
-          if (this.isAdminView) {
-            this.kpiCards = this.buildAdminKpis(
-              safeDocuments,
-              safeRoomReservations,
-              safeEquipmentReservations,
-              safeInterventions,
-              safeUserStats
-            );
-            this.recentActivities = this.buildAdminRecentActivities(
-              safeDocuments,
-              safeEvents,
-              safeRoomReservations,
-              safeEquipmentReservations,
-              safeInterventions
-            );
-            this.quickActions = [...this.adminQuickActions];
-          } else if (this.isEmployeeView) {
-            this.kpiCards = this.buildEmployeeKpis(
-              safeEvents,
-              safeRoomReservations,
-              safeEquipmentReservations,
-              safeInterventions,
-              safeInvitations,
-              safeNotifications
-            );
-            this.recentActivities = this.buildEmployeeRecentActivities(
-              safeDocuments,
-              safeInvitations,
-              safeRoomReservations,
-              safeEquipmentReservations,
-              safeInterventions
-            );
-            this.quickActions = [...this.employeeQuickActions];
-          } else if (this.isManagerResponsibleView) {
-            this.kpiCards = this.buildRoleSpecificKpis(
-              this.currentRole,
-              safeEvents,
-              safeInvitations,
-              safeDocuments,
-              safeRoomReservations,
-              safeEquipmentReservations,
-              safeInterventions,
-              safeRooms,
-              safeEquipment,
-              safeAuditLogs,
-              safeUserStats,
-              safeItEquipments,
-              safeItInterventions,
-            );
-            this.recentActivities = this.buildRoleSpecificRecentActivities(
-              this.currentRole,
-              safeDocuments,
-              safeInvitations,
-              safeRoomReservations,
-              safeEvents,
-              safeInterventions,
-              safeItInterventions,
-              safeItEquipments,
-            );
-            this.quickActions = this.getRoleQuickActions(this.currentRole);
-          } else {
-            this.kpiCards = [];
-            this.quickActions = [];
-            this.recentActivities = [];
-          }
-
-          this.upcomingEvents = this.buildUpcomingEvents(safeEvents);
-          this.miniCalendarMonthLabel = this.formatMiniCalendarMonth(new Date());
-          this.miniCalendarCells = this.buildMiniCalendarCells(
-            new Date(),
-            this.extractEventDates(safeEvents)
-          );
-          this.roleTasks = this.buildRoleTasks(
-            this.currentRole,
-            safeEvents,
-            safeInvitations,
-            safeRoomReservations,
-            safeEquipmentReservations,
-            safeInterventions,
-            safeDocuments,
-            safeItInterventions,
-            safeNotifications,
-          );
-
-          this.isLoading = false;
-          this.startDashboardAnimations();
-        },
-        error: () => {
-          this.stopDashboardAnimations();
-          this.hasError = true;
-          this.loadErrorMessage = 'Impossible de charger le tableau de bord pour le moment.';
-          this.isLoading = false;
-        },
-      })
-    );
-  }
-
-  private hasEffectivePermission(permissionCode: string): boolean {
-    const currentUserPermissions = this.authService.currentUser?.permissions ?? [];
-    if (currentUserPermissions.length > 0) {
-      return currentUserPermissions.includes(permissionCode);
-    }
-
-    return this.authService.hasPermission(permissionCode);
-  }
-
-  private startDashboardAnimations(): void {
-    this.stopDashboardAnimations();
-
-    if (this.prefersReducedMotion) {
-      this.dashboardMotionReady = true;
-      this.chartsAnimated = true;
-      this.animatedKpiValues = this.kpiCards.map((card) => card.value);
-      this.animatedStatusSegments = this.statusSegments.map((segment) => ({
-        ...segment,
-      }));
-      this.animatedStatusChartGradient = this.statusChartGradient;
-      return;
-    }
-
-    this.dashboardMotionReady = false;
-    this.startKpiCountAnimation();
-    this.startChartsAnimation();
-
-    this.dashboardRevealTimeoutId = setTimeout(() => {
-      this.dashboardMotionReady = true;
-    }, 20);
-  }
-
-  private startKpiCountAnimation(): void {
-    this.stopKpiAnimation();
-    this.animatedKpiValues = this.kpiCards.map(() => 0);
-
-    const durationMs = 950;
-    const animationStart = performance.now();
-
-    const step = (now: number) => {
-      const progress = Math.min((now - animationStart) / durationMs, 1);
-      const easedProgress = 1 - Math.pow(1 - progress, 4);
-
-      this.animatedKpiValues = this.kpiCards.map((card) =>
-        Math.round(card.value * easedProgress)
+      tasks.push(
+        { title: 'Workflows a surveiller', detail: `${this.countPendingWorkflows(data)} demandes ouvertes sur les modules metier.`, tone: this.countPendingWorkflows(data) > 0 ? 'high' : 'low', route: '/notifications' },
+        { title: 'Utilisateurs actifs', detail: `${data.userStats.activeUsers} comptes actifs sur ${data.userStats.totalUsers}.`, tone: 'low', route: '/admin' },
       );
+    } else if (role === 'QUALITY_MANAGER') {
+      tasks.push({ title: 'Validation qualite GED', detail: `${pendingDocuments} document(s) en attente de validation.`, tone: pendingDocuments > 0 ? 'high' : 'low', route: '/documents', queryParams: { status: 'En attente qualite' } });
+    } else if (role === 'ROOM_MANAGER') {
+      tasks.push({ title: 'Reservations salles', detail: `${pendingRooms} demande(s) de salle en attente.`, tone: pendingRooms > 0 ? 'high' : 'low', route: '/reservations/salles' });
+    } else if (role === 'IT_MANAGER') {
+      tasks.push({ title: 'Interventions IT', detail: `${openItInterventions} intervention(s) IT a traiter.`, tone: openItInterventions > 0 ? 'high' : 'low', route: '/it/interventions' });
+    } else if (role === 'SECURITY_MANAGER' || role === 'DSN_DIRECTOR' || role === 'MANAGER') {
+      tasks.push({ title: 'Validations evenements', detail: `${pendingEvents} evenement(s) soumis dans le workflow.`, tone: pendingEvents > 0 ? 'high' : 'low', route: '/events' });
+    } else {
+      const mine = this.filterPersonalData(data);
+      const myOpen = [...mine.interventions, ...mine.itInterventions].filter((item) => !this.isClosedStatus(this.getStatus(item))).length;
+      tasks.push(
+        { title: 'Mes interventions', detail: `${myOpen} demande(s) encore ouvertes.`, tone: myOpen > 0 ? 'medium' : 'low', route: '/it/interventions' },
+        { title: 'Mes invitations', detail: `${mine.invitations.filter((item) => item.status === InvitationStatus.PENDING).length} invitation(s) en attente de reponse.`, tone: 'medium', route: '/invitations' },
+      );
+    }
 
-      if (progress < 1) {
-        this.kpiAnimationFrameId = requestAnimationFrame(step);
-        return;
-      }
-
-      this.kpiAnimationFrameId = null;
-      this.animatedKpiValues = this.kpiCards.map((card) => card.value);
-    };
-
-    this.kpiAnimationFrameId = requestAnimationFrame(step);
+    tasks.push({ title: 'Suivi operationnel', detail: `${openInterventions + openItInterventions} intervention(s) ouvertes au total.`, tone: openInterventions + openItInterventions > 0 ? 'medium' : 'low', route: '/interventions' });
+    return tasks.slice(0, 5);
   }
 
-  private startChartsAnimation(): void {
-    this.stopChartAnimation();
-    this.chartsAnimated = false;
-
-    const zeroSegments = this.statusSegments.map((segment) => ({
-      ...segment,
-      percentage: 0,
-    }));
-
-    this.animatedStatusSegments = zeroSegments;
-    this.animatedStatusChartGradient = this.buildStatusGradient(zeroSegments);
-
-    this.chartAnimationTimeoutId = setTimeout(() => {
-      this.chartsAnimated = true;
-
-      const durationMs = 1200;
-      const animationStart = performance.now();
-
-      const step = (now: number) => {
-        const progress = Math.min((now - animationStart) / durationMs, 1);
-        const easedProgress = 1 - Math.pow(1 - progress, 3);
-
-        const interpolatedSegments = this.statusSegments.map((segment) => ({
-          ...segment,
-          percentage: segment.percentage * easedProgress,
-        }));
-
-        this.animatedStatusChartGradient = this.buildStatusGradient(
-          interpolatedSegments
-        );
-
-        this.animatedStatusSegments = this.statusSegments.map((segment) => ({
-          ...segment,
-          percentage: Math.round(segment.percentage * easedProgress),
-        }));
-
-        if (progress < 1) {
-          this.chartAnimationFrameId = requestAnimationFrame(step);
-          return;
-        }
-
-        this.chartAnimationFrameId = null;
-        this.animatedStatusSegments = this.statusSegments.map((segment) => ({
-          ...segment,
-        }));
-        this.animatedStatusChartGradient = this.statusChartGradient;
-      };
-
-      this.chartAnimationFrameId = requestAnimationFrame(step);
-    }, 60);
-  }
-
-  private stopChartAnimation(): void {
-    if (this.chartAnimationTimeoutId !== null) {
-      clearTimeout(this.chartAnimationTimeoutId);
-      this.chartAnimationTimeoutId = null;
-    }
-
-    if (this.chartAnimationFrameId !== null) {
-      cancelAnimationFrame(this.chartAnimationFrameId);
-      this.chartAnimationFrameId = null;
-    }
-  }
-
-  private stopKpiAnimation(): void {
-    if (this.kpiAnimationFrameId !== null) {
-      cancelAnimationFrame(this.kpiAnimationFrameId);
-      this.kpiAnimationFrameId = null;
-    }
-  }
-
-  private stopDashboardAnimations(): void {
-    if (this.dashboardRevealTimeoutId !== null) {
-      clearTimeout(this.dashboardRevealTimeoutId);
-      this.dashboardRevealTimeoutId = null;
-    }
-
-    this.stopKpiAnimation();
-    this.stopChartAnimation();
-  }
-
-  private buildAdminKpis(
-    documents: GedDocument[],
-    roomReservations: RoomReservation[],
-    equipmentReservations: EquipmentReservation[],
-    interventions: Intervention[],
-    userStats: UserStatistics
-  ): DashboardKpiCard[] {
-    const activeReservations =
-      roomReservations.filter((reservation) => reservation.status === 'APPROVED')
-        .length +
-      equipmentReservations.filter(
-        (reservation) =>
-          reservation.status === 'APPROVED' || reservation.status === 'IN_USE'
-      ).length;
-
-    const openInterventions = interventions.filter((intervention) =>
-      [
-        InterventionStatus.OPEN,
-        InterventionStatus.ASSIGNED,
-        InterventionStatus.IN_PROGRESS,
-      ].includes(intervention.status)
-    ).length;
-
-    const documentsThisMonth = this.countInCurrentMonth(
-      documents.map((document) => document.updatedAt)
-    );
-    const reservationsToday =
-      roomReservations.filter((reservation) =>
-        this.isSameDay(reservation.createdAt, new Date())
-      ).length +
-      equipmentReservations.filter((reservation) =>
-        this.isSameDay(reservation.createdAt, new Date())
-      ).length;
-
-    const todayOpen = interventions.filter(
-      (intervention) =>
-        [
-          InterventionStatus.OPEN,
-          InterventionStatus.ASSIGNED,
-          InterventionStatus.IN_PROGRESS,
-        ].includes(intervention.status) &&
-        this.isSameDay(intervention.createdAt, new Date())
-    ).length;
-
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayOpen = interventions.filter(
-      (intervention) =>
-        [
-          InterventionStatus.OPEN,
-          InterventionStatus.ASSIGNED,
-          InterventionStatus.IN_PROGRESS,
-        ].includes(intervention.status) &&
-        this.isSameDay(intervention.createdAt, yesterday)
-    ).length;
-
-    const interventionDiff = todayOpen - yesterdayOpen;
-
-    return [
-      {
-        label: 'Utilisateurs',
-        value: userStats.activeUsers,
-        delta: `${this.formatSigned(userStats.newUsersThisMonth)} ce mois`,
-        deltaTone: 'positive',
-        icon: USERS_ICON,
-        iconColorClass: 'text-blue-light-500',
-      },
-      {
-        label: 'Reservations actives',
-        value: activeReservations,
-        delta: `${this.formatSigned(reservationsToday)} aujourd'hui`,
-        deltaTone: 'positive',
-        icon: RESERVATION_ICON,
-        iconColorClass: 'text-success-500',
-      },
-      {
-        label: 'Interventions ouvertes',
-        value: openInterventions,
-        delta: `${this.formatSigned(interventionDiff)} vs hier`,
-        deltaTone: interventionDiff > 0 ? 'positive' : 'negative',
-        icon: INTERVENTION_ICON,
-        iconColorClass: 'text-error-500',
-      },
-      {
-        label: 'Documents GED',
-        value: documents.length,
-        delta: `${this.formatSigned(documentsThisMonth)} ce mois`,
-        deltaTone: 'positive',
-        icon: DOCUMENT_ICON,
-        iconColorClass: 'text-theme-purple-500',
-      },
-    ];
-  }
-
-  private buildEmployeeKpis(
-    events: EnterpriseEvent[],
-    roomReservations: RoomReservation[],
-    equipmentReservations: EquipmentReservation[],
-    interventions: Intervention[],
-    invitations: Invitation[],
-    notifications: AppNotification[]
-  ): DashboardKpiCard[] {
-    const myEvents = events.filter((event) =>
-      event.organiserId === this.authService.currentUser?.id ||
-      event.participants.some((participant) => participant.userId === this.authService.currentUser?.id)
-    ).length;
-
-    const activeReservations =
-      roomReservations.filter((reservation) =>
-        this.matchesCurrentUser(reservation.userId, '', reservation.userName)
-      ).filter((reservation) => ['APPROVED', 'PENDING'].includes(reservation.status)).length +
-      equipmentReservations.filter((reservation) =>
-        this.matchesCurrentUser(reservation.userId, '', reservation.userName)
-      ).filter((reservation) => ['APPROVED', 'IN_USE'].includes(reservation.status)).length;
-
-    const userInvitations = invitations.filter((invitation) =>
-      this.matchesCurrentUser(
-        invitation.recipientId,
-        invitation.recipientEmail,
-        invitation.recipientName
-      ) || invitation.senderId === this.authService.currentUser?.id
-    );
-    const pendingInvitations = userInvitations.filter(
-      (invitation) => invitation.status === InvitationStatus.PENDING
-    ).length;
-
-    const userInterventions = interventions.filter((intervention) =>
-      this.matchesCurrentUser(
-        intervention.requesterId,
-        intervention.requesterEmail,
-        intervention.requesterName
-      )
-    );
-    const inProgressInterventions = userInterventions.filter((intervention) =>
-      [InterventionStatus.ASSIGNED, InterventionStatus.IN_PROGRESS].includes(
-        intervention.status
-      )
-    ).length;
-
-    const unreadNotifications = notifications.filter(
-      (notification) => !notification.isRead
-    ).length;
-
-    return [
-      {
-        label: 'Mes événements',
-        value: myEvents,
-        delta: 'Planifiés',
-        deltaTone: 'positive',
-        icon: EVENT_ACTION_ICON,
-        iconColorClass: 'text-blue-light-500',
-      },
-      {
-        label: 'Mes réservations',
-        value: activeReservations,
-        delta: 'Actives',
-        deltaTone: 'positive',
-        icon: RESERVATION_ICON,
-        iconColorClass: 'text-success-500',
-      },
-      {
-        label: 'Mes invitations',
-        value: userInvitations.length,
-        delta: `${pendingInvitations} en attente`,
-        deltaTone: pendingInvitations > 0 ? 'negative' : 'positive',
-        icon: INVITATION_ICON,
-        iconColorClass: 'text-warning-500',
-      },
-      {
-        label: 'Mes interventions',
-        value: userInterventions.length,
-        delta: 'En cours',
-        deltaTone: 'positive',
-        icon: INTERVENTION_ICON,
-        iconColorClass: 'text-error-500',
-      },
-      {
-        label: 'Notifications',
-        value: unreadNotifications,
-        delta: 'Non lues',
-        deltaTone: unreadNotifications > 0 ? 'negative' : 'positive',
-        icon: NOTIFICATION_ICON,
-        iconColorClass: 'text-theme-purple-500',
-      },
-    ];
-  }
-
-  private buildManagerResponsibleKpis(
-    roomReservations: RoomReservation[],
-    equipmentReservations: EquipmentReservation[],
-    interventions: Intervention[],
-    events: EnterpriseEvent[],
-    userStats: UserStatistics
-  ): DashboardKpiCard[] {
-    const weeklyReservations =
-      roomReservations.filter(
-        (reservation) =>
-          this.isInCurrentWeek(reservation.startDate) &&
-          ['PENDING', 'APPROVED', 'COMPLETED'].includes(reservation.status)
-      ).length +
-      equipmentReservations.filter(
-        (reservation) =>
-          this.isInCurrentWeek(reservation.startDate) &&
-          ['PENDING', 'APPROVED', 'IN_USE', 'RETURNED'].includes(
-            reservation.status
-          )
-      ).length;
-
-    const highPriorityInterventions = interventions.filter(
-      (intervention) =>
-        [
-          InterventionStatus.OPEN,
-          InterventionStatus.ASSIGNED,
-          InterventionStatus.IN_PROGRESS,
-        ].includes(intervention.status) &&
-        ['HIGH', 'CRITICAL'].includes(intervention.priority)
-    ).length;
-
-    const monthlyUpcomingEvents = events.filter(
-      (event) =>
-        event.status === 'PUBLISHED' && this.isInCurrentMonth(event.startDate)
-    ).length;
-
-    return [
-      {
-        label: 'Mon equipe',
-        value: userStats.activeUsers,
-        delta: 'Actifs aujourd\'hui',
-        deltaTone: 'positive',
-        icon: USERS_ICON,
-        iconColorClass: 'text-blue-light-500',
-      },
-      {
-        label: 'Reservations equipe',
-        value: weeklyReservations,
-        delta: 'Cette semaine',
-        deltaTone: 'positive',
-        icon: RESERVATION_ICON,
-        iconColorClass: 'text-success-500',
-      },
-      {
-        label: 'Interventions en cours',
-        value: highPriorityInterventions,
-        delta: 'Priorite haute',
-        deltaTone: highPriorityInterventions > 0 ? 'negative' : 'positive',
-        icon: INTERVENTION_ICON,
-        iconColorClass: 'text-error-500',
-      },
-      {
-        label: 'Evenements a venir',
-        value: monthlyUpcomingEvents,
-        delta: 'Ce mois',
-        deltaTone: 'positive',
-        icon: INVITATION_ICON,
-        iconColorClass: 'text-theme-purple-500',
-      },
-    ];
-  }
-
-  private buildRoleSpecificKpis(
-    role: AppRole,
-    events: EnterpriseEvent[],
-    invitations: Invitation[],
-    documents: GedDocument[],
-    roomReservations: RoomReservation[],
-    equipmentReservations: EquipmentReservation[],
-    interventions: Intervention[],
-    rooms: Room[],
-    equipment: Equipment[],
-    auditLogs: GedAuditLogEntry[],
-    userStats: UserStatistics,
-    itEquipments: ItEquipment[],
-    itInterventions: ItIntervention[],
-  ): DashboardKpiCard[] {
-    if (role === 'MANAGER') {
-      return this.buildManagerKpis(events);
-    }
-    if (role === 'SECURITY_MANAGER') {
-      return this.buildSecurityManagerKpis(roomReservations, equipmentReservations);
-    }
-    if (role === 'ROOM_MANAGER') {
-      return this.buildRoomManagerKpis(rooms, equipment, roomReservations);
-    }
-    if (role === 'QUALITY_MANAGER') {
-      return this.buildQualityManagerKpis(documents, auditLogs);
-    }
-    if (role === 'DSN_DIRECTOR') {
-      return this.buildDsnDirectorKpis(events, invitations);
-    }
-    if (role === 'IT_MANAGER') {
-      return this.buildItManagerKpis(itEquipments, itInterventions);
-    }
-
-    return this.buildManagerResponsibleKpis(
-      roomReservations,
-      equipmentReservations,
-      interventions,
-      events,
-      userStats,
-    );
-  }
-
-  private buildManagerKpis(events: EnterpriseEvent[]): DashboardKpiCard[] {
-    const pendingEvents = events.filter((event) => event.status === 'SUBMITTED').length;
-    const approvedEvents = events.filter((event) => event.status === 'PUBLISHED').length;
-    const rejectedEvents = events.filter((event) => event.status === 'CANCELLED').length;
-    const completedEvents = events.filter((event) => event.status === 'COMPLETED').length;
-
-    return [
-      {
-        label: 'Événements en attente',
-        value: pendingEvents,
-        delta: 'Validation requise',
-        deltaTone: pendingEvents > 0 ? 'negative' : 'positive',
-        icon: EVENT_ACTION_ICON,
-        iconColorClass: 'text-warning-500',
-      },
-      {
-        label: 'Événements validés',
-        value: approvedEvents,
-        delta: 'Publiés',
-        deltaTone: 'positive',
-        icon: INVITATION_ICON,
-        iconColorClass: 'text-success-500',
-      },
-      {
-        label: 'Événements refusés',
-        value: rejectedEvents,
-        delta: 'Annulés',
-        deltaTone: rejectedEvents > 0 ? 'negative' : 'positive',
-        icon: INTERVENTION_ICON,
-        iconColorClass: 'text-error-500',
-      },
-      {
-        label: 'Événements terminés',
-        value: completedEvents,
-        delta: 'Historique',
-        deltaTone: 'positive',
-        icon: REPORT_ACTION_ICON,
-        iconColorClass: 'text-blue-light-500',
-      },
-    ];
-  }
-
-  private buildSecurityManagerKpis(
-    roomReservations: RoomReservation[],
-    equipmentReservations: EquipmentReservation[],
-  ): DashboardKpiCard[] {
-    const pending = roomReservations.filter((reservation) => reservation.status === 'PENDING').length
-      + equipmentReservations.filter((reservation) => reservation.status === 'PENDING').length;
-    const approved = roomReservations.filter((reservation) => reservation.status === 'APPROVED').length
-      + equipmentReservations.filter((reservation) => reservation.status === 'APPROVED' || reservation.status === 'IN_USE').length;
-    const rejected = roomReservations.filter((reservation) => reservation.status === 'REJECTED').length
-      + equipmentReservations.filter((reservation) => reservation.status === 'CANCELLED').length;
-
-    const byRoom = roomReservations
-      .filter((reservation) => reservation.status === 'APPROVED')
-      .reduce((accumulator, reservation) => {
-        const key = reservation.roomName || 'N/A';
-        return { ...accumulator, [key]: (accumulator[key] ?? 0) + 1 };
-      }, {} as Record<string, number>);
-    const maxByRoom = Object.values(byRoom).length > 0 ? Math.max(...Object.values(byRoom)) : 0;
-
-    return [
-      {
-        label: 'Réservations en attente',
-        value: pending,
-        delta: 'À contrôler',
-        deltaTone: pending > 0 ? 'negative' : 'positive',
-        icon: RESERVATION_ICON,
-        iconColorClass: 'text-warning-500',
-      },
-      {
-        label: 'Réservations validées',
-        value: approved,
-        delta: 'Confirmées',
-        deltaTone: 'positive',
-        icon: INVITATION_ICON,
-        iconColorClass: 'text-success-500',
-      },
-      {
-        label: 'Réservations refusées',
-        value: rejected,
-        delta: 'Rejetées',
-        deltaTone: rejected > 0 ? 'negative' : 'positive',
-        icon: INTERVENTION_ICON,
-        iconColorClass: 'text-error-500',
-      },
-      {
-        label: 'Pic par salle',
-        value: maxByRoom,
-        delta: 'Occupation max',
-        deltaTone: 'positive',
-        icon: REPORT_ACTION_ICON,
-        iconColorClass: 'text-blue-light-500',
-      },
-    ];
-  }
-
-  private buildRoomManagerKpis(
-    rooms: Room[],
-    equipment: Equipment[],
-    roomReservations: RoomReservation[],
-  ): DashboardKpiCard[] {
-    const availableRooms = rooms.filter((room) =>
-      room.isActive && (room.status === 'DISPONIBLE' || !room.status)
-    ).length;
-    const maintenanceRooms = rooms.filter((room) =>
-      room.status === 'MAINTENANCE' || !room.isActive
-    ).length;
-
-    const equipmentAvailable = equipment.filter((item) =>
-      item.status === 'AVAILABLE' && (item.availableQuantity ?? item.totalQuantity ?? 0) > 0
-    ).length;
-    const equipmentMaintenance = equipment.filter((item) => item.status === 'MAINTENANCE').length;
-
-    const currentMonthReservations = roomReservations.filter((reservation) =>
-      this.isInCurrentMonth(reservation.startDate) && ['APPROVED', 'PENDING', 'COMPLETED'].includes(reservation.status)
-    ).length;
-
-    return [
-      {
-        label: 'Nombre de salles',
-        value: rooms.length,
-        delta: `${availableRooms} disponibles`,
-        deltaTone: 'positive',
-        icon: USERS_ICON,
-        iconColorClass: 'text-blue-light-500',
-      },
-      {
-        label: 'Salles maintenance',
-        value: maintenanceRooms,
-        delta: 'À traiter',
-        deltaTone: maintenanceRooms > 0 ? 'negative' : 'positive',
-        icon: INTERVENTION_ICON,
-        iconColorClass: 'text-warning-500',
-      },
-      {
-        label: 'Équipements disponibles',
-        value: equipmentAvailable,
-        delta: `${equipmentMaintenance} maintenance`,
-        deltaTone: 'positive',
-        icon: TOOL_ACTION_ICON,
-        iconColorClass: 'text-success-500',
-      },
-      {
-        label: 'Occupation du mois',
-        value: currentMonthReservations,
-        delta: 'Réservations salle',
-        deltaTone: 'positive',
-        icon: RESERVATION_ICON,
-        iconColorClass: 'text-theme-purple-500',
-      },
-    ];
-  }
-
-  private buildQualityManagerKpis(
-    documents: GedDocument[],
-    auditLogs: GedAuditLogEntry[],
-  ): DashboardKpiCard[] {
-    const publishedDocuments = documents.filter((document) => /publie|valide/i.test(document.gedStatus ?? '')).length;
-    const archivedDocuments = documents.filter((document) => document.isArchived || /archive|obsolete/i.test(document.gedStatus ?? '')).length;
-    const confidentialDocuments = documents.filter((document) => document.confidentialityLevel === 'CONFIDENTIAL').length;
-    const auditActions = auditLogs.length;
-
-    return [
-      {
-        label: 'Documents GED',
-        value: documents.length,
-        delta: `${publishedDocuments} publiés`,
-        deltaTone: 'positive',
-        icon: DOCUMENT_ICON,
-        iconColorClass: 'text-blue-light-500',
-      },
-      {
-        label: 'Documents archivés',
-        value: archivedDocuments,
-        delta: 'Historique',
-        deltaTone: 'positive',
-        icon: REPORT_ACTION_ICON,
-        iconColorClass: 'text-warning-500',
-      },
-      {
-        label: 'Confidentiels',
-        value: confidentialDocuments,
-        delta: 'Niveau élevé',
-        deltaTone: confidentialDocuments > 0 ? 'negative' : 'positive',
-        icon: INVITATION_ICON,
-        iconColorClass: 'text-error-500',
-      },
-      {
-        label: 'Audit GED récent',
-        value: auditActions,
-        delta: 'Traçabilité',
-        deltaTone: 'positive',
-        icon: NOTIFICATION_ICON,
-        iconColorClass: 'text-theme-purple-500',
-      },
-    ];
-  }
-
-  private buildDsnDirectorKpis(
-    events: EnterpriseEvent[],
-    invitations: Invitation[],
-  ): DashboardKpiCard[] {
-    const partnerEvents = events.filter((event) => event.hasExternalPartners).length;
-    const partnerInvitations = invitations.filter((invitation) => invitation.isExternalPartner);
-    const pendingAccess = partnerInvitations.filter((invitation) => !invitation.isVerifiedByDsn).length;
-    const approvedAccess = partnerInvitations.filter((invitation) => invitation.isVerifiedByDsn).length;
-    const refusedAccess = partnerInvitations.filter((invitation) =>
-      invitation.status === InvitationStatus.DECLINED || invitation.status === InvitationStatus.CANCELLED
-    ).length;
-
-    const recentDecisions = partnerInvitations.filter((invitation) => {
-      if (!invitation.respondedAt) {
-        return false;
-      }
-      const diff = Date.now() - invitation.respondedAt.getTime();
-      return diff <= 30 * 24 * 60 * 60 * 1000;
-    }).length;
-
-    return [
-      {
-        label: 'Événements partenaires',
-        value: partnerEvents,
-        delta: 'Externe',
-        deltaTone: 'positive',
-        icon: EVENT_ACTION_ICON,
-        iconColorClass: 'text-blue-light-500',
-      },
-      {
-        label: 'Accès en attente',
-        value: pendingAccess,
-        delta: 'Validation DSN',
-        deltaTone: pendingAccess > 0 ? 'negative' : 'positive',
-        icon: INVITATION_ICON,
-        iconColorClass: 'text-warning-500',
-      },
-      {
-        label: 'Accès validés',
-        value: approvedAccess,
-        delta: `${refusedAccess} refusés`,
-        deltaTone: 'positive',
-        icon: RESERVATION_ICON,
-        iconColorClass: 'text-success-500',
-      },
-      {
-        label: 'Décisions récentes',
-        value: recentDecisions,
-        delta: '30 derniers jours',
-        deltaTone: 'positive',
-        icon: REPORT_ACTION_ICON,
-        iconColorClass: 'text-theme-purple-500',
-      },
-    ];
-  }
-
-  private buildItManagerKpis(
-    itEquipments: ItEquipment[],
-    itInterventions: ItIntervention[],
-  ): DashboardKpiCard[] {
-    const operationalEquipments = itEquipments.filter(
-      (equipment) => equipment.state === 'OPERATIONAL'
-    ).length;
-    const maintenanceEquipments = itEquipments.filter(
-      (equipment) => equipment.state === 'IN_MAINTENANCE' || equipment.state === 'IN_REPAIR'
-    ).length;
-    const pendingInterventions = itInterventions.filter((intervention) =>
-      intervention.itWorkflowStatus === 'IT_PROCESSING_PENDING'
-    ).length;
-    const inProgressInterventions = itInterventions.filter((intervention) =>
-      intervention.itWorkflowStatus === 'IT_IN_CHARGE' ||
-      intervention.itWorkflowStatus === 'IT_IN_PROGRESS'
-    ).length;
-
-    return [
-      {
-        label: 'Equipements IT',
-        value: itEquipments.length,
-        delta: `${operationalEquipments} operationnels`,
-        deltaTone: 'positive',
-        icon: TOOL_ACTION_ICON,
-        iconColorClass: 'text-blue-light-500',
-      },
-      {
-        label: 'Maintenance IT',
-        value: maintenanceEquipments,
-        delta: 'A traiter',
-        deltaTone: maintenanceEquipments > 0 ? 'negative' : 'positive',
-        icon: INTERVENTION_ICON,
-        iconColorClass: 'text-warning-500',
-      },
-      {
-        label: 'Interventions IT en attente',
-        value: pendingInterventions,
-        delta: 'File de traitement',
-        deltaTone: pendingInterventions > 0 ? 'negative' : 'positive',
-        icon: INVITATION_ICON,
-        iconColorClass: 'text-error-500',
-      },
-      {
-        label: 'Interventions IT en cours',
-        value: inProgressInterventions,
-        delta: 'Prises en charge',
-        deltaTone: 'positive',
-        icon: REPORT_ACTION_ICON,
-        iconColorClass: 'text-theme-purple-500',
-      },
-    ];
-  }
-
-  private buildRoleSpecificRecentActivities(
-    role: AppRole,
-    documents: GedDocument[],
-    invitations: Invitation[],
-    roomReservations: RoomReservation[],
-    events: EnterpriseEvent[],
-    interventions: Intervention[],
-    itInterventions: ItIntervention[],
-    itEquipments: ItEquipment[],
-  ): ActivityItem[] {
-    if (role === 'MANAGER') {
-      const pending = events
-        .filter((event) => event.status === 'SUBMITTED')
-        .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())
-        .slice(0, 3);
-
-      return pending.map((event) => ({
-        title: `Validation requise: ${event.title}`,
-        timestamp: event.updatedAt,
-        timeAgo: this.formatTimeAgo(event.updatedAt),
-        tag: 'Validation',
-        tagClass: 'bg-warning-50 text-warning-700 dark:bg-warning-500/20 dark:text-warning-300',
-        dotClass: 'bg-warning-500',
-      }));
-    }
-
-    if (role === 'SECURITY_MANAGER') {
-      const pendingReservations = roomReservations
-        .filter((reservation) => reservation.status === 'PENDING')
-        .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())
-        .slice(0, 3);
-
-      return pendingReservations.map((reservation) => ({
-        title: `Contrôle sécurité: ${reservation.roomName} (${reservation.userName})`,
-        timestamp: reservation.updatedAt,
-        timeAgo: this.formatTimeAgo(reservation.updatedAt),
-        tag: 'Réservation',
-        tagClass: 'bg-warning-50 text-warning-700 dark:bg-warning-500/20 dark:text-warning-300',
-        dotClass: 'bg-warning-500',
-      }));
-    }
-
-    if (role === 'QUALITY_MANAGER') {
-      const latestDocuments = documents
-        .slice()
-        .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())
-        .slice(0, 3);
-
-      return latestDocuments.map((document) => ({
-        title: `Suivi qualité: ${document.title}`,
-        timestamp: document.updatedAt,
-        timeAgo: this.formatTimeAgo(document.updatedAt),
-        tag: 'GED',
-        tagClass: 'bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
-        dotClass: 'bg-blue-light-500',
-      }));
-    }
-
-    if (role === 'DSN_DIRECTOR') {
-      const partnerActions = invitations
-        .filter((invitation) => invitation.isExternalPartner)
-        .sort((left, right) => right.sentAt.getTime() - left.sentAt.getTime())
-        .slice(0, 3);
-
-      return partnerActions.map((invitation) => ({
-        title: `Partenaire: ${invitation.recipientName} (${invitation.eventTitle})`,
-        timestamp: invitation.sentAt,
-        timeAgo: this.formatTimeAgo(invitation.sentAt),
-        tag: invitation.isVerifiedByDsn ? 'Validé' : 'À valider',
-        tagClass: invitation.isVerifiedByDsn
-          ? 'bg-success-50 text-success-700 dark:bg-success-500/20 dark:text-success-300'
-          : 'bg-warning-50 text-warning-700 dark:bg-warning-500/20 dark:text-warning-300',
-        dotClass: invitation.isVerifiedByDsn ? 'bg-success-500' : 'bg-warning-500',
-      }));
-    }
-
-    if (role === 'ROOM_MANAGER') {
-      const latestReservations = roomReservations
-        .slice()
-        .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())
-        .slice(0, 3);
-
-      return latestReservations.map((reservation) => ({
-        title: `Salle ${reservation.roomName} - ${reservation.status}`,
-        timestamp: reservation.updatedAt,
-        timeAgo: this.formatTimeAgo(reservation.updatedAt),
-        tag: 'Salle',
-        tagClass: 'bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
-        dotClass: 'bg-blue-light-500',
-      }));
-    }
-
-    if (role === 'IT_MANAGER') {
-      return this.buildItManagerRecentActivities(itInterventions, itEquipments);
-    }
-
-    return this.buildManagerResponsibleRecentActivities(
-      documents,
-      invitations,
-      roomReservations
-    );
-  }
-
-  private getRoleQuickActions(role: AppRole): QuickAction[] {
-    if (role === 'MANAGER') {
-      return [
-        { label: 'Valider événements', route: '/events', icon: EVENT_ACTION_ICON },
-        { label: 'Suivre invitations', route: '/invitations', icon: INVITATION_ICON },
-        { label: 'Voir tableau de bord', route: '/dashboard', icon: REPORT_ACTION_ICON },
-        { label: 'Consulter profil', route: '/profile', icon: USER_ACTION_ICON },
-      ];
-    }
-
-    if (role === 'SECURITY_MANAGER') {
-      return [
-        { label: 'Réservations salles', route: '/reservations/salles', icon: RESERVATION_ACTION_ICON },
-        { label: 'Réservations équipements', route: '/reservations/equipements', icon: RESERVATION_ACTION_ICON },
-        { label: 'Interventions', route: '/interventions', icon: TOOL_ACTION_ICON },
-        { label: 'Notifications', route: '/notifications', icon: NOTIFICATION_ICON },
-      ];
-    }
-
-    if (role === 'ROOM_MANAGER') {
-      return [
-        { label: 'Gérer les salles', route: '/reservations/salles', icon: RESERVATION_ACTION_ICON },
-        { label: 'Gérer équipements', route: '/reservations/equipements', icon: TOOL_ACTION_ICON },
-        { label: 'Créer événement', route: '/events', icon: EVENT_ACTION_ICON },
-        { label: 'Notifications', route: '/notifications', icon: NOTIFICATION_ICON },
-      ];
-    }
-
-    if (role === 'IT_MANAGER') {
-      return [
-        { label: 'Parc IT', route: '/it/equipements', icon: TOOL_ACTION_ICON },
-        { label: 'Interventions IT', route: '/it/interventions', icon: INTERVENTION_ICON },
-        { label: 'Notifications', route: '/notifications', icon: NOTIFICATION_ICON },
-        { label: 'Profil', route: '/profile', icon: USER_ACTION_ICON },
-      ];
-    }
-
-    if (role === 'QUALITY_MANAGER') {
-      return [
-        { label: 'Ouvrir GED', route: '/documents', icon: DOCUMENT_ICON },
-        { label: 'Voir audit', route: '/documents', icon: REPORT_ACTION_ICON, queryParams: { tab: 'audit' } },
-        { label: 'Événements', route: '/events', icon: EVENT_ACTION_ICON },
-        { label: 'Notifications', route: '/notifications', icon: NOTIFICATION_ICON },
-      ];
-    }
-
-    if (role === 'DSN_DIRECTOR') {
-      return [
-        { label: 'Accès partenaires', route: '/invitations', icon: INVITATION_ICON },
-        { label: 'Événements', route: '/events', icon: EVENT_ACTION_ICON },
-        { label: 'Reporting', route: '/dashboard', icon: REPORT_ACTION_ICON },
-        { label: 'Notifications', route: '/notifications', icon: NOTIFICATION_ICON },
-      ];
-    }
-
-    return [...this.managerResponsibleQuickActions];
-  }
-
-  private getQuickActionDisabledReason(route: string): string | null {
-    const canAccess = (roles: AppRole[], permissions?: string[]): boolean => {
-      if (!this.authService.canAccess(roles)) {
-        return false;
-      }
-      if (!permissions || permissions.length === 0) {
-        return true;
-      }
-      return this.authService.hasAllPermissions(permissions);
-    };
-
-    if (route === '/admin' || route === '/admin/workflows') {
-      return canAccess(['ADMIN'], ['VIEW_USERS_MODULE']) ? null : 'Action reservee a l administrateur.';
-    }
-
-    if (route === '/documents') {
-      return canAccess(
-        ['ADMIN', 'EMPLOYEE', 'MANAGER', 'ROOM_MANAGER', 'IT_MANAGER', 'SECURITY_MANAGER', 'DSN_DIRECTOR', 'QUALITY_MANAGER'],
-        ['VIEW_GED_MODULE'],
-      ) ? null : 'Acces GED non autorise pour ce role.';
-    }
-
-    if (route === '/events') {
-      return canAccess(
-        ['ADMIN', 'EMPLOYEE', 'MANAGER', 'ROOM_MANAGER', 'IT_MANAGER', 'SECURITY_MANAGER', 'DSN_DIRECTOR', 'QUALITY_MANAGER'],
-        ['VIEW_EVENTS_MODULE'],
-      ) ? null : 'Acces Evenements non autorise pour ce role.';
-    }
-
-    if (route === '/invitations') {
-      return canAccess(
-        ['ADMIN', 'EMPLOYEE', 'MANAGER', 'DSN_DIRECTOR', 'QUALITY_MANAGER', 'SECURITY_MANAGER'],
-        ['VIEW_EVENTS_MODULE'],
-      ) ? null : 'Acces Invitations non autorise pour ce role.';
-    }
-
-    if (route === '/reservations/salles' || route === '/reservations/equipements') {
-      return canAccess(
-        ['ADMIN', 'EMPLOYEE', 'MANAGER', 'ROOM_MANAGER', 'SECURITY_MANAGER', 'DSN_DIRECTOR', 'QUALITY_MANAGER']
-      ) ? null : 'Acces Reservations non autorise pour ce role.';
-    }
-
-    if (route === '/interventions') {
-      return canAccess(['ADMIN', 'ROOM_MANAGER'], ['VIEW_INTERVENTIONS_MODULE'])
-        ? null
-        : 'Action indisponible pour ce role (interventions logistiques).';
-    }
-
-    if (route === '/it/interventions') {
-      return canAccess(['ADMIN', 'EMPLOYEE', 'MANAGER', 'DSN_DIRECTOR', 'IT_MANAGER'], ['VIEW_INTERVENTIONS_MODULE'])
-        ? null
-        : 'Action indisponible pour ce role (interventions IT).';
-    }
-
-    if (route === '/it/equipements') {
-      return canAccess(['ADMIN', 'IT_MANAGER']) ? null : 'Action reservee au responsable IT.';
-    }
-
-    if (route === '/notifications') {
-      return canAccess(
-        ['ADMIN', 'EMPLOYEE', 'MANAGER', 'ROOM_MANAGER', 'IT_MANAGER', 'SECURITY_MANAGER', 'DSN_DIRECTOR', 'QUALITY_MANAGER']
-      ) ? null : 'Acces notifications non autorise.';
-    }
-
-    if (route === '/dashboard' || route === '/reporting') {
-      return canAccess(
-        ['ADMIN', 'EMPLOYEE', 'MANAGER', 'ROOM_MANAGER', 'IT_MANAGER', 'SECURITY_MANAGER', 'DSN_DIRECTOR', 'QUALITY_MANAGER'],
-        ['VIEW_REPORTS_MODULE'],
-      ) ? null : 'Acces dashboard non autorise.';
-    }
-
-    if (route === '/profile') {
-      return canAccess(
-        ['ADMIN', 'EMPLOYEE', 'MANAGER', 'ROOM_MANAGER', 'IT_MANAGER', 'SECURITY_MANAGER', 'DSN_DIRECTOR', 'QUALITY_MANAGER']
-      ) ? null : 'Acces profil non autorise.';
-    }
-
-    return null;
-  }
-
-  private buildUpcomingEvents(events: EnterpriseEvent[]): UpcomingEventItem[] {
-    const now = new Date();
-    return events
-      .filter((event) => event.startDate >= now)
+  legacyUpcomingEvents(data: DashboardData, role: AppRole): UpcomingEventItem[] {
+    const source = role === 'EMPLOYEE' ? this.filterPersonalData(data).events : data.events;
+    return source
+      .filter((event) => event.startDate >= new Date())
       .sort((left, right) => left.startDate.getTime() - right.startDate.getTime())
       .slice(0, 4)
       .map((event) => ({
         id: event.id,
         title: event.title,
         dateLabel: this.formatEventDateRange(event.startDate, event.endDate),
-        locationLabel: event.location || 'Non precise',
-        statusLabel: this.getEventStatusLabelForDashboard(event.status),
-        statusClass: this.getEventStatusClassForDashboard(event.status),
+        locationLabel: event.location || event.eventMode || 'Lieu a confirmer',
+        statusLabel: this.eventStatusLabel(event.status),
+        statusClass: this.eventStatusClass(event.status),
         route: '/events',
       }));
   }
 
-  private buildRoleTasks(
-    role: AppRole,
-    events: EnterpriseEvent[],
-    invitations: Invitation[],
-    roomReservations: RoomReservation[],
-    equipmentReservations: EquipmentReservation[],
-    interventions: Intervention[],
-    documents: GedDocument[],
-    itInterventions: ItIntervention[],
-    notifications: AppNotification[],
-  ): DashboardTaskItem[] {
-    const tasks: DashboardTaskItem[] = [];
+  legacyActivities(data: DashboardData, role: AppRole): ActivityItem[] {
+    const mine = role === 'EMPLOYEE' ? this.filterPersonalData(data) : null;
+    const documents = mine ? mine.documents : data.documents;
+    const events = mine ? mine.events : data.events;
+    const rooms = mine ? mine.rooms : data.roomReservations;
+    const interventions = mine ? mine.interventions : data.interventions;
+    const itInterventions = mine ? mine.itInterventions : data.itInterventions;
 
+    const activities: ActivityItem[] = [
+      ...documents.map((document) => ({
+        title: `Document GED: ${document.title}`,
+        timestamp: document.updatedAt,
+        timeAgo: this.formatTimeAgo(document.updatedAt),
+        tag: 'GED',
+        tagClass: 'bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
+        dotClass: 'bg-[#0C488C]',
+      })),
+      ...events.map((event) => ({
+        title: `Evenement: ${event.title}`,
+        timestamp: event.updatedAt,
+        timeAgo: this.formatTimeAgo(event.updatedAt),
+        tag: this.eventStatusLabel(event.status),
+        tagClass: this.eventStatusClass(event.status),
+        dotClass: 'bg-warning-500',
+      })),
+      ...rooms.map((reservation) => ({
+        title: `Salle ${reservation.roomName} reservee par ${reservation.userName}`,
+        timestamp: reservation.updatedAt,
+        timeAgo: this.formatTimeAgo(reservation.updatedAt),
+        tag: reservation.status,
+        tagClass: this.reservationStatusClass(reservation.status),
+        dotClass: 'bg-success-500',
+      })),
+      ...interventions.map((intervention) => ({
+        title: `Intervention: ${intervention.title}`,
+        timestamp: intervention.updatedAt,
+        timeAgo: this.formatTimeAgo(intervention.updatedAt),
+        tag: intervention.status,
+        tagClass: this.interventionToneClass(intervention.status),
+        dotClass: intervention.priority === 'CRITICAL' ? 'bg-error-500' : 'bg-warning-500',
+      })),
+      ...itInterventions.map((intervention) => ({
+        title: `Intervention IT: ${intervention.title}`,
+        timestamp: intervention.updatedAt,
+        timeAgo: this.formatTimeAgo(intervention.updatedAt),
+        tag: intervention.itWorkflowStatus,
+        tagClass: this.interventionToneClass(intervention.itWorkflowStatus),
+        dotClass: intervention.priority === 'CRITICAL' || intervention.priority === 'HIGH' ? 'bg-error-500' : 'bg-blue-light-500',
+      })),
+    ];
+
+    if (role !== 'EMPLOYEE') {
+      activities.push(...data.notifications.slice(0, 8).map((notification) => ({
+        title: notification.title,
+        timestamp: notification.createdAt,
+        timeAgo: this.formatTimeAgo(notification.createdAt),
+        tag: notification.isRead ? 'Lu' : 'Non lu',
+        tagClass: notification.isRead ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' : 'bg-warning-50 text-warning-700 dark:bg-warning-500/20 dark:text-warning-300',
+        dotClass: notification.isRead ? 'bg-gray-400' : 'bg-warning-500',
+      })));
+    }
+
+    return activities
+      .sort((left, right) => right.timestamp.getTime() - left.timestamp.getTime())
+      .slice(0, 5);
+  }
+
+  legacyQuickActions(role: AppRole): QuickAction[] {
     if (role === 'ADMIN') {
-      const pendingEvents = events.filter((event) => event.status === 'SUBMITTED').length;
-      if (pendingEvents > 0) {
-        tasks.push({
-          title: 'Valider les evenements en attente',
-          detail: `${pendingEvents} evenement(s) soumis a traiter`,
-          tone: 'high',
-          route: '/events',
-        });
-      }
-
-      const unreadNotifications = notifications.filter((notification) => !notification.isRead).length;
-      if (unreadNotifications > 0) {
-        tasks.push({
-          title: 'Consulter les notifications non lues',
-          detail: `${unreadNotifications} notification(s) en attente`,
-          tone: 'medium',
-          route: '/notifications',
-        });
-      }
+      return [
+        { label: 'Gerer les utilisateurs', route: '/admin' },
+        { label: 'Voir les reservations', route: '/reservations/salles' },
+        { label: 'Interventions', route: '/interventions' },
+        { label: 'Notifications', route: '/notifications' },
+      ];
     }
-
-    if (role === 'EMPLOYEE') {
-      const myPendingInvites = invitations.filter((invitation) =>
-        invitation.status === InvitationStatus.PENDING &&
-        this.matchesCurrentUser(invitation.recipientId, invitation.recipientEmail, invitation.recipientName)
-      ).length;
-      if (myPendingInvites > 0) {
-        tasks.push({
-          title: 'Repondre a vos invitations',
-          detail: `${myPendingInvites} invitation(s) en attente`,
-          tone: 'high',
-          route: '/invitations',
-        });
-      }
-
-      const myInterventions = interventions.filter((intervention) =>
-        this.matchesCurrentUser(intervention.requesterId, intervention.requesterEmail, intervention.requesterName) &&
-        (intervention.status === InterventionStatus.OPEN || intervention.status === InterventionStatus.IN_PROGRESS)
-      ).length;
-      if (myInterventions > 0) {
-        tasks.push({
-          title: 'Suivre vos interventions',
-          detail: `${myInterventions} demande(s) a suivre`,
-          tone: 'medium',
-          route: '/it/interventions',
-        });
-      }
-    }
-
-    if (role === 'MANAGER') {
-      const pendingEvents = events.filter((event) => event.status === 'SUBMITTED').length;
-      if (pendingEvents > 0) {
-        tasks.push({
-          title: 'Valider les demandes evenementielles',
-          detail: `${pendingEvents} evenement(s) en attente de decision`,
-          tone: 'high',
-          route: '/events',
-        });
-      }
-    }
-
-    if (role === 'SECURITY_MANAGER') {
-      const pendingReservations =
-        roomReservations.filter((reservation) => reservation.status === 'PENDING').length +
-        equipmentReservations.filter((reservation) => reservation.status === 'PENDING').length;
-      if (pendingReservations > 0) {
-        tasks.push({
-          title: 'Controler les reservations en attente',
-          detail: `${pendingReservations} reservation(s) a verifier`,
-          tone: 'high',
-          route: '/reservations/salles',
-        });
-      }
-    }
-
-    if (role === 'ROOM_MANAGER') {
-      const pendingRoomReservations = roomReservations.filter((reservation) => reservation.status === 'PENDING').length;
-      if (pendingRoomReservations > 0) {
-        tasks.push({
-          title: 'Traiter les reservations de salles',
-          detail: `${pendingRoomReservations} reservation(s) salle en attente`,
-          tone: 'high',
-          route: '/reservations/salles',
-        });
-      }
-    }
-
     if (role === 'QUALITY_MANAGER') {
-      const confidentialDocuments = documents.filter((document) => document.confidentialityLevel === 'CONFIDENTIAL').length;
-      if (confidentialDocuments > 0) {
-        tasks.push({
-          title: 'Surveiller les documents confidentiels',
-          detail: `${confidentialDocuments} document(s) a controle qualite`,
-          tone: 'medium',
-          route: '/documents',
-        });
-      }
+      return [
+        { label: 'Parcourir la GED', route: '/documents' },
+        { label: 'Documents a valider', route: '/documents', queryParams: { status: 'En attente qualite' } },
+        { label: 'Evenements', route: '/events' },
+      ];
     }
-
-    if (role === 'DSN_DIRECTOR') {
-      const pendingPartnerAccess = invitations.filter(
-        (invitation) => invitation.isExternalPartner && !invitation.isVerifiedByDsn
-      ).length;
-      if (pendingPartnerAccess > 0) {
-        tasks.push({
-          title: 'Valider les acces partenaires',
-          detail: `${pendingPartnerAccess} acces externe(s) en attente`,
-          tone: 'high',
-          route: '/invitations',
-        });
-      }
-    }
-
     if (role === 'IT_MANAGER') {
-      const pendingItInterventions = itInterventions.filter(
-        (intervention) => intervention.itWorkflowStatus === 'IT_PROCESSING_PENDING'
-      ).length;
-      if (pendingItInterventions > 0) {
-        tasks.push({
-          title: 'Prendre en charge les interventions IT',
-          detail: `${pendingItInterventions} intervention(s) en file d attente`,
-          tone: 'high',
-          route: '/it/interventions',
-        });
+      return [
+        { label: 'Interventions IT', route: '/it/interventions' },
+        { label: 'Parc IT', route: '/it/equipements' },
+        { label: 'Notifications', route: '/notifications' },
+      ];
+    }
+    return [
+      { label: 'Reserver une salle', route: '/reservations/salles' },
+      { label: 'Declarer une intervention', route: '/it/interventions' },
+      { label: 'Parcourir la GED', route: '/documents' },
+      { label: 'Evenements', route: '/events' },
+    ];
+  }
+
+  legacyMiniCalendarCells(data: DashboardData, role: AppRole): MiniCalendarCell[] {
+    const events = role === 'EMPLOYEE' ? this.filterPersonalData(data).events : data.events;
+    return this.buildMiniCalendarCells(new Date(), events.map((event) => event.startDate));
+  }
+
+  legacyMiniCalendarMonthLabel(): string {
+    return new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date());
+  }
+
+  getTaskToneClass(task: DashboardTaskItem): string {
+    if (task.tone === 'high') {
+      return 'bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-300';
+    }
+    if (task.tone === 'medium') {
+      return 'bg-warning-50 text-warning-700 dark:bg-warning-500/20 dark:text-warning-300';
+    }
+    return 'bg-success-50 text-success-700 dark:bg-success-500/20 dark:text-success-300';
+  }
+
+  private loadDashboardData(): void {
+    this.isLoading.set(true);
+    this.hasError.set(false);
+    this.loadErrorMessage.set('');
+    this.disposeAmChart();
+
+    const currentRole = this.resolveHighestRole();
+    const canViewAll = currentRole === 'ADMIN';
+    const canViewGed = canViewAll || ['EMPLOYEE', 'MANAGER', 'ROOM_MANAGER', 'SECURITY_MANAGER', 'DSN_DIRECTOR', 'QUALITY_MANAGER'].includes(currentRole);
+    const canViewFolders = canViewAll || currentRole === 'QUALITY_MANAGER';
+    const canViewEvents = canViewAll || ['EMPLOYEE', 'MANAGER', 'ROOM_MANAGER', 'SECURITY_MANAGER', 'DSN_DIRECTOR', 'QUALITY_MANAGER'].includes(currentRole);
+    const canViewOperationalInterventions = canViewAll || ['EMPLOYEE', 'MANAGER', 'ROOM_MANAGER', 'DSN_DIRECTOR', 'QUALITY_MANAGER'].includes(currentRole);
+    const canViewReservations = canViewAll || ['EMPLOYEE', 'MANAGER', 'ROOM_MANAGER', 'SECURITY_MANAGER', 'DSN_DIRECTOR', 'QUALITY_MANAGER'].includes(currentRole);
+    const canViewInvitations = canViewAll || ['EMPLOYEE', 'MANAGER', 'ROOM_MANAGER', 'SECURITY_MANAGER', 'DSN_DIRECTOR', 'QUALITY_MANAGER'].includes(currentRole);
+    const canViewItEquipment = canViewAll || currentRole === 'IT_MANAGER';
+    const canViewItAssignments = canViewAll || currentRole === 'IT_MANAGER';
+    const canViewItInterventions = canViewAll || ['EMPLOYEE', 'MANAGER', 'DSN_DIRECTOR', 'IT_MANAGER'].includes(currentRole);
+    const data$ = forkJoin({
+      userStats: this.safeSource('Utilisateurs', canViewAll ? this.adminService.getUserStatistics() : of(EMPTY_USER_STATS), EMPTY_USER_STATS),
+      documents: this.safeSource('GED', canViewGed ? this.documentService.getDocuments({ page: 0, size: 500 }) : of([] as GedDocument[]), [] as GedDocument[]),
+      folderTree: this.safeSource('Dossiers GED', canViewFolders ? this.documentService.getFoldersTree() : of([] as GedFolderTreeNode[]), [] as GedFolderTreeNode[]),
+      events: this.safeSource('Evenements', canViewEvents ? this.eventService.getEvents() : of([] as EnterpriseEvent[]), [] as EnterpriseEvent[]),
+      interventions: this.safeSource('Interventions', canViewOperationalInterventions ? this.interventionService.getInterventions() : of([] as Intervention[]), [] as Intervention[]),
+      itInterventions: canViewItInterventions ? this.loadItInterventionsForRole(currentRole) : of([] as ItIntervention[]),
+      itEquipments: canViewItEquipment ? this.safePageSource('Parc IT', this.itEquipmentService.listEquipments({ page: 0, size: 500 })) : of([] as ItEquipment[]),
+      itAssignments: canViewItAssignments ? this.safePageSource('Affectations IT', this.itEquipmentService.listAssignments(0, 500)) : of([] as ItEquipmentAssignment[]),
+      invitations: this.safeSource('Invitations', canViewInvitations ? this.invitationService.getInvitations(canViewAll) : of([] as Invitation[]), [] as Invitation[]),
+      notifications: this.safeSource('Notifications', this.notificationService.getNotifications({ page: 0, size: 500, sort: 'createdAt,desc' }), [] as AppNotification[]),
+      roomReservations: this.safeSource('Reservations salles', canViewReservations ? this.reservationService.getRoomReservations() : of([] as RoomReservation[]), [] as RoomReservation[]),
+      equipmentReservations: this.safeSource('Reservations equipements', canViewReservations ? this.reservationService.getEquipmentReservations() : of([] as EquipmentReservation[]), [] as EquipmentReservation[]),
+      rooms: this.safeSource('Salles', canViewReservations ? this.reservationService.getRooms({ page: 0, size: 500 }) : of([] as Room[]), [] as Room[]),
+      equipment: this.safeSource('Equipements', canViewReservations ? this.reservationService.getEquipment({ page: 0, size: 500 }) : of([] as Equipment[]), [] as Equipment[]),
+    }).pipe(shareReplay({ bufferSize: 1, refCount: true }));
+
+    this.subscription.add(
+      data$.subscribe({
+        next: (data) => {
+          this.dashboardData.set(data);
+          this.isLoading.set(false);
+          setTimeout(() => this.renderAmChartIfVisible(), 0);
+        },
+        error: (error: unknown) => {
+          this.hasError.set(true);
+          this.loadErrorMessage.set(error instanceof Error ? error.message : 'Chargement impossible.');
+          this.isLoading.set(false);
+        },
+      }),
+    );
+  }
+
+  private safeSource<T>(label: string, source$: import('rxjs').Observable<T>, fallback: T): import('rxjs').Observable<T> {
+    return source$.pipe(
+      catchError((error: unknown) => {
+        console.warn(`[Dashboard] ${label}`, error);
+        return of(fallback);
+      }),
+    );
+  }
+
+  private safePageSource<T>(label: string, source$: import('rxjs').Observable<ApiPageResponse<T>>): import('rxjs').Observable<T[]> {
+    return source$.pipe(
+      map((response) => response.content ?? []),
+      catchError((error: unknown) => {
+        console.warn(`[Dashboard] ${label}`, error);
+        return of([] as T[]);
+      }),
+    );
+  }
+
+  private loadItInterventionsForRole(role: AppRole): import('rxjs').Observable<ItIntervention[]> {
+    if (role === 'ADMIN') {
+      return this.safePageSource('Interventions IT', this.itInterventionService.listAll(0, 500));
+    }
+    if (role === 'MANAGER') {
+      return this.safePageSource('Interventions IT', this.itInterventionService.listManager(0, 500));
+    }
+    if (role === 'DSN_DIRECTOR') {
+      return this.safePageSource('Interventions IT', this.itInterventionService.listDsn(0, 500));
+    }
+    if (role === 'IT_MANAGER') {
+      return this.safePageSource('Interventions IT', this.itInterventionService.listProcessing(0, 500));
+    }
+    return this.safePageSource('Interventions IT', this.itInterventionService.listMine(0, 500));
+  }
+
+  private resolveHighestRole(): AppRole {
+    const user = this.authService.currentUser;
+    const roles = user?.roles?.length ? user.roles : [this.authService.currentRole];
+    return ROLE_PRIORITY.find((role) => roles.includes(role)) ?? 'EMPLOYEE';
+  }
+
+  private buildRoleDashboard(role: AppRole, data: DashboardData): DashboardVm {
+    switch (role) {
+      case 'ADMIN':
+        return this.buildAdminDashboard(data);
+      case 'MANAGER':
+        return this.buildManagerDashboard(data);
+      case 'ROOM_MANAGER':
+        return this.buildRoomManagerDashboard(data);
+      case 'SECURITY_MANAGER':
+        return this.buildSecurityDashboard(data);
+      case 'DSN_DIRECTOR':
+        return this.buildDsnDashboard(data);
+      case 'QUALITY_MANAGER':
+        return this.buildQualityDashboard(data);
+      case 'IT_MANAGER':
+        return this.buildItDashboard(data);
+      default:
+        return this.buildEmployeeDashboard(data);
+    }
+  }
+
+  private buildAdminDashboard(data: DashboardData): DashboardVm {
+    const pendingWorkflows = this.countPendingWorkflows(data);
+    const recentUnread = data.notifications.filter((item) => !item.isRead && this.daysBetween(item.createdAt, new Date()) <= 7).length;
+    return {
+      role: 'ADMIN',
+      title: 'Vue globale systeme',
+      subtitle: 'Pilotage transverse des utilisateurs, workflows et modules metier.',
+      kpis: [
+        { label: 'Total utilisateurs actifs', value: this.formatNumber(data.userStats.activeUsers), hint: `${data.userStats.totalUsers} comptes au total`, tone: 'brand' },
+        { label: 'Microservices UP', value: '6', hint: 'Services metier V1 supervises', tone: 'success' },
+        { label: 'Notifications non lues', value: this.formatNumber(recentUnread), hint: 'Toutes confondues, 7 derniers jours', tone: recentUnread > 0 ? 'warning' : 'success' },
+        { label: 'Workflows actifs', value: this.formatNumber(pendingWorkflows), hint: 'Demandes et validations ouvertes', tone: pendingWorkflows > 0 ? 'warning' : 'neutral' },
+      ],
+      charts: [
+        this.barChart('users-role', 'Repartition utilisateurs par role', 'Nombre de comptes actifs par role applicatif.', ROLE_PRIORITY.map((role) => ROLE_LABELS[role]), [{ name: 'Utilisateurs', data: this.countUsersByRole(data.userStats) }]),
+        this.donutChart('event-status', 'Statuts evenements', 'Evenements regroupes par etat de workflow.', ['DRAFT', 'PENDING', 'APPROVED', 'REJECTED'], this.countEventWorkflowStatus(data.events)),
+        this.lineChart('login-volume', 'Volume de connexions par jour', 'Connexions connues via les statistiques utilisateurs, 30 derniers jours.', this.lastDaysLabels(30), [{ name: 'Connexions', data: this.userActivityForLastDays(data.userStats, 30) }]),
+        this.stackedBarChart('reservation-status-week', 'Reservations par statut', 'Reservations salles et equipements par semaine sur 8 semaines.', this.lastWeekLabels(8), this.reservationStatusByWeek(data, 8)),
+      ],
+      amChart: { id: 'am-admin-treemap', title: 'GED par categorie', description: 'Treemap des documents GED par categorie et sous-categorie.', kind: 'treemap', empty: data.documents.length === 0 },
+      emptyNote: 'Aucune donnee disponible pour la vue administrateur.',
+    };
+  }
+
+  private buildEmployeeDashboard(data: DashboardData): DashboardVm {
+    const mine = this.filterPersonalData(data);
+    const nextReservations = [...mine.rooms, ...mine.equipment].filter((item) => this.isBetween(item.startDate, new Date(), this.addDays(new Date(), 7)));
+    const myOpenInterventions = [...mine.interventions, ...mine.itInterventions].filter((item) => !this.isClosedStatus(this.getStatus(item)));
+    const pendingInvitations = mine.invitations.filter((item) => item.status === InvitationStatus.PENDING);
+    const publishedDocuments = mine.documents.filter((item) => item.gedStatus === 'Publie' || item.gedStatus === 'Valide qualite').length;
+    const occupancy = nextReservations.length === 0 ? 0 : Math.round(nextReservations.reduce((sum, item) => sum + this.hoursBetween(item.startDate, item.endDate), 0) / (7 * 8) * 100);
+
+    return {
+      role: 'EMPLOYEE',
+      title: 'Vue personnelle',
+      subtitle: 'Vos reservations, interventions, invitations et publications GED.',
+      kpis: [
+        { label: 'Mes reservations a venir', value: this.formatNumber(nextReservations.length), hint: '7 prochains jours', tone: 'brand' },
+        { label: 'Mes interventions en cours', value: this.formatNumber(myOpenInterventions.length), hint: 'Demandes operationnelles et IT', tone: myOpenInterventions.length > 0 ? 'warning' : 'success' },
+        { label: 'Mes invitations en attente', value: this.formatNumber(pendingInvitations.length), hint: 'Reponse attendue', tone: pendingInvitations.length > 0 ? 'warning' : 'success' },
+        { label: 'Mes documents publies', value: this.formatNumber(publishedDocuments), hint: 'Compteur GED personnel', tone: 'neutral' },
+      ],
+      charts: [
+        this.radialChart('my-occupancy', "Taux d'occupation", 'Occupation estimee de vos prochaines reservations.', occupancy),
+        this.horizontalBarChart('my-interventions-status', 'Mes interventions par statut', 'Interventions operationnelles et IT ouvertes par statut.', this.statusCounts(mine.interventions, 'status', mine.itInterventions, 'itWorkflowStatus')),
+        this.areaChart('my-activity', 'Mes activites sur 30 jours', 'Reservations, interventions et publications GED personnelles.', this.lastDaysLabels(30), this.personalActivitySeries(mine, 30)),
+      ],
+      amChart: { id: 'am-employee-calendar', title: 'Calendrier personnel', description: 'Heatmap des evenements et reservations des 3 derniers mois.', kind: 'calendar', empty: mine.rooms.length + mine.equipment.length + mine.events.length === 0 },
+      emptyNote: 'Aucune donnee personnelle disponible.',
+    };
+  }
+
+  private buildManagerDashboard(data: DashboardData): DashboardVm {
+    const pending = data.events.filter((event) => event.workflowStep === 'VALIDATION_MANAGER' || event.status === EventStatus.SUBMITTED);
+    const monthlyEvents = data.events.filter((event) => this.isCurrentMonth(event.startDate));
+    const activeTeamInterventions = data.interventions.filter((item) => !this.isClosedStatus(item.status));
+    const handled = data.events.filter((event) => event.updatedAt >= this.addDays(new Date(), -30));
+    const approved = handled.filter((event) => event.status === EventStatus.PUBLISHED || event.status === EventStatus.COMPLETED).length;
+    const approvalRate = handled.length ? Math.round((approved / handled.length) * 100) : 0;
+
+    return {
+      role: 'MANAGER',
+      title: 'Vue equipe',
+      subtitle: "Suivi des validations, de l'activite du service et des delais de traitement.",
+      kpis: [
+        { label: 'Demandes en attente', value: this.formatNumber(pending.length), hint: 'Validation manager', tone: pending.length > 0 ? 'warning' : 'success' },
+        { label: 'Evenements du service', value: this.formatNumber(monthlyEvents.length), hint: 'Ce mois', tone: 'brand' },
+        { label: 'Interventions equipe', value: this.formatNumber(activeTeamInterventions.length), hint: 'En cours', tone: activeTeamInterventions.length > 0 ? 'warning' : 'success' },
+        { label: "Taux d'approbation", value: `${approvalRate}%`, hint: '30 derniers jours', tone: approvalRate >= 70 ? 'success' : 'warning' },
+      ],
+      charts: [
+        this.donutChart('manager-decisions', 'Demandes traitees', 'Approuvees, refusees et en attente.', ['Approuvees', 'Refusees', 'En attente'], [approved, handled.filter((event) => event.status === EventStatus.CANCELLED).length, pending.length]),
+        this.barChart('team-activity', 'Activite par membre', 'Evenements et interventions par personne.', this.topActors(data), [{ name: 'Activites', data: this.topActorCounts(data) }]),
+        this.comboChart('processing-time', 'Temps moyen de traitement', 'Delai moyen en jours par type de demande.', ['Evenements', 'Reservations', 'Interventions'], [{ name: 'Demandes', type: 'column', data: [data.events.length, data.roomReservations.length + data.equipmentReservations.length, data.interventions.length] }, { name: 'Jours moyens', type: 'line', data: [this.averageDays(data.events), this.averageDays([...data.roomReservations, ...data.equipmentReservations]), this.averageDays(data.interventions)] }]),
+      ],
+      amChart: { id: 'am-manager-sankey', title: 'Flux des workflows evenement', description: 'Sankey des validations Manager vers les etapes suivantes.', kind: 'sankey', empty: data.events.length === 0 },
+      emptyNote: 'Aucune donnee equipe disponible.',
+    };
+  }
+
+  private buildRoomManagerDashboard(data: DashboardData): DashboardVm {
+    const now = new Date();
+    const occupiedRoomIds = new Set(data.roomReservations.filter((item) => item.status === 'APPROVED' && item.startDate <= now && item.endDate >= now).map((item) => item.roomId));
+    const availableNow = data.rooms.filter((room) => room.isActive && room.status !== 'MAINTENANCE' && !occupiedRoomIds.has(room.id)).length;
+    const thisWeek = data.roomReservations.filter((item) => this.isCurrentWeek(item.startDate));
+    const occupancyRate = this.roomOccupancyRate(data.roomReservations, data.rooms);
+    const logistics = data.interventions.filter((item) => !this.isClosedStatus(item.status) && ['INSTALLATION', 'MAINTENANCE'].includes(item.type)).length;
+
+    return {
+      role: 'ROOM_MANAGER',
+      title: 'Vue ressources',
+      subtitle: 'Occupation des salles, reservations et besoins logistiques.',
+      kpis: [
+        { label: 'Salles disponibles', value: this.formatNumber(availableNow), hint: 'Disponibles maintenant', tone: availableNow > 0 ? 'success' : 'warning' },
+        { label: 'Reservations semaine', value: this.formatNumber(thisWeek.length), hint: 'Semaine courante', tone: 'brand' },
+        { label: "Taux d'occupation", value: `${occupancyRate}%`, hint: 'Moyenne estimee', tone: occupancyRate > 80 ? 'warning' : 'success' },
+        { label: 'Interventions logistiques', value: this.formatNumber(logistics), hint: 'En cours', tone: logistics > 0 ? 'warning' : 'neutral' },
+      ],
+      charts: [
+        this.heatmapChart('room-heatmap', 'Occupation jour/heure', 'Taux d occupation des salles par jour et heure cette semaine.', this.roomHeatmap(data.roomReservations)),
+        this.barChart('top-rooms', 'Top 5 salles', 'Salles les plus reservees.', this.topRooms(data.roomReservations).labels, [{ name: 'Reservations', data: this.topRooms(data.roomReservations).values }]),
+        this.donutChart('reservation-types', 'Types de reservation', 'Salle vs equipement.', ['Salles', 'Equipements'], [data.roomReservations.length, data.equipmentReservations.length]),
+      ],
+      amChart: { id: 'am-room-timeline', title: 'Planning salles', description: 'Timeline des reservations des 2 prochaines semaines.', kind: 'timeline', empty: data.roomReservations.length === 0 },
+      emptyNote: 'Aucune donnee ressources disponible.',
+    };
+  }
+
+  private buildSecurityDashboard(data: DashboardData): DashboardVm {
+    const pendingReservations = data.roomReservations.filter((item) => item.status === 'PENDING').length;
+    const pendingPhysicalEvents = data.events.filter((event) => event.eventMode !== 'EN_LIGNE' && (event.workflowStep === 'VALIDATION_SECURITE' || event.status === EventStatus.SUBMITTED)).length;
+    const decisions = data.events.filter((event) => this.isCurrentMonth(event.updatedAt) && ['VALIDATION_DSN', 'VALIDATION_SALLE', 'TERMINE', 'REFUSE'].includes(event.workflowStep ?? '')).length;
+    const avgDays = this.averageDays(data.events.filter((event) => event.workflowStep === 'VALIDATION_SECURITE' || event.updatedAt));
+
+    return {
+      role: 'SECURITY_MANAGER',
+      title: 'Vue validations',
+      subtitle: 'Validations securite, delais de reponse et liens salles/evenements.',
+      kpis: [
+        { label: 'Reservations a valider', value: this.formatNumber(pendingReservations), hint: 'Salles en attente', tone: pendingReservations > 0 ? 'warning' : 'success' },
+        { label: 'Evenements physiques', value: this.formatNumber(pendingPhysicalEvents), hint: 'En attente securite', tone: pendingPhysicalEvents > 0 ? 'warning' : 'success' },
+        { label: 'Validations effectuees', value: this.formatNumber(decisions), hint: 'Ce mois', tone: 'brand' },
+        { label: 'Temps moyen', value: `${avgDays} j`, hint: 'Traitement estime', tone: avgDays <= 3 ? 'success' : 'warning' },
+      ],
+      charts: [
+        this.barChart('security-daily', 'Validations par jour', 'Volume quotidien sur 30 jours.', this.lastDaysLabels(30), [{ name: 'Validations', data: this.updatedCountsByDay(data.events, 30) }]),
+        this.donutChart('security-decisions', 'Mes decisions', 'Validees, refusees et en attente.', ['Validees', 'Refusees', 'En attente'], [data.events.filter((e) => e.status === EventStatus.PUBLISHED).length, data.events.filter((e) => e.status === EventStatus.CANCELLED).length, pendingPhysicalEvents]),
+        this.lineChart('security-response', 'Temps de reponse moyen', 'Evolution estimee du delai moyen.', this.lastDaysLabels(30), [{ name: 'Jours', data: this.rollingAverageDays(data.events, 30) }]),
+      ],
+      amChart: { id: 'am-security-force', title: 'Evenements et salles', description: 'Graphe des liens entre evenements approuves et salles reservees.', kind: 'force', empty: data.events.length === 0 || data.roomReservations.length === 0 },
+      emptyNote: 'Aucune donnee de validation securite disponible.',
+    };
+  }
+
+  private buildDsnDashboard(data: DashboardData): DashboardVm {
+    const externalEvents = data.events.filter((event) => event.hasExternalPartners);
+    const monthlyDecisions = data.events.filter((event) => this.isCurrentMonth(event.updatedAt) && ['VALIDATION_SALLE', 'TERMINE', 'REFUSE'].includes(event.workflowStep ?? '')).length;
+    const yearPartners = data.invitations.filter((item) => item.isExternalPartner && item.sentAt.getFullYear() === new Date().getFullYear()).length;
+    const coverage = this.moduleCoverage(data);
+
+    return {
+      role: 'DSN_DIRECTOR',
+      title: 'Vue strategique',
+      subtitle: 'Orientation DSN, partenaires externes et couverture des modules.',
+      kpis: [
+        { label: 'Evenements externes', value: this.formatNumber(externalEvents.length), hint: 'Avec partenaires', tone: 'brand' },
+        { label: 'Decisions DSN', value: this.formatNumber(monthlyDecisions), hint: 'Ce mois', tone: 'success' },
+        { label: 'Partenaires invites', value: this.formatNumber(yearPartners), hint: 'Cumul annee', tone: 'neutral' },
+        { label: 'Couverture services', value: `${coverage}%`, hint: 'Modules avec donnees', tone: coverage >= 70 ? 'success' : 'warning' },
+      ],
+      charts: [
+        this.comboChart('dsn-events', 'Evenements externes vs internes', 'Evolution mensuelle.', this.lastMonthLabels(12), this.externalInternalSeries(data.events)),
+        this.donutChart('dsn-partners', 'Partenaires par organisme', 'Repartition des invitations externes par organisme.', this.partnerDistribution(data.invitations).labels, this.partnerDistribution(data.invitations).values),
+        this.radarChart('dsn-maturity', 'Maturite operationnelle', 'Score par module base sur les volumes reels.', ['Events', 'GED', 'Interventions', 'Reservations', 'IT', 'Invitations'], this.moduleMaturity(data)),
+      ],
+      amChart: { id: 'am-dsn-map', title: 'Partenaires par pays', description: 'Carte mondiale des partenaires externes par pays quand le pays est detectable.', kind: 'map', empty: data.invitations.filter((item) => item.isExternalPartner).length === 0 },
+      emptyNote: 'Aucune donnee strategique disponible.',
+    };
+  }
+
+  private buildQualityDashboard(data: DashboardData): DashboardVm {
+    const publishedMonth = data.documents.filter((doc) => (doc.gedStatus === 'Publie' || doc.gedStatus === 'Valide qualite') && this.isCurrentMonth(doc.updatedAt)).length;
+    const pendingApproval = data.documents.filter((doc) => doc.gedStatus === 'En attente qualite').length;
+    const aclRequests = data.documents.filter((doc) => (doc.accessControl.roles?.length ?? 0) > 1).length;
+    const confidentialityKnown = data.documents.filter((doc) => !!doc.confidentialityLevel).length;
+
+    return {
+      role: 'QUALITY_MANAGER',
+      title: 'Vue documentaire',
+      subtitle: 'Qualite GED, statuts documentaires, confidentialite et arborescence.',
+      kpis: [
+        { label: 'Documents publies', value: this.formatNumber(publishedMonth), hint: 'Ce mois', tone: 'success' },
+        { label: 'En attente approbation', value: this.formatNumber(pendingApproval), hint: 'Qualite GED', tone: pendingApproval > 0 ? 'warning' : 'success' },
+        { label: 'Demandes ACL', value: this.formatNumber(aclRequests), hint: "Acces roles/services detectes", tone: 'neutral' },
+        { label: 'Confidentialite renseignee', value: this.formatNumber(confidentialityKnown), hint: 'Documents avec niveau', tone: 'brand' },
+      ],
+      charts: [
+        this.barChart('quality-status', 'Documents par statut', 'Brouillon, soumis, approuve et publie.', ['DRAFT', 'SUBMITTED', 'APPROVED', 'PUBLISHED'], [{ name: 'Documents', data: this.documentStatusCounts(data.documents) }]),
+        this.donutChart('quality-confidentiality', 'Niveaux de confidentialite', 'PUBLIC, INTERNAL, RESTRICTED, CONFIDENTIAL.', ['PUBLIC', 'INTERNAL', 'RESTRICTED', 'CONFIDENTIAL'], this.countByFixed(data.documents, 'confidentialityLevel', ['PUBLIC', 'INTERNAL', 'RESTRICTED', 'CONFIDENTIAL'])),
+        this.lineChart('quality-versions', 'Versions par document', 'Top 10 documents par nombre de versions.', data.documents.slice(0, 10).map((doc) => this.shorten(doc.title)), [{ name: 'Versions', data: data.documents.slice(0, 10).map((doc) => doc.currentVersionNumber ?? doc.versions.length) }]),
+      ],
+      amChart: { id: 'am-quality-sunburst', title: 'Arborescence GED', description: 'Sunburst des dossiers GED par volume de documents.', kind: 'sunburst', empty: data.folderTree.length === 0 },
+      emptyNote: 'Aucune donnee documentaire disponible.',
+    };
+  }
+
+  private buildItDashboard(data: DashboardData): DashboardVm {
+    const openTickets = data.itInterventions.filter((item) => !this.isClosedStatus(item.itWorkflowStatus)).length;
+    const inService = data.itEquipments.filter((item) => item.state === 'OPERATIONAL').length;
+    const maintenance = data.itEquipments.filter((item) => item.state === 'IN_MAINTENANCE' || item.state === 'IN_REPAIR').length;
+    const avgResolution = this.averageDays(data.itInterventions.filter((item) => ['IT_RESOLVED', 'IT_CLOSED'].includes(item.itWorkflowStatus)));
+
+    return {
+      role: 'IT_MANAGER',
+      title: 'Vue parc et support',
+      subtitle: 'Tickets IT, etat du parc, SLA et affectations equipements.',
+      kpis: [
+        { label: 'Tickets IT ouverts', value: this.formatNumber(openTickets), hint: 'Workflow non clos', tone: openTickets > 0 ? 'warning' : 'success' },
+        { label: 'En service / total', value: `${inService}/${data.itEquipments.length}`, hint: 'Parc IT operationnel', tone: 'brand' },
+        { label: 'En maintenance', value: this.formatNumber(maintenance), hint: 'Maintenance ou reparation', tone: maintenance > 0 ? 'warning' : 'success' },
+        { label: 'Resolution moyenne', value: `${avgResolution} j`, hint: 'Tickets resolus', tone: avgResolution <= 5 ? 'success' : 'warning' },
+      ],
+      charts: [
+        this.stackedBarChart('it-priority-status', 'Interventions IT par priorite', 'Priorite croisee avec le statut.', ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], this.itPriorityStatusSeries(data.itInterventions)),
+        this.donutChart('it-fleet-state', 'Etat du parc', 'EN_SERVICE, EN_STOCK, EN_MAINTENANCE, HORS_SERVICE, RETIRE.', ['EN_SERVICE', 'EN_STOCK', 'EN_MAINTENANCE', 'HORS_SERVICE', 'RETIRE'], this.itFleetCounts(data.itEquipments)),
+        this.lineChart('it-sla', 'SLA resolution tickets', 'Evolution sur 12 semaines.', this.lastWeekLabels(12), [{ name: 'Jours moyens', data: this.itSlaByWeek(data.itInterventions, 12) }]),
+      ],
+      amChart: { id: 'am-it-network', title: 'Affectations equipements', description: 'Network graph des relations equipements et utilisateurs.', kind: 'network', empty: data.itAssignments.length === 0 && data.itEquipments.filter((item) => item.currentEmployeeName).length === 0 },
+      emptyNote: 'Aucune donnee IT disponible.',
+    };
+  }
+
+  private setupLazyAmChart(): void {
+    if (!this.amChartHost?.nativeElement || typeof IntersectionObserver === 'undefined') {
+      setTimeout(() => this.renderAmChartIfVisible(), 0);
+      return;
+    }
+
+    this.observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        this.renderAmChartIfVisible();
       }
+    }, { threshold: 0.2 });
+    this.observer.observe(this.amChartHost.nativeElement);
+  }
+
+  private renderAmChartIfVisible(): void {
+    const vm = this.vm();
+    const host = this.amChartHost?.nativeElement;
+    if (!vm || !host || vm.amChart.empty || this.activeAmChartId === vm.amChart.id) {
+      return;
     }
 
-    if (tasks.length === 0) {
-      tasks.push({
-        title: 'Aucune validation en attente',
-        detail: 'Vos files de traitement sont a jour.',
-        tone: 'low',
-      });
+    this.activeAmChartId = vm.amChart.id;
+    this.disposeAmChart();
+    this.zone.runOutsideAngular(() => {
+      void this.createAmChart(vm.amChart.kind, host);
+    });
+  }
+
+  private async createAmChart(kind: AmChartKind, host: HTMLDivElement): Promise<void> {
+    const data = this.dashboardData();
+    if (!data) {
+      return;
     }
 
-    return tasks.slice(0, 5);
+    const am5: any = await import('@amcharts/amcharts5');
+    const animated: any = await import('@amcharts/amcharts5/themes/Animated');
+    const root = am5.Root.new(host);
+    this.amRoot = root;
+    root.setThemes([animated.default.new(root)]);
+
+    if (kind === 'map') {
+      await this.createMapChart(root, data);
+      return;
+    }
+    if (kind === 'timeline' || kind === 'calendar') {
+      await this.createXYChart(root, data, kind);
+      return;
+    }
+    if (kind === 'sankey') {
+      await this.createSankeyChart(root, data);
+      return;
+    }
+
+    await this.createHierarchyChart(root, data, kind);
+  }
+
+  private async createHierarchyChart(root: any, data: DashboardData, kind: Exclude<AmChartKind, 'map' | 'timeline' | 'calendar' | 'sankey'>): Promise<void> {
+    const hierarchy: any = await import('@amcharts/amcharts5/hierarchy');
+    const chartClass = kind === 'treemap' ? hierarchy.Treemap : kind === 'sunburst' ? hierarchy.Sunburst : hierarchy.ForceDirected;
+    const chart = root.container.children.push(chartClass.new(root, {
+      singleBranchOnly: false,
+      downDepth: 1,
+      initialDepth: kind === 'sunburst' ? 2 : 1,
+      valueField: 'value',
+      categoryField: 'name',
+      childDataField: 'children',
+    }));
+
+    chart.data.setAll([this.hierarchyDataFor(kind, data)]);
+    chart.appear(700, 80);
+  }
+
+  private async createSankeyChart(root: any, data: DashboardData): Promise<void> {
+    const flow: any = await import('@amcharts/amcharts5/flow');
+    const chart = root.container.children.push(flow.Sankey.new(root, {
+      sourceIdField: 'from',
+      targetIdField: 'to',
+      valueField: 'value',
+      paddingRight: 40,
+    }));
+    chart.data.setAll(this.sankeyData(data.events));
+    chart.appear(700, 80);
+  }
+
+  private async createXYChart(root: any, data: DashboardData, kind: 'timeline' | 'calendar'): Promise<void> {
+    const am5: any = await import('@amcharts/amcharts5');
+    const xy: any = await import('@amcharts/amcharts5/xy');
+    const chart = root.container.children.push(xy.XYChart.new(root, { panX: false, panY: false, wheelX: 'none', wheelY: 'none' }));
+    const yAxis = chart.yAxes.push(xy.CategoryAxis.new(root, {
+      categoryField: 'category',
+      renderer: xy.AxisRendererY.new(root, { inversed: true, minGridDistance: 20 }),
+    }));
+    const xAxis = chart.xAxes.push(xy.DateAxis.new(root, {
+      baseInterval: { timeUnit: 'day', count: 1 },
+      renderer: xy.AxisRendererX.new(root, { minGridDistance: 50 }),
+    }));
+    const series = chart.series.push(xy.ColumnSeries.new(root, {
+      xAxis,
+      yAxis,
+      openValueXField: 'start',
+      valueXField: 'end',
+      categoryYField: 'category',
+      sequencedInterpolation: true,
+    }));
+    series.columns.template.setAll({ height: am5.percent(70), cornerRadiusBL: 4, cornerRadiusBR: 4, cornerRadiusTL: 4, cornerRadiusTR: 4, tooltipText: '{label}' });
+    const chartData = kind === 'timeline' ? this.timelineData(data.roomReservations) : this.calendarData(data);
+    yAxis.data.setAll(Array.from(new Set(chartData.map((item) => item.category))).map((category) => ({ category })));
+    series.data.setAll(chartData);
+    chart.appear(700, 80);
+  }
+
+  private async createMapChart(root: any, data: DashboardData): Promise<void> {
+    const am5: any = await import('@amcharts/amcharts5');
+    const map: any = await import('@amcharts/amcharts5/map');
+    const worldLow: any = await import('@amcharts/amcharts5-geodata/worldLow');
+    const chart = root.container.children.push(map.MapChart.new(root, { projection: map.geoMercator() }));
+    const polygonSeries = chart.series.push(map.MapPolygonSeries.new(root, { geoJSON: worldLow.default }));
+    polygonSeries.mapPolygons.template.setAll({ fill: am5.color(0xE5E7EB), stroke: am5.color(0xffffff) });
+    const pointSeries = chart.series.push(map.MapPointSeries.new(root, { latitudeField: 'lat', longitudeField: 'lon', valueField: 'value' }));
+    pointSeries.bullets.push(() => am5.Bullet.new(root, {
+      sprite: am5.Circle.new(root, { radius: 6, fill: am5.color(0xD8A528), tooltipText: '{name}: {value}' }),
+    }));
+    pointSeries.data.setAll(this.partnerCountryPoints(data.invitations));
+    chart.appear(700, 80);
+  }
+
+  private disposeAmChart(): void {
+    this.amRoot?.dispose();
+    this.amRoot = undefined;
+  }
+
+  private baseChart(type: string, id: string, height = 320): ApexOptions {
+    return {
+      chart: { id, type, height, toolbar: { show: false }, fontFamily: 'Inter, ui-sans-serif, system-ui' },
+      colors: ROLE_COLORS,
+      dataLabels: { enabled: false },
+      grid: { borderColor: '#E5E7EB', strokeDashArray: 4 },
+      legend: { labels: { colors: '#6B7280' } },
+      tooltip: { theme: 'light' },
+      noData: { text: 'Aucune donnee disponible' },
+    };
+  }
+
+  private barChart(id: string, title: string, description: string, categories: string[], series: unknown[]): DashboardChart {
+    return {
+      id,
+      title,
+      description,
+      empty: this.isSeriesEmpty(series),
+      options: {
+        ...this.baseChart('bar', id),
+        series,
+        xaxis: { categories, labels: { style: { colors: '#6B7280' } } },
+        yaxis: { labels: { style: { colors: '#6B7280' } } },
+        plotOptions: { bar: { borderRadius: 5, columnWidth: '50%' } },
+      },
+    };
+  }
+
+  private horizontalBarChart(id: string, title: string, description: string, counts: Record<string, number>): DashboardChart {
+    return {
+      id,
+      title,
+      description,
+      empty: Object.values(counts).every((value) => value === 0),
+      options: {
+        ...this.baseChart('bar', id),
+        series: [{ name: 'Interventions', data: Object.values(counts) }],
+        xaxis: { categories: Object.keys(counts) },
+        plotOptions: { bar: { horizontal: true, borderRadius: 5 } },
+      },
+    };
+  }
+
+  private stackedBarChart(id: string, title: string, description: string, categories: string[], series: unknown[]): DashboardChart {
+    return {
+      id,
+      title,
+      description,
+      empty: this.isSeriesEmpty(series),
+      options: {
+        ...this.baseChart('bar', id),
+        series,
+        xaxis: { categories },
+        chart: { ...(this.baseChart('bar', id)['chart'] as object), stacked: true },
+        plotOptions: { bar: { borderRadius: 4, columnWidth: '55%' } },
+      },
+    };
+  }
+
+  private donutChart(id: string, title: string, description: string, labels: string[], series: number[]): DashboardChart {
+    return {
+      id,
+      title,
+      description,
+      empty: series.every((value) => value === 0),
+      options: {
+        ...this.baseChart('donut', id),
+        series,
+        labels,
+        colors: STATUS_COLORS,
+        plotOptions: { pie: { donut: { size: '68%', labels: { show: true, total: { show: true, label: 'Total' } } } } },
+      },
+    };
+  }
+
+  private lineChart(id: string, title: string, description: string, categories: string[], series: unknown[]): DashboardChart {
+    return {
+      id,
+      title,
+      description,
+      empty: this.isSeriesEmpty(series),
+      options: {
+        ...this.baseChart('line', id),
+        series,
+        stroke: { width: 3, curve: 'smooth' },
+        markers: { size: 3 },
+        xaxis: { categories },
+      },
+    };
+  }
+
+  private areaChart(id: string, title: string, description: string, categories: string[], series: unknown[]): DashboardChart {
+    return {
+      id,
+      title,
+      description,
+      empty: this.isSeriesEmpty(series),
+      options: {
+        ...this.baseChart('area', id),
+        series,
+        stroke: { width: 2, curve: 'smooth' },
+        fill: { type: 'gradient', gradient: { opacityFrom: 0.32, opacityTo: 0.02 } },
+        xaxis: { categories },
+      },
+    };
+  }
+
+  private radialChart(id: string, title: string, description: string, value: number): DashboardChart {
+    return {
+      id,
+      title,
+      description,
+      empty: value === 0,
+      options: {
+        ...this.baseChart('radialBar', id),
+        series: [Math.min(value, 100)],
+        labels: ['Occupation'],
+        plotOptions: { radialBar: { hollow: { size: '64%' }, dataLabels: { value: { formatter: (val: number) => `${Math.round(val)}%` } } } },
+        colors: ['#0C488C'],
+      },
+    };
+  }
+
+  private comboChart(id: string, title: string, description: string, categories: string[], series: unknown[]): DashboardChart {
+    return {
+      id,
+      title,
+      description,
+      empty: this.isSeriesEmpty(series),
+      options: {
+        ...this.baseChart('line', id),
+        series,
+        stroke: { width: [0, 3], curve: 'smooth' },
+        plotOptions: { bar: { columnWidth: '48%', borderRadius: 4 } },
+        xaxis: { categories },
+      },
+    };
+  }
+
+  private radarChart(id: string, title: string, description: string, categories: string[], data: number[]): DashboardChart {
+    return {
+      id,
+      title,
+      description,
+      empty: data.every((value) => value === 0),
+      options: {
+        ...this.baseChart('radar', id),
+        series: [{ name: 'Score', data }],
+        xaxis: { categories },
+        yaxis: { min: 0, max: 100 },
+        colors: ['#0C488C'],
+      },
+    };
+  }
+
+  private heatmapChart(id: string, title: string, description: string, series: unknown[]): DashboardChart {
+    return {
+      id,
+      title,
+      description,
+      empty: this.isSeriesEmpty(series),
+      options: {
+        ...this.baseChart('heatmap', id, 340),
+        series,
+        plotOptions: { heatmap: { shadeIntensity: 0.35, colorScale: { ranges: [{ from: 0, to: 0, color: '#E5E7EB' }, { from: 1, to: 4, color: '#D8A528' }, { from: 5, to: 99, color: '#0C488C' }] } } },
+      },
+    };
+  }
+
+  private isSeriesEmpty(series: unknown[]): boolean {
+    return JSON.stringify(series).match(/"data":\[(.*?)\]/g)?.every((match) => !/\d/.test(match.replace(/[^\d]/g, ''))) ?? true;
+  }
+
+  private countPendingWorkflows(data: DashboardData): number {
+    return data.events.filter((item) => item.status === EventStatus.SUBMITTED).length
+      + data.roomReservations.filter((item) => item.status === 'PENDING').length
+      + data.equipmentReservations.filter((item) => item.status === 'PENDING').length
+      + data.documents.filter((item) => item.gedStatus === 'En attente qualite').length
+      + data.itInterventions.filter((item) => !this.isClosedStatus(item.itWorkflowStatus)).length;
+  }
+
+  private countUsersByRole(stats: UserStatistics): number[] {
+    return ROLE_PRIORITY.map((role) => {
+      const apiLabel = ROLE_LABELS[role];
+      return stats.usersByRole.find((item) => item.role === role || item.role === apiLabel)?.count ?? 0;
+    });
+  }
+
+  private countEventWorkflowStatus(events: EnterpriseEvent[]): number[] {
+    return [
+      events.filter((item) => item.status === EventStatus.DRAFT).length,
+      events.filter((item) => item.status === EventStatus.SUBMITTED).length,
+      events.filter((item) => item.status === EventStatus.PUBLISHED || item.status === EventStatus.COMPLETED).length,
+      events.filter((item) => item.status === EventStatus.CANCELLED).length,
+    ];
+  }
+
+  private userActivityForLastDays(stats: UserStatistics, days: number): number[] {
+    const byDate = new Map(stats.userActivityChart.map((item) => [item.date, item.count]));
+    return this.lastDateKeys(days).map((key) => byDate.get(key) ?? 0);
+  }
+
+  private reservationStatusByWeek(data: DashboardData, weeks: number): unknown[] {
+    const all = [...data.roomReservations, ...data.equipmentReservations];
+    const statuses = ['PENDING', 'APPROVED', 'REJECTED'];
+    return statuses.map((status) => ({
+      name: status,
+      data: this.weekStartDates(weeks).map((weekStart) => all.filter((item) => this.sameWeek(item.startDate, weekStart) && item.status === status).length),
+    }));
+  }
+
+  private filterPersonalData(data: DashboardData): {
+    rooms: RoomReservation[];
+    equipment: EquipmentReservation[];
+    events: EnterpriseEvent[];
+    documents: GedDocument[];
+    interventions: Intervention[];
+    itInterventions: ItIntervention[];
+    invitations: Invitation[];
+  } {
+    return {
+      rooms: data.roomReservations.filter((item) => this.matchesCurrentUser(item.userId, '', item.userName)),
+      equipment: data.equipmentReservations.filter((item) => this.matchesCurrentUser(item.userId, '', item.userName)),
+      events: data.events.filter((item) => this.matchesCurrentUser(item.organiserId, '', item.organiserName) || item.participants.some((participant) => this.matchesCurrentUser(participant.userId, participant.userEmail, participant.userName))),
+      documents: data.documents.filter((item) => this.matchesCurrentUser('', '', item.author)),
+      interventions: data.interventions.filter((item) => this.matchesCurrentUser(item.requesterId, item.requesterEmail, item.requesterName)),
+      itInterventions: data.itInterventions.filter((item) => this.matchesCurrentUser(item.requestedBy, '', item.requesterName)),
+      invitations: data.invitations.filter((item) => this.matchesCurrentUser(item.recipientId, item.recipientEmail, item.recipientName)),
+    };
+  }
+
+  private personalActivitySeries(mine: ReturnType<EnterpriseDashboardComponent['filterPersonalData']>, days: number): unknown[] {
+    return [
+      { name: 'Reservations', data: this.countDatesByDay([...mine.rooms, ...mine.equipment].map((item) => item.createdAt), days) },
+      { name: 'Interventions', data: this.countDatesByDay([...mine.interventions, ...mine.itInterventions].map((item) => item.createdAt), days) },
+      { name: 'GED', data: this.countDatesByDay(mine.documents.map((item) => item.uploadedAt), days) },
+    ];
+  }
+
+  private statusCounts<T, U>(left: T[], leftKey: keyof T, right: U[], rightKey: keyof U): Record<string, number> {
+    const counts: Record<string, number> = {};
+    [...left.map((item) => String(item[leftKey])), ...right.map((item) => String(item[rightKey]))].forEach((status) => {
+      counts[status] = (counts[status] ?? 0) + 1;
+    });
+    return Object.keys(counts).length ? counts : { AUCUNE: 0 };
+  }
+
+  private topActors(data: DashboardData): string[] {
+    return this.actorCounts(data).slice(0, 8).map((item) => this.shorten(item.name));
+  }
+
+  private topActorCounts(data: DashboardData): number[] {
+    return this.actorCounts(data).slice(0, 8).map((item) => item.count);
+  }
+
+  private actorCounts(data: DashboardData): Array<{ name: string; count: number }> {
+    const counts = new Map<string, number>();
+    data.events.forEach((item) => counts.set(item.organiserName, (counts.get(item.organiserName) ?? 0) + 1));
+    data.interventions.forEach((item) => counts.set(item.requesterName, (counts.get(item.requesterName) ?? 0) + 1));
+    data.roomReservations.forEach((item) => counts.set(item.userName, (counts.get(item.userName) ?? 0) + 1));
+    return Array.from(counts, ([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+  }
+
+  private roomOccupancyRate(reservations: RoomReservation[], rooms: Room[]): number {
+    if (rooms.length === 0) {
+      return 0;
+    }
+    const weekHours = rooms.length * 5 * 8;
+    const used = reservations.filter((item) => this.isCurrentWeek(item.startDate) && item.status === 'APPROVED').reduce((sum, item) => sum + this.hoursBetween(item.startDate, item.endDate), 0);
+    return Math.min(100, Math.round((used / Math.max(weekHours, 1)) * 100));
+  }
+
+  private roomHeatmap(reservations: RoomReservation[]): unknown[] {
+    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    const hours = Array.from({ length: 10 }, (_, index) => `${8 + index}h`);
+    return days.map((day, dayIndex) => ({
+      name: day,
+      data: hours.map((hour, hourIndex) => ({
+        x: hour,
+        y: reservations.filter((item) => this.isCurrentWeek(item.startDate) && ((item.startDate.getDay() + 6) % 7) === dayIndex && item.startDate.getHours() <= 8 + hourIndex && item.endDate.getHours() > 8 + hourIndex).length,
+      })),
+    }));
+  }
+
+  private topRooms(reservations: RoomReservation[]): { labels: string[]; values: number[] } {
+    const counts = new Map<string, number>();
+    reservations.forEach((item) => counts.set(item.roomName, (counts.get(item.roomName) ?? 0) + 1));
+    const rows = Array.from(counts, ([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 5);
+    return { labels: rows.map((item) => item.label), values: rows.map((item) => item.value) };
+  }
+
+  private updatedCountsByDay(items: Array<{ updatedAt: Date }>, days: number): number[] {
+    return this.countDatesByDay(items.map((item) => item.updatedAt), days);
+  }
+
+  private rollingAverageDays(items: Array<{ createdAt: Date; updatedAt: Date }>, days: number): number[] {
+    const keys = this.lastDateKeys(days);
+    return keys.map((key) => {
+      const dayItems = items.filter((item) => this.dateKey(item.updatedAt) === key);
+      return this.averageDays(dayItems);
+    });
+  }
+
+  private partnerDistribution(invitations: Invitation[]): { labels: string[]; values: number[] } {
+    const counts = new Map<string, number>();
+    invitations.filter((item) => item.isExternalPartner).forEach((item) => {
+      const label = item.partnerOrganization?.trim() || 'Organisme externe';
+      counts.set(label, (counts.get(label) ?? 0) + 1);
+    });
+    const rows = Array.from(counts, ([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 8);
+    return { labels: rows.map((item) => this.shorten(item.label)), values: rows.map((item) => item.value) };
+  }
+
+  private externalInternalSeries(events: EnterpriseEvent[]): unknown[] {
+    const starts = this.monthStartDates(12);
+    return [
+      { name: 'Externes', type: 'column', data: starts.map((start) => events.filter((event) => this.sameMonth(event.startDate, start) && event.hasExternalPartners).length) },
+      { name: 'Internes', type: 'line', data: starts.map((start) => events.filter((event) => this.sameMonth(event.startDate, start) && !event.hasExternalPartners).length) },
+    ];
+  }
+
+  private moduleCoverage(data: DashboardData): number {
+    const modules = [data.events, data.documents, data.interventions, data.roomReservations, data.itEquipments, data.invitations];
+    return Math.round((modules.filter((items) => items.length > 0).length / modules.length) * 100);
+  }
+
+  private moduleMaturity(data: DashboardData): number[] {
+    return [data.events.length, data.documents.length, data.interventions.length, data.roomReservations.length + data.equipmentReservations.length, data.itInterventions.length + data.itEquipments.length, data.invitations.length]
+      .map((count) => Math.min(100, count * 10));
+  }
+
+  private documentStatusCounts(documents: GedDocument[]): number[] {
+    return [
+      documents.filter((item) => item.gedStatus === 'Brouillon').length,
+      documents.filter((item) => item.gedStatus === 'En attente qualite').length,
+      documents.filter((item) => item.gedStatus === 'Valide qualite').length,
+      documents.filter((item) => item.gedStatus === 'Publie').length,
+    ];
+  }
+
+  private countByFixed<T>(items: T[], key: keyof T, values: string[]): number[] {
+    return values.map((value) => items.filter((item) => item[key] === value).length);
+  }
+
+  private itPriorityStatusSeries(items: ItIntervention[]): unknown[] {
+    const statuses = ['SUBMITTED', 'PENDING', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
+    return statuses.map((status) => ({
+      name: status,
+      data: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((priority) => items.filter((item) => item.priority === priority && this.normalizeItStatus(item.itWorkflowStatus) === status).length),
+    }));
+  }
+
+  private itFleetCounts(items: ItEquipment[]): number[] {
+    return [
+      items.filter((item) => item.state === 'OPERATIONAL').length,
+      items.filter((item) => item.assignmentStatus === 'NOT_ASSIGNED' && item.state === 'OPERATIONAL').length,
+      items.filter((item) => item.state === 'IN_MAINTENANCE' || item.state === 'IN_REPAIR').length,
+      items.filter((item) => item.state === 'OUT_OF_SERVICE').length,
+      items.filter((item) => item.state === 'ARCHIVED').length,
+    ];
+  }
+
+  private itSlaByWeek(items: ItIntervention[], weeks: number): number[] {
+    return this.weekStartDates(weeks).map((week) => this.averageDays(items.filter((item) => this.sameWeek(item.updatedAt, week) && ['IT_RESOLVED', 'IT_CLOSED'].includes(item.itWorkflowStatus))));
+  }
+
+  private normalizeItStatus(status: string): string {
+    if (status.includes('PENDING') || status.includes('APPROVAL')) {
+      return 'PENDING';
+    }
+    if (status.includes('PROGRESS') || status.includes('CHARGE')) {
+      return 'IN_PROGRESS';
+    }
+    if (status.includes('RESOLVED')) {
+      return 'RESOLVED';
+    }
+    if (status.includes('CLOSED')) {
+      return 'CLOSED';
+    }
+    return 'SUBMITTED';
+  }
+
+  private hierarchyDataFor(kind: AmChartKind, data: DashboardData): unknown {
+    if (kind === 'treemap') {
+      return {
+        name: 'GED',
+        children: this.groupDocumentsForTree(data.documents),
+      };
+    }
+    if (kind === 'sunburst') {
+      return {
+        name: 'GED',
+        children: this.folderNodesForChart(data.folderTree),
+      };
+    }
+    if (kind === 'network') {
+      return {
+        name: 'Affectations',
+        children: this.assignmentNodes(data),
+      };
+    }
+    return {
+      name: 'Evenements',
+      children: this.eventRoomNodes(data),
+    };
+  }
+
+  private groupDocumentsForTree(documents: GedDocument[]): unknown[] {
+    const categories = new Map<string, Map<string, number>>();
+    documents.forEach((doc) => {
+      const category = doc.mainCategory || doc.category.name || 'General';
+      const subCategory = doc.subCategory || 'Sans sous-categorie';
+      if (!categories.has(category)) {
+        categories.set(category, new Map());
+      }
+      const sub = categories.get(category)!;
+      sub.set(subCategory, (sub.get(subCategory) ?? 0) + 1);
+    });
+    return Array.from(categories, ([name, children]) => ({
+      name,
+      children: Array.from(children, ([childName, value]) => ({ name: childName, value })),
+    }));
+  }
+
+  private folderNodesForChart(nodes: GedFolderTreeNode[]): unknown[] {
+    return nodes.map((node) => ({
+      name: node.name,
+      value: node.documentCount || 1,
+      children: node.children?.length ? this.folderNodesForChart(node.children) : undefined,
+    }));
+  }
+
+  private assignmentNodes(data: DashboardData): unknown[] {
+    const assignments = data.itAssignments.length
+      ? data.itAssignments.map((item) => ({ user: item.employeeName, equipment: item.equipmentName }))
+      : data.itEquipments.filter((item) => item.currentEmployeeName).map((item) => ({ user: item.currentEmployeeName ?? 'Utilisateur', equipment: item.name }));
+    const byUser = new Map<string, string[]>();
+    assignments.forEach((item) => {
+      byUser.set(item.user, [...(byUser.get(item.user) ?? []), item.equipment]);
+    });
+    return Array.from(byUser, ([name, equipments]) => ({
+      name,
+      children: equipments.map((equipment) => ({ name: equipment, value: 1 })),
+    }));
+  }
+
+  private eventRoomNodes(data: DashboardData): unknown[] {
+    const roomNames = new Set(data.roomReservations.map((item) => item.roomName));
+    return data.events.filter((event) => event.status === EventStatus.PUBLISHED || event.status === EventStatus.COMPLETED).slice(0, 20).map((event) => ({
+      name: event.title,
+      children: Array.from(roomNames).slice(0, 2).map((room) => ({ name: room, value: 1 })),
+    }));
+  }
+
+  private sankeyData(events: EnterpriseEvent[]): Array<{ from: string; to: string; value: number }> {
+    const flows = new Map<string, number>();
+    const add = (from: string, to: string): void => {
+      flows.set(`${from}|${to}`, (flows.get(`${from}|${to}`) ?? 0) + 1);
+    };
+    events.forEach((event) => {
+      add('Manager', event.workflowStep === 'VALIDATION_SECURITE' ? 'Securite' : event.workflowStep === 'VALIDATION_DSN' ? 'DSN' : event.workflowStep === 'VALIDATION_SALLE' ? 'Salle' : 'Decision');
+      add(event.workflowStep === 'REFUSE' ? 'Decision' : 'Decision', event.status === EventStatus.CANCELLED ? 'Rejete' : event.status === EventStatus.PUBLISHED || event.status === EventStatus.COMPLETED ? 'Approuve' : 'En attente');
+    });
+    return Array.from(flows, ([key, value]) => {
+      const [from, to] = key.split('|');
+      return { from, to, value };
+    });
+  }
+
+  private timelineData(reservations: RoomReservation[]): Array<{ category: string; start: number; end: number; label: string }> {
+    const now = new Date();
+    const limit = this.addDays(now, 14);
+    return reservations
+      .filter((item) => item.startDate >= now && item.startDate <= limit)
+      .slice(0, 80)
+      .map((item) => ({ category: item.roomName, start: item.startDate.getTime(), end: item.endDate.getTime(), label: `${item.roomName}: ${item.title}` }));
+  }
+
+  private calendarData(data: DashboardData): Array<{ category: string; start: number; end: number; label: string }> {
+    const start = this.addDays(new Date(), -90);
+    const mine = this.filterPersonalData(data);
+    return [...mine.events.map((item) => ({ date: item.startDate, label: item.title })), ...mine.rooms.map((item) => ({ date: item.startDate, label: item.roomName })), ...mine.equipment.map((item) => ({ date: item.startDate, label: item.equipmentName }))]
+      .filter((item) => item.date >= start)
+      .map((item) => ({ category: 'Activites', start: item.date.getTime(), end: this.addDays(item.date, 1).getTime(), label: item.label }));
+  }
+
+  private partnerCountryPoints(invitations: Invitation[]): Array<{ name: string; value: number; lat: number; lon: number }> {
+    const points: Record<string, { lat: number; lon: number; aliases: string[] }> = {
+      Tunisie: { lat: 34, lon: 9, aliases: ['tunisie', 'tunisia'] },
+      France: { lat: 46, lon: 2, aliases: ['france'] },
+      Algerie: { lat: 28, lon: 2, aliases: ['algerie', 'algeria'] },
+      Maroc: { lat: 32, lon: -6, aliases: ['maroc', 'morocco'] },
+      Allemagne: { lat: 51, lon: 10, aliases: ['allemagne', 'germany'] },
+      Italie: { lat: 42.5, lon: 12.5, aliases: ['italie', 'italy'] },
+      Espagne: { lat: 40, lon: -4, aliases: ['espagne', 'spain'] },
+      USA: { lat: 39, lon: -98, aliases: ['usa', 'etats-unis', 'united states'] },
+    };
+    const counts = new Map<string, number>();
+    invitations.filter((item) => item.isExternalPartner).forEach((item) => {
+      const org = (item.partnerOrganization ?? '').toLowerCase();
+      const country = Object.entries(points).find(([, config]) => config.aliases.some((alias) => org.includes(alias)))?.[0] ?? 'Tunisie';
+      counts.set(country, (counts.get(country) ?? 0) + 1);
+    });
+    return Array.from(counts, ([name, value]) => ({ name, value, lat: points[name].lat, lon: points[name].lon }));
   }
 
   private formatEventDateRange(startDate: Date, endDate: Date): string {
-    const start = new Intl.DateTimeFormat('fr-FR', {
+    const formatter = new Intl.DateTimeFormat('fr-FR', {
       day: '2-digit',
       month: 'short',
       hour: '2-digit',
       minute: '2-digit',
-    }).format(startDate);
-
-    const end = new Intl.DateTimeFormat('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(endDate);
-
-    return `${start} - ${end}`;
+    });
+    return `${formatter.format(startDate)} - ${formatter.format(endDate)}`;
   }
 
-  private getEventStatusLabelForDashboard(status: EnterpriseEvent['status']): string {
-    if (status === 'SUBMITTED') {
+  private eventStatusLabel(status: EventStatus): string {
+    if (status === EventStatus.SUBMITTED) {
       return 'En attente';
     }
-    if (status === 'PUBLISHED') {
+    if (status === EventStatus.PUBLISHED) {
       return 'Publie';
     }
-    if (status === 'COMPLETED') {
+    if (status === EventStatus.COMPLETED) {
       return 'Termine';
     }
-    if (status === 'CANCELLED') {
+    if (status === EventStatus.CANCELLED) {
       return 'Annule';
     }
-    return status;
+    return 'Brouillon';
   }
 
-  private getEventStatusClassForDashboard(status: EnterpriseEvent['status']): string {
-    if (status === 'SUBMITTED') {
-      return 'bg-warning-50 text-warning-700';
+  private eventStatusClass(status: EventStatus): string {
+    if (status === EventStatus.SUBMITTED) {
+      return 'bg-warning-50 text-warning-700 dark:bg-warning-500/20 dark:text-warning-300';
     }
-    if (status === 'PUBLISHED') {
-      return 'bg-success-50 text-success-700';
+    if (status === EventStatus.PUBLISHED || status === EventStatus.COMPLETED) {
+      return 'bg-success-50 text-success-700 dark:bg-success-500/20 dark:text-success-300';
     }
-    if (status === 'COMPLETED') {
-      return 'bg-brand-50 text-brand-700';
+    if (status === EventStatus.CANCELLED) {
+      return 'bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-300';
     }
-    if (status === 'CANCELLED') {
-      return 'bg-error-50 text-error-700';
-    }
-    return 'bg-gray-100 text-gray-700';
+    return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
   }
 
-  private extractEventDates(events: EnterpriseEvent[]): Date[] {
-    return events.map((event) => event.startDate);
+  private reservationStatusClass(status: string): string {
+    if (status === 'PENDING') {
+      return 'bg-warning-50 text-warning-700 dark:bg-warning-500/20 dark:text-warning-300';
+    }
+    if (['APPROVED', 'IN_USE', 'RETURNED', 'COMPLETED'].includes(status)) {
+      return 'bg-success-50 text-success-700 dark:bg-success-500/20 dark:text-success-300';
+    }
+    if (['REJECTED', 'CANCELLED'].includes(status)) {
+      return 'bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-300';
+    }
+    return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
   }
 
-  private formatMiniCalendarMonth(referenceDate: Date): string {
-    return new Intl.DateTimeFormat('fr-FR', {
-      month: 'long',
-      year: 'numeric',
-    }).format(referenceDate);
+  private interventionToneClass(status: string): string {
+    if (this.isClosedStatus(status)) {
+      return 'bg-success-50 text-success-700 dark:bg-success-500/20 dark:text-success-300';
+    }
+    if (status.includes('PENDING') || status === InterventionStatus.OPEN || status === InterventionStatus.ASSIGNED) {
+      return 'bg-warning-50 text-warning-700 dark:bg-warning-500/20 dark:text-warning-300';
+    }
+    return 'bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300';
   }
 
   private buildMiniCalendarCells(referenceDate: Date, eventDates: Date[]): MiniCalendarCell[] {
@@ -2274,524 +1459,162 @@ export class EnterpriseDashboardComponent implements OnInit, OnDestroy {
     const today = new Date();
 
     eventDates.forEach((date) => {
-      if (
-        date.getFullYear() !== referenceDate.getFullYear() ||
-        date.getMonth() !== referenceDate.getMonth()
-      ) {
+      if (date.getFullYear() !== referenceDate.getFullYear() || date.getMonth() !== referenceDate.getMonth()) {
         return;
       }
-
-      const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-      eventCounts.set(key, (eventCounts.get(key) ?? 0) + 1);
+      eventCounts.set(this.dateKey(date), (eventCounts.get(this.dateKey(date)) ?? 0) + 1);
     });
 
-    const cells: MiniCalendarCell[] = [];
-
-    for (let index = 0; index < 42; index += 1) {
+    return Array.from({ length: 42 }, (_, index) => {
       const dayNumber = index - firstWeekday + 1;
       if (dayNumber < 1 || dayNumber > daysInMonth) {
-        cells.push({
-          date: null,
-          dayNumber: null,
-          isCurrentMonth: false,
-          isToday: false,
-          eventCount: 0,
-        });
-        continue;
+        return { date: null, dayNumber: null, isCurrentMonth: false, isToday: false, eventCount: 0 };
       }
-
       const date = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), dayNumber);
-      const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-      cells.push({
+      return {
         date,
         dayNumber,
         isCurrentMonth: true,
         isToday: this.isSameDay(date, today),
-        eventCount: eventCounts.get(key) ?? 0,
-      });
-    }
-
-    return cells;
-  }
-
-  private buildReservationSeries(
-    roomReservations: RoomReservation[],
-    equipmentReservations: EquipmentReservation[]
-  ): ReservationMonthPoint[] {
-    const now = new Date();
-    const series: ReservationMonthPoint[] = [];
-    const monthKeys: string[] = [];
-
-    for (let offset = 5; offset >= 0; offset -= 1) {
-      const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-      const month = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()];
-      const key = `${date.getFullYear()}-${date.getMonth()}`;
-
-      monthKeys.push(key);
-      series.push({ month, rooms: 0, equipment: 0 });
-    }
-
-    roomReservations.forEach((reservation) => {
-      const key = `${reservation.startDate.getFullYear()}-${reservation.startDate.getMonth()}`;
-      const index = monthKeys.indexOf(key);
-      if (index >= 0) {
-        series[index].rooms += 1;
-      }
+        eventCount: eventCounts.get(this.dateKey(date)) ?? 0,
+      };
     });
-
-    equipmentReservations.forEach((reservation) => {
-      const key = `${reservation.startDate.getFullYear()}-${reservation.startDate.getMonth()}`;
-      const index = monthKeys.indexOf(key);
-      if (index >= 0) {
-        series[index].equipment += 1;
-      }
-    });
-
-    return series;
-  }
-
-  private buildStatusSegments(interventions: Intervention[]): StatusSegment[] {
-    const open = interventions.filter(
-      (intervention) => intervention.status === InterventionStatus.OPEN
-    ).length;
-    const inProgress = interventions.filter(
-      (intervention) =>
-        intervention.status === InterventionStatus.ASSIGNED ||
-        intervention.status === InterventionStatus.IN_PROGRESS
-    ).length;
-    const resolved = interventions.filter(
-      (intervention) => intervention.status === InterventionStatus.RESOLVED
-    ).length;
-    const closed = interventions.filter(
-      (intervention) => intervention.status === InterventionStatus.CLOSED
-    ).length;
-
-    const total = open + inProgress + resolved + closed;
-    if (total === 0) {
-      return [
-        { label: 'Ouvert', percentage: 0, color: '#ef4444' },
-        { label: 'En cours', percentage: 0, color: '#f59e0b' },
-        { label: 'Resolu', percentage: 0, color: '#3b82f6' },
-        { label: 'Ferme', percentage: 0, color: '#65a30d' },
-      ];
-    }
-
-    const raw = [open, inProgress, resolved, closed].map((value) =>
-      Math.round((value / total) * 100)
-    );
-
-    const adjustment = 100 - raw.reduce((sum, value) => sum + value, 0);
-    if (adjustment !== 0) {
-      const maxIndex = raw.indexOf(Math.max(...raw));
-      raw[maxIndex] += adjustment;
-    }
-
-    return [
-      { label: 'Ouvert', percentage: raw[0], color: '#ef4444' },
-      { label: 'En cours', percentage: raw[1], color: '#f59e0b' },
-      { label: 'Resolu', percentage: raw[2], color: '#3b82f6' },
-      { label: 'Ferme', percentage: raw[3], color: '#65a30d' },
-    ];
-  }
-
-  private buildStatusGradient(segments: StatusSegment[]): string {
-    let cursor = 0;
-    const parts = segments.map((segment) => {
-      const start = cursor;
-      const end = cursor + segment.percentage;
-      cursor = end;
-      return `${segment.color} ${start}% ${end}%`;
-    });
-
-    return `conic-gradient(${parts.join(', ')})`;
-  }
-
-  private buildAdminRecentActivities(
-    documents: GedDocument[],
-    events: EnterpriseEvent[],
-    roomReservations: RoomReservation[],
-    equipmentReservations: EquipmentReservation[],
-    interventions: Intervention[]
-  ): ActivityItem[] {
-    const activities: ActivityItem[] = [];
-
-    roomReservations.forEach((reservation) => {
-      activities.push({
-        title: `${reservation.roomName} reservee par ${reservation.userName}`,
-        timestamp: reservation.createdAt,
-        timeAgo: this.formatTimeAgo(reservation.createdAt),
-        tag: 'Salles',
-        tagClass:
-          'bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
-        dotClass: 'bg-blue-light-500',
-      });
-    });
-
-    equipmentReservations.forEach((reservation) => {
-      activities.push({
-        title: `${reservation.equipmentName} reserve par ${reservation.userName}`,
-        timestamp: reservation.createdAt,
-        timeAgo: this.formatTimeAgo(reservation.createdAt),
-        tag: 'Equipement',
-        tagClass:
-          'bg-success-50 text-success-700 dark:bg-success-500/20 dark:text-success-300',
-        dotClass: 'bg-success-500',
-      });
-    });
-
-    interventions.forEach((intervention) => {
-      const isCritical = intervention.priority === 'CRITICAL';
-      const resolved = intervention.status === InterventionStatus.RESOLVED;
-      const interventionTitle = resolved
-        ? `Intervention ${intervention.id} marquee resolue`
-        : intervention.title;
-      activities.push({
-        title: isCritical
-           ? `Nouvelle intervention CRITICAL - ${intervention.title}`
-          : interventionTitle,
-        timestamp: intervention.updatedAt,
-        timeAgo: this.formatTimeAgo(intervention.updatedAt),
-        tag: resolved ? 'Resolu' : isCritical ? 'Critique' : 'Intervention',
-        tagClass: resolved
-          ? 'bg-success-50 text-success-700 dark:bg-success-500/20 dark:text-success-300'
-          : isCritical
-            ? 'bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-300'
-            : 'bg-warning-50 text-warning-700 dark:bg-warning-500/20 dark:text-warning-300',
-        dotClass: resolved ? 'bg-success-500' : isCritical ? 'bg-error-500' : 'bg-warning-500',
-      });
-    });
-
-    documents.forEach((document) => {
-      activities.push({
-        title: document.isArchived
-          ? `Document ${document.title} archive`
-          : `Document ${document.title} publie`,
-        timestamp: document.updatedAt,
-        timeAgo: this.formatTimeAgo(document.updatedAt),
-        tag: 'GED',
-        tagClass: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-        dotClass: 'bg-success-500',
-      });
-    });
-
-    events
-      .filter((event) => event.status === 'PUBLISHED')
-      .forEach((event) => {
-        activities.push({
-          title: `Evenement "${event.title}" publie`,
-          timestamp: event.updatedAt,
-          timeAgo: this.formatTimeAgo(event.updatedAt),
-          tag: 'Evenement',
-          tagClass:
-            'bg-warning-50 text-warning-700 dark:bg-warning-500/20 dark:text-warning-300',
-          dotClass: 'bg-warning-500',
-        });
-      });
-
-    const sorted = activities
-      .sort((first, second) => second.timestamp.getTime() - first.timestamp.getTime())
-      .slice(0, 5);
-
-    return sorted;
-  }
-
-  private buildEmployeeRecentActivities(
-    documents: GedDocument[],
-    invitations: Invitation[],
-    roomReservations: RoomReservation[],
-    equipmentReservations: EquipmentReservation[],
-    interventions: Intervention[]
-  ): ActivityItem[] {
-    const activities: ActivityItem[] = [];
-
-    const activeRoomReservation = roomReservations.find(
-      (reservation) =>
-        this.matchesCurrentUser(reservation.userId, '', reservation.userName) &&
-        reservation.status === 'APPROVED'
-    );
-    if (activeRoomReservation) {
-      activities.push({
-        title: `Votre reservation ${activeRoomReservation.roomName} confirmee`,
-        timestamp: activeRoomReservation.updatedAt,
-        timeAgo: this.formatTimeAgo(activeRoomReservation.updatedAt),
-        tag: 'Confirme',
-        tagClass:
-          'bg-success-50 text-success-700 dark:bg-success-500/20 dark:text-success-300',
-        dotClass: 'bg-success-500',
-      });
-    }
-
-    const pendingInvitation = invitations.find(
-      (invitation) =>
-        invitation.status === InvitationStatus.PENDING &&
-        this.matchesCurrentUser(
-          invitation.recipientId,
-          invitation.recipientEmail,
-          invitation.recipientName
-        )
-    );
-    if (pendingInvitation) {
-      activities.push({
-        title: `Invitation a ${pendingInvitation.eventTitle} - repondre avant vendredi`,
-        timestamp: pendingInvitation.sentAt,
-        timeAgo: this.formatTimeAgo(pendingInvitation.sentAt),
-        tag: 'Invitation',
-        tagClass:
-          'bg-warning-50 text-warning-700 dark:bg-warning-500/20 dark:text-warning-300',
-        dotClass: 'bg-warning-500',
-      });
-    }
-
-    const recentSharedDocument = documents
-      .filter((document) => !document.isArchived)
-      .sort((first, second) => second.updatedAt.getTime() - first.updatedAt.getTime())[0];
-    if (recentSharedDocument) {
-      activities.push({
-        title: `Nouveau document partage : ${recentSharedDocument.currentVersion.fileName}`,
-        timestamp: recentSharedDocument.updatedAt,
-        timeAgo: this.formatTimeAgo(recentSharedDocument.updatedAt),
-        tag: 'GED',
-        tagClass:
-          'bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
-        dotClass: 'bg-blue-light-500',
-      });
-    }
-
-    const inProgressIntervention = interventions.find((intervention) =>
-      this.matchesCurrentUser(
-        intervention.requesterId,
-        intervention.requesterEmail,
-        intervention.requesterName
-      )
-    );
-    if (inProgressIntervention) {
-      activities.push({
-        title: `Intervention en cours : ${inProgressIntervention.title}`,
-        timestamp: inProgressIntervention.updatedAt,
-        timeAgo: this.formatTimeAgo(inProgressIntervention.updatedAt),
-        tag: 'Intervention',
-        tagClass:
-          'bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-300',
-        dotClass: 'bg-error-500',
-      });
-    }
-
-    const recentEquipmentReservation = equipmentReservations.find(
-      (reservation) =>
-        this.matchesCurrentUser(reservation.userId, '', reservation.userName) &&
-        ['APPROVED', 'IN_USE'].includes(reservation.status)
-    );
-    if (recentEquipmentReservation) {
-      activities.push({
-        title: `Equipement ${recentEquipmentReservation.equipmentName} reserve`,
-        timestamp: recentEquipmentReservation.updatedAt,
-        timeAgo: this.formatTimeAgo(recentEquipmentReservation.updatedAt),
-        tag: 'Equipement',
-        tagClass:
-          'bg-success-50 text-success-700 dark:bg-success-500/20 dark:text-success-300',
-        dotClass: 'bg-success-500',
-      });
-    }
-
-    const sorted = activities
-      .sort((first, second) => second.timestamp.getTime() - first.timestamp.getTime())
-      .slice(0, 3);
-
-    return sorted;
-  }
-
-  private buildItManagerRecentActivities(
-    itInterventions: ItIntervention[],
-    itEquipments: ItEquipment[],
-  ): ActivityItem[] {
-    const activities: ActivityItem[] = [];
-
-    const recentItInterventions = itInterventions
-      .slice()
-      .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())
-      .slice(0, 3);
-
-    recentItInterventions.forEach((intervention) => {
-      const isCritical = intervention.priority === 'CRITICAL' || intervention.priority === 'HIGH';
-      activities.push({
-        title: `Intervention IT: ${intervention.title}`,
-        timestamp: intervention.updatedAt,
-        timeAgo: this.formatTimeAgo(intervention.updatedAt),
-        tag: intervention.itWorkflowStatus,
-        tagClass: isCritical
-          ? 'bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-300'
-          : 'bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
-        dotClass: isCritical ? 'bg-error-500' : 'bg-blue-light-500',
-      });
-    });
-
-    const maintenanceEquipment = itEquipments
-      .filter((equipment) => equipment.state === 'IN_MAINTENANCE' || equipment.state === 'IN_REPAIR')
-      .slice(0, 2);
-
-    maintenanceEquipment.forEach((equipment) => {
-      activities.push({
-        title: `Equipement IT en maintenance: ${equipment.name}`,
-        timestamp: equipment.updatedAt,
-        timeAgo: this.formatTimeAgo(equipment.updatedAt),
-        tag: 'Maintenance',
-        tagClass: 'bg-warning-50 text-warning-700 dark:bg-warning-500/20 dark:text-warning-300',
-        dotClass: 'bg-warning-500',
-      });
-    });
-
-    return activities
-      .sort((left, right) => right.timestamp.getTime() - left.timestamp.getTime())
-      .slice(0, 5);
-  }
-
-  private buildManagerResponsibleRecentActivities(
-    documents: GedDocument[],
-    invitations: Invitation[],
-    roomReservations: RoomReservation[]
-  ): ActivityItem[] {
-    const activities: ActivityItem[] = [];
-
-    const sentInvitations = invitations.filter((invitation) =>
-      this.matchesCurrentUser(invitation.senderId, '', invitation.senderName)
-    );
-    if (sentInvitations.length > 0) {
-      const latestSent = sentInvitations
-        .slice()
-        .sort((first, second) => second.sentAt.getTime() - first.sentAt.getTime())[0];
-
-      activities.push({
-        title: `Invitation envoyee a ${sentInvitations.length} membre(s) pour ${latestSent.eventTitle}`,
-        timestamp: latestSent.sentAt,
-        timeAgo: this.formatTimeAgo(latestSent.sentAt),
-        tag: 'Invitation',
-        tagClass:
-          'bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
-        dotClass: 'bg-blue-light-500',
-      });
-    }
-
-    const pendingReservation = roomReservations
-      .filter((reservation) => reservation.status === 'PENDING')
-      .sort((first, second) => second.updatedAt.getTime() - first.updatedAt.getTime())[0];
-    if (pendingReservation) {
-      activities.push({
-        title: `Reservation salle ${pendingReservation.roomName} en attente d'approbation`,
-        timestamp: pendingReservation.updatedAt,
-        timeAgo: this.formatTimeAgo(pendingReservation.updatedAt),
-        tag: 'En attente',
-        tagClass:
-          'bg-warning-50 text-warning-700 dark:bg-warning-500/20 dark:text-warning-300',
-        dotClass: 'bg-warning-500',
-      });
-    }
-
-    const monthlyReportDocument = documents
-      .filter((document) => /rapport/i.test(document.title))
-      .sort((first, second) => second.updatedAt.getTime() - first.updatedAt.getTime())[0];
-    if (monthlyReportDocument) {
-      activities.push({
-        title: 'Rapport mensuel equipe disponible',
-        timestamp: monthlyReportDocument.updatedAt,
-        timeAgo: this.formatTimeAgo(monthlyReportDocument.updatedAt),
-        tag: 'Rapport',
-        tagClass:
-          'bg-success-50 text-success-700 dark:bg-success-500/20 dark:text-success-300',
-        dotClass: 'bg-lime-600',
-      });
-    }
-
-    const sorted = activities
-      .sort((first, second) => second.timestamp.getTime() - first.timestamp.getTime())
-      .slice(0, 3);
-
-    return sorted;
-  }
-
-  private matchesCurrentUser(
-    targetUserId?: string,
-    targetEmail?: string,
-    targetName?: string
-  ): boolean {
-    const currentUser = this.authService.currentUser;
-    if (!currentUser) {
-      return false;
-    }
-
-    const normalizedName = `${currentUser.firstName} ${currentUser.lastName}`
-      .trim()
-      .toLowerCase();
-
-    return (
-      (targetUserId ? targetUserId === currentUser.id : false) ||
-      (targetEmail
-        ? targetEmail.toLowerCase() === currentUser.email.toLowerCase()
-        : false) ||
-      (targetName
-        ? targetName.toLowerCase().includes(normalizedName)
-        : false)
-    );
-  }
-
-  private isInCurrentWeek(date: Date): boolean {
-    const now = new Date();
-    const currentDay = now.getDay();
-    const daysFromMonday = (currentDay + 6) % 7;
-
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - daysFromMonday);
-    weekStart.setHours(0, 0, 0, 0);
-
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 7);
-
-    return date >= weekStart && date < weekEnd;
-  }
-
-  private isInCurrentMonth(date: Date): boolean {
-    const now = new Date();
-    return (
-      date.getFullYear() === now.getFullYear() &&
-      date.getMonth() === now.getMonth()
-    );
-  }
-
-  private countInCurrentMonth(dates: Date[]): number {
-    const now = new Date();
-    return dates.filter(
-      (date) =>
-        date.getFullYear() === now.getFullYear() &&
-        date.getMonth() === now.getMonth()
-    ).length;
   }
 
   private isSameDay(first: Date, second: Date): boolean {
-    return (
-      first.getFullYear() === second.getFullYear() &&
-      first.getMonth() === second.getMonth() &&
-      first.getDate() === second.getDate()
-    );
-  }
-
-  private formatSigned(value: number): string {
-    return value > 0 ? `+${value}` : `${value}`;
+    return first.getFullYear() === second.getFullYear()
+      && first.getMonth() === second.getMonth()
+      && first.getDate() === second.getDate();
   }
 
   private formatTimeAgo(date: Date): string {
-    const now = Date.now();
-    const diffMs = Math.max(now - date.getTime(), 0);
-    const diffMinutes = Math.floor(diffMs / 60000);
-
+    const diffMinutes = Math.floor(Math.max(Date.now() - date.getTime(), 0) / 60000);
     if (diffMinutes < 60) {
       return `${Math.max(diffMinutes, 1)} min`;
     }
-
     const diffHours = Math.floor(diffMinutes / 60);
     if (diffHours < 24) {
       return `${diffHours} h`;
     }
+    return `${Math.floor(diffHours / 24)} j`;
+  }
 
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays} j`;
+  private matchesCurrentUser(targetUserId?: string, targetEmail?: string, targetName?: string): boolean {
+    const user = this.authService.currentUser;
+    if (!user) {
+      return false;
+    }
+    const fullName = `${user.firstName} ${user.lastName}`.trim().toLowerCase();
+    return !!targetUserId && targetUserId === user.id
+      || !!targetEmail && targetEmail.toLowerCase() === user.email.toLowerCase()
+      || !!targetName && fullName.length > 0 && targetName.toLowerCase().includes(fullName);
+  }
+
+  private getStatus(item: Intervention | ItIntervention): string {
+    return 'status' in item ? item.status : item.itWorkflowStatus;
+  }
+
+  private isClosedStatus(status: string): boolean {
+    return ['RESOLVED', 'CLOSED', 'IT_RESOLVED', 'IT_CLOSED', 'COMPLETED', 'CANCELLED'].includes(status);
+  }
+
+  private countDatesByDay(dates: Date[], days: number): number[] {
+    return this.lastDateKeys(days).map((key) => dates.filter((date) => this.dateKey(date) === key).length);
+  }
+
+  private averageDays(items: Array<{ createdAt: Date; updatedAt?: Date }>): number {
+    if (items.length === 0) {
+      return 0;
+    }
+    const average = items.reduce((sum, item) => sum + this.daysBetween(item.createdAt, item.updatedAt ?? new Date()), 0) / items.length;
+    return Math.round(average * 10) / 10;
+  }
+
+  private daysBetween(first: Date, second: Date): number {
+    return Math.max(0, (second.getTime() - first.getTime()) / 86400000);
+  }
+
+  private hoursBetween(first: Date, second: Date): number {
+    return Math.max(0, (second.getTime() - first.getTime()) / 3600000);
+  }
+
+  private isBetween(date: Date, start: Date, end: Date): boolean {
+    return date >= start && date <= end;
+  }
+
+  private isCurrentWeek(date: Date): boolean {
+    return this.sameWeek(date, this.weekStart(new Date()));
+  }
+
+  private isCurrentMonth(date: Date): boolean {
+    return this.sameMonth(date, new Date());
+  }
+
+  private sameWeek(date: Date, weekStart: Date): boolean {
+    const start = this.weekStart(weekStart);
+    const end = this.addDays(start, 7);
+    return date >= start && date < end;
+  }
+
+  private sameMonth(date: Date, month: Date): boolean {
+    return date.getFullYear() === month.getFullYear() && date.getMonth() === month.getMonth();
+  }
+
+  private weekStart(date: Date): Date {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    return start;
+  }
+
+  private weekStartDates(weeks: number): Date[] {
+    const current = this.weekStart(new Date());
+    return Array.from({ length: weeks }, (_, index) => this.addDays(current, (index - weeks + 1) * 7));
+  }
+
+  private monthStartDates(months: number): Date[] {
+    const now = new Date();
+    return Array.from({ length: months }, (_, index) => new Date(now.getFullYear(), now.getMonth() - months + 1 + index, 1));
+  }
+
+  private lastDateKeys(days: number): string[] {
+    return Array.from({ length: days }, (_, index) => this.dateKey(this.addDays(new Date(), index - days + 1)));
+  }
+
+  private lastDaysLabels(days: number): string[] {
+    return this.lastDateKeys(days).map((key) => key.slice(5));
+  }
+
+  private lastWeekLabels(weeks: number): string[] {
+    return this.weekStartDates(weeks).map((date) => `S${this.isoWeek(date)}`);
+  }
+
+  private lastMonthLabels(months: number): string[] {
+    return this.monthStartDates(months).map((date) => new Intl.DateTimeFormat('fr-FR', { month: 'short' }).format(date));
+  }
+
+  private addDays(date: Date, days: number): Date {
+    const copy = new Date(date);
+    copy.setDate(copy.getDate() + days);
+    return copy;
+  }
+
+  private dateKey(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
+  private isoWeek(date: Date): number {
+    const copy = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    copy.setUTCDate(copy.getUTCDate() + 4 - (copy.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(copy.getUTCFullYear(), 0, 1));
+    return Math.ceil((((copy.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  }
+
+  private shorten(value: string, length = 18): string {
+    return value.length > length ? `${value.slice(0, length - 1)}...` : value;
+  }
+
+  private formatNumber(value: number): string {
+    return new Intl.NumberFormat('fr-FR').format(value);
   }
 }

@@ -18,6 +18,7 @@ public final class ReservationMapper {
                 entity.getName(),
                 entity.getLocation(),
                 entity.getDescription(),
+                entity.getImageUrl(),
                 entity.getCapacity(),
                 entity.getStatus(),
                 entity.isActive(),

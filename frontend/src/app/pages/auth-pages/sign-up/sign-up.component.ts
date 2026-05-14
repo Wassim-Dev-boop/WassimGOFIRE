@@ -3,7 +3,6 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { GridShapeComponent } from '../../../shared/components/common/grid-shape/grid-shape.component';
 
 interface DepartmentOption {
   id: string;
@@ -14,7 +13,7 @@ interface DepartmentOption {
 @Component({
   selector: 'app-sign-up',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, GridShapeComponent],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './sign-up.component.html',
 })
 export class SignUpComponent implements OnInit {

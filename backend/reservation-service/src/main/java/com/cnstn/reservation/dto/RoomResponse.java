@@ -9,6 +9,7 @@ public record RoomResponse(
         String name,
         String location,
         String description,
+        String imageUrl,
         int capacity,
         RoomOperationalStatus status,
         boolean active,

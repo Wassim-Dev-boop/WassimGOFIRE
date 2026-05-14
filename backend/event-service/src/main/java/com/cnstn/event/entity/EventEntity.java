@@ -49,12 +49,6 @@ public class EventEntity {
     @Column(name = "online_event", nullable = false)
     private Boolean onlineEvent = Boolean.FALSE;
 
-    @Column(name = "zoom_meeting_number", length = 30)
-    private String zoomMeetingNumber;
-
-    @Column(name = "zoom_passcode", length = 100)
-    private String zoomPasscode;
-
     @Column(name = "online_meeting_provider", length = 60)
     private String onlineMeetingProvider;
 
@@ -66,6 +60,9 @@ public class EventEntity {
 
     @Column(name = "online_meeting_password", length = 120)
     private String onlineMeetingPassword;
+
+    @Column(name = "meeting_room_id", length = 120)
+    private String meetingRoomId;
 
     @Column(name = "requested_by", nullable = false, length = 120)
     private String requestedBy;
@@ -215,22 +212,6 @@ public class EventEntity {
         this.onlineEvent = onlineEvent;
     }
 
-    public String getZoomMeetingNumber() {
-        return zoomMeetingNumber;
-    }
-
-    public void setZoomMeetingNumber(String zoomMeetingNumber) {
-        this.zoomMeetingNumber = zoomMeetingNumber;
-    }
-
-    public String getZoomPasscode() {
-        return zoomPasscode;
-    }
-
-    public void setZoomPasscode(String zoomPasscode) {
-        this.zoomPasscode = zoomPasscode;
-    }
-
     public String getOnlineMeetingProvider() {
         return onlineMeetingProvider;
     }
@@ -261,6 +242,14 @@ public class EventEntity {
 
     public void setOnlineMeetingPassword(String onlineMeetingPassword) {
         this.onlineMeetingPassword = onlineMeetingPassword;
+    }
+
+    public String getMeetingRoomId() {
+        return meetingRoomId;
+    }
+
+    public void setMeetingRoomId(String meetingRoomId) {
+        this.meetingRoomId = meetingRoomId;
     }
 
     public String getRequestedBy() {

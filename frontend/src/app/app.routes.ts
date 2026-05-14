@@ -13,6 +13,7 @@ import { EnterpriseDashboardComponent } from './pages/dashboard/enterprise-dashb
 import { GedListComponent } from './modules/ged/components/ged-list.component';
 import { EventsListComponent } from './modules/events/components/events-list.component';
 import { EventAlbumComponent } from './modules/events/components/event-album.component';
+import { EventMeetingComponent } from './modules/events/components/event-meeting.component';
 import { InvitationsComponent } from './modules/events/components/invitations.component';
 import { RoomReservationsComponent } from './modules/reservations/components/room-reservations.component';
 import { EquipmentReservationsComponent } from './modules/reservations/components/equipment-reservations.component';
@@ -102,15 +103,8 @@ export const routes: Routes = [
         path: 'dashboard',
         component: EnterpriseDashboardComponent,
         canActivate: [roleGuard],
-        data: { roles: allBusinessRoles, permissions: ['VIEW_REPORTS_MODULE'] },
+        data: { roles: allBusinessRoles },
         title: 'Tableau de bord | CNSTN',
-      },
-      {
-        path: 'reporting',
-        component: EnterpriseDashboardComponent,
-        canActivate: [roleGuard],
-        data: { roles: allBusinessRoles, permissions: ['VIEW_REPORTS_MODULE'] },
-        title: 'Reporting | CNSTN',
       },
       {
         path: 'profile',
@@ -144,6 +138,13 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: allBusinessRoles, permissions: ['VIEW_EVENTS_MODULE'] },
         title: 'Album photos evenement | CNSTN',
+      },
+      {
+        path: 'events/:id/meeting',
+        component: EventMeetingComponent,
+        canActivate: [roleGuard],
+        data: { roles: allBusinessRoles, permissions: ['VIEW_EVENTS_MODULE'], hideNavbar: true },
+        title: 'Salle virtuelle evenement | CNSTN',
       },
       {
         path: 'invitations',

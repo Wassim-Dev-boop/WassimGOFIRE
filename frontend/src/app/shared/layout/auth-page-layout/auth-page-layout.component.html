@@ -6,24 +6,40 @@
       </div>
     </section>
 
-    <aside class="relative hidden overflow-hidden border-l border-gray-200 bg-gradient-to-br from-brand-50 via-white to-blue-light-50 lg:flex lg:items-center lg:justify-center">
-      <app-grid-shape />
-      <div class="relative z-10 mx-auto flex max-w-md flex-col items-center px-10 text-center">
-        <a routerLink="/accueil" class="mb-5 flex items-center gap-3 rounded-2xl border border-white bg-white/90 px-4 py-3 shadow-theme-md">
-          <span class="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-gray-200 bg-white">
+    <aside class="relative hidden overflow-hidden border-l border-gray-200 lg:block">
+      <img src="/images/acceuil.png" alt="Plateforme interne CNSTN" class="absolute inset-0 h-full w-full object-cover" />
+      <div class="absolute inset-0 bg-slate-950/55"></div>
+      <div class="relative z-10 flex h-full flex-col justify-between p-10 text-white">
+        <a routerLink="/accueil" class="inline-flex w-fit items-center gap-3 rounded-2xl border border-white/25 bg-white/15 px-4 py-3 shadow-theme-md backdrop-blur-md">
+          <span class="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-white/25 bg-white">
             <img src="/images/logo/logo1.png" alt="CNSTN Logo" class="h-8 w-8 object-contain" />
           </span>
-          <span class="text-left">
-            <span class="block text-xl font-semibold tracking-wide text-gray-900">CNSTN</span>
-            <span class="block text-sm text-gray-500">Plateforme interne</span>
+          <span>
+            <span class="block text-xl font-semibold tracking-wide">CNSTN</span>
+            <span class="block text-sm text-blue-100">Plateforme interne</span>
           </span>
         </a>
 
-        <div class="rounded-2xl border border-gray-200 bg-white/90 p-5 shadow-theme-sm">
-          <p class="text-lg font-semibold text-gray-900">Securise. Fiable. Connecte.</p>
-          <p class="mt-2 text-sm text-gray-600">
-            Vos donnees sont protegees et accessibles uniquement par les personnes autorisees.
+        <div class="max-w-md">
+          <p class="text-4xl font-semibold leading-tight">Un acces clair a vos workflows critiques.</p>
+          <p class="mt-3 text-sm leading-6 text-blue-100">
+            GED, reservations, evenements et interventions restent lisibles, controles et connectes des la connexion.
           </p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div class="rounded-xl border border-white/20 bg-white/15 p-3 backdrop-blur-md">
+            <span class="block text-lg font-semibold">GED</span>
+            <span class="text-xs text-blue-100">Documents</span>
+          </div>
+          <div class="rounded-xl border border-white/20 bg-white/15 p-3 backdrop-blur-md">
+            <span class="block text-lg font-semibold">ACL</span>
+            <span class="text-xs text-blue-100">Acces</span>
+          </div>
+          <div class="rounded-xl border border-white/20 bg-white/15 p-3 backdrop-blur-md">
+            <span class="block text-lg font-semibold">Audit</span>
+            <span class="text-xs text-blue-100">Traces</span>
+          </div>
         </div>
       </div>
     </aside>

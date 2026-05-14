@@ -51,7 +51,6 @@ const EQUIPMENT_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="
 const INTERVENTION_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 6.5L17.5 3.5L20.5 6.5L17.5 9.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path><path d="M4 20L10.2 13.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M7.2 12.8L10.6 16.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M14.5 6.5L7.2 13.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>`;
 const NOTIFICATION_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 17H18L16.8 15.8C16.2861 15.2861 16 14.5891 16 13.8627V11C16 8.79086 14.2091 7 12 7C9.79086 7 8 8.79086 8 11V13.8627C8 14.5891 7.71392 15.2861 7.2 15.8L6 17Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path><path d="M10 18.5C10 19.6046 10.8954 20.5 12 20.5C13.1046 20.5 14 19.6046 14 18.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>`;
 const ADMIN_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5 2.8C11.4 2.3 12.6 2.3 13.5 2.8L15 3.7C15.3 3.9 15.7 4 16.1 4H17.8C18.9 4 19.8 4.9 19.8 6V7.9C19.8 8.3 19.9 8.7 20.1 9L21 10.5C21.5 11.4 21.5 12.6 21 13.5L20.1 15C19.9 15.3 19.8 15.7 19.8 16.1V17.8C19.8 18.9 18.9 19.8 17.8 19.8H16.1C15.7 19.8 15.3 19.9 15 20.1L13.5 21C12.6 21.5 11.4 21.5 10.5 21L9 20.1C8.7 19.9 8.3 19.8 7.9 19.8H6.2C5.1 19.8 4.2 18.9 4.2 17.8V16.1C4.2 15.7 4.1 15.3 3.9 15L3 13.5C2.5 12.6 2.5 11.4 3 10.5L3.9 9C4.1 8.7 4.2 8.3 4.2 7.9V6C4.2 4.9 5.1 4 6.2 4H7.9C8.3 4 8.7 3.9 9 3.7L10.5 2.8Z" stroke="currentColor" stroke-width="1.6"></path><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6"></circle></svg>`;
-const REPORTING_ICON = `<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 19H19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M7.5 16V10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M12 16V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M16.5 16V12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>`;
 
 @Component({
   selector: 'app-sidebar',
@@ -135,13 +134,7 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
 
   isNavItemActive(nav: NavItem): boolean {
     const [currentPath] = this.router.url.split('?');
-    const targetPath = nav.path;
-
-    if (targetPath === '/reporting') {
-      return currentPath === '/reporting';
-    }
-
-    return currentPath === targetPath;
+    return currentPath === nav.path;
   }
 
   toggleTheme(): void {
@@ -206,7 +199,6 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
         name: 'Tableau de bord',
         path: '/dashboard',
         roles: ALL_ROLES,
-        permissions: ['VIEW_REPORTS_MODULE'],
         icon: DASHBOARD_ICON,
       },
       {
@@ -264,13 +256,6 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
         roles: ['ADMIN'],
         permissions: ['VIEW_USERS_MODULE'],
         icon: ADMIN_ICON,
-      },
-      {
-        name: 'Reporting',
-        path: '/reporting',
-        roles: ALL_ROLES,
-        permissions: ['VIEW_REPORTS_MODULE'],
-        icon: REPORTING_ICON,
       },
     ];
   }

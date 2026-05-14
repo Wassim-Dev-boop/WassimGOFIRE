@@ -12,6 +12,7 @@ export type EventWorkflowStep =
   | 'VALIDATION_MANAGER'
   | 'VALIDATION_SECURITE'
   | 'VALIDATION_DSN'
+  | 'VALIDATION_SALLE'
   | 'TERMINE'
   | 'REFUSE';
 
@@ -37,8 +38,7 @@ export interface Event {
   onlineEvent?: boolean;
   onlineMeetingUrl?: string;
   onlineMeetingProvider?: string;
-  zoomMeetingNumber?: string;
-  zoomPasscode?: string;
+  meetingRoomId?: string;
   organiserId: string;
   organiserName: string;
   status: EventStatus;
@@ -66,15 +66,14 @@ export interface EventFilter {
   organiserId?: string;
 }
 
-export interface ZoomMeetingCredentials {
-  sdkKey: string;
-  signature: string;
-  meetingNumber: string;
-  passcode: string;
-  userName: string;
-  role: number;
-  fallbackWebUrl: string;
-  sdkConfigured: boolean;
+export interface EventMeeting {
+  eventId: string;
+  title: string;
+  startAt: Date;
+  endAt: Date;
+  eventMode: EventMode;
+  meetingRoomId?: string;
+  onlineAvailable: boolean;
 }
 
 export interface EventPhoto {

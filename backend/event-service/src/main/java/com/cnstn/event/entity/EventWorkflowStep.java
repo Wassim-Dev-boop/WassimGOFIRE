@@ -5,6 +5,7 @@ public enum EventWorkflowStep {
     VALIDATION_MANAGER,
     VALIDATION_SECURITE,
     VALIDATION_DSN,
+    VALIDATION_SALLE,
     TERMINE,
     REFUSE
 }

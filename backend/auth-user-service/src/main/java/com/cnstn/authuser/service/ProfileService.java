@@ -45,6 +45,7 @@ public class ProfileService {
 
         if (user.getKeycloakId() != null) {
             keycloakAdminClient.updateUser(user.getKeycloakId(), new KeycloakUpdateUserRequest(
+                    user.getUsername(),
                     user.getEmail(),
                     user.getFirstName(),
                     user.getLastName(),

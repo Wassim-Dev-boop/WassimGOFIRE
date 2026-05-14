@@ -11,11 +11,14 @@ import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
 import com.lowagie.text.Rectangle;
+import com.lowagie.text.pdf.PdfContentByte;
 import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.pdf.PdfPCellEvent;
 import com.lowagie.text.pdf.PdfPageEventHelper;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import java.io.ByteArrayOutputStream;
+import java.awt.Color;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -29,11 +32,22 @@ public class EventOfficialPdfRenderer {
     private static final DateTimeFormatter DATE_TIME_FORMATTER =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm").withZone(DISPLAY_ZONE);
 
-    private static final Font TITLE_FONT = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 15);
-    private static final Font SECTION_FONT = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
-    private static final Font LABEL_FONT = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10);
-    private static final Font VALUE_FONT = FontFactory.getFont(FontFactory.HELVETICA, 10);
-    private static final Font FOOTER_FONT = FontFactory.getFont(FontFactory.HELVETICA, 9);
+    private static final Color NAVY = new Color(20, 38, 71);
+    private static final Color BLUE = new Color(40, 84, 168);
+    private static final Color LIGHT_BLUE = new Color(236, 243, 255);
+    private static final Color BORDER = new Color(207, 216, 231);
+    private static final Color SOFT_GRAY = new Color(248, 250, 252);
+    private static final Color TUNISIA_RED = new Color(231, 0, 19);
+    private static final Color WHITE = Color.WHITE;
+
+    private static final Font TITLE_FONT = coloredFont(FontFactory.HELVETICA_BOLD, 16, NAVY);
+    private static final Font HEADER_FONT = coloredFont(FontFactory.HELVETICA_BOLD, 10, NAVY);
+    private static final Font HEADER_MUTED_FONT = coloredFont(FontFactory.HELVETICA, 8, new Color(83, 99, 124));
+    private static final Font SECTION_FONT = coloredFont(FontFactory.HELVETICA_BOLD, 12, NAVY);
+    private static final Font LABEL_FONT = coloredFont(FontFactory.HELVETICA_BOLD, 9, new Color(61, 75, 99));
+    private static final Font VALUE_FONT = coloredFont(FontFactory.HELVETICA, 10, new Color(30, 41, 59));
+    private static final Font FOOTER_FONT = coloredFont(FontFactory.HELVETICA, 8, new Color(100, 116, 139));
+    private static final Font WHITE_BOLD_FONT = coloredFont(FontFactory.HELVETICA_BOLD, 10, WHITE);
 
     public byte[] renderSubmissionPdf(
             EventEntity event,
@@ -47,7 +61,7 @@ public class EventOfficialPdfRenderer {
         Objects.requireNonNull(documentReference);
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            Document document = new Document(PageSize.A4, 36, 36, 84, 58);
+            Document document = new Document(PageSize.A4, 36, 36, 40, 58);
             PdfWriter writer = PdfWriter.getInstance(document, outputStream);
             writer.setPageEvent(new DocumentFooter(documentReference, businessVersion));
 
@@ -86,7 +100,7 @@ public class EventOfficialPdfRenderer {
         Objects.requireNonNull(documentReference);
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            Document document = new Document(PageSize.A4, 36, 36, 84, 58);
+            Document document = new Document(PageSize.A4, 36, 36, 40, 58);
             PdfWriter writer = PdfWriter.getInstance(document, outputStream);
             writer.setPageEvent(new DocumentFooter(documentReference, businessVersion));
 
@@ -124,21 +138,52 @@ public class EventOfficialPdfRenderer {
             int businessVersion,
             Instant generatedAt
     ) throws DocumentException {
-        Paragraph organization = new Paragraph("CNSTN - Direction des Systemes Numeriques", LABEL_FONT);
-        organization.setAlignment(Element.ALIGN_LEFT);
-        organization.setSpacingAfter(8f);
-        document.add(organization);
+        PdfPTable masthead = new PdfPTable(new float[]{1.2f, 4.8f, 1.2f});
+        masthead.setWidthPercentage(100f);
+        masthead.setSpacingAfter(14f);
+
+        PdfPCell logo = new PdfPCell(new Phrase("CNSTN", WHITE_BOLD_FONT));
+        logo.setFixedHeight(58f);
+        logo.setBorder(Rectangle.NO_BORDER);
+        logo.setBackgroundColor(BLUE);
+        logo.setHorizontalAlignment(Element.ALIGN_CENTER);
+        logo.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        logo.setPadding(8f);
+        masthead.addCell(logo);
+
+        PdfPCell organization = new PdfPCell();
+        organization.setBorder(Rectangle.NO_BORDER);
+        organization.setPadding(0f);
+        organization.setPaddingLeft(14f);
+        organization.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        Paragraph republic = new Paragraph("Republique Tunisienne", HEADER_FONT);
+        Paragraph ministry = new Paragraph("Centre National des Sciences et Technologies Nucleaires", HEADER_FONT);
+        Paragraph direction = new Paragraph("Direction des Systemes Numeriques - Document officiel evenement", HEADER_MUTED_FONT);
+        organization.addElement(republic);
+        organization.addElement(ministry);
+        organization.addElement(direction);
+        masthead.addCell(organization);
+
+        PdfPCell flag = new PdfPCell(new Phrase("TUNISIE", WHITE_BOLD_FONT));
+        flag.setFixedHeight(58f);
+        flag.setBorder(Rectangle.NO_BORDER);
+        flag.setCellEvent(new TunisiaFlagCellEvent());
+        flag.setHorizontalAlignment(Element.ALIGN_CENTER);
+        flag.setVerticalAlignment(Element.ALIGN_BOTTOM);
+        flag.setPaddingBottom(6f);
+        masthead.addCell(flag);
+        document.add(masthead);
 
         Paragraph titleParagraph = new Paragraph(title, TITLE_FONT);
-        titleParagraph.setAlignment(Element.ALIGN_LEFT);
-        titleParagraph.setSpacingAfter(10f);
+        titleParagraph.setAlignment(Element.ALIGN_CENTER);
+        titleParagraph.setSpacingAfter(12f);
         document.add(titleParagraph);
 
         PdfPTable metadata = twoColumnTable();
         addRow(metadata, "Reference", reference);
         addRow(metadata, "Version", "v" + businessVersion);
         addRow(metadata, "Date generation", formatDate(generatedAt));
-        addRow(metadata, "Format", "A4 portrait");
+        addRow(metadata, "Classification", "Document interne officiel");
         document.add(metadata);
         document.add(new Paragraph(" ", VALUE_FONT));
     }
@@ -168,10 +213,24 @@ public class EventOfficialPdfRenderer {
     }
 
     private void addSection(Document document, String title, PdfPTable table) throws DocumentException {
-        Paragraph sectionTitle = new Paragraph(title, SECTION_FONT);
-        sectionTitle.setSpacingBefore(8f);
-        sectionTitle.setSpacingAfter(6f);
-        document.add(sectionTitle);
+        PdfPTable sectionHeader = new PdfPTable(new float[]{0.12f, 5f});
+        sectionHeader.setWidthPercentage(100f);
+        sectionHeader.setSpacingBefore(8f);
+        sectionHeader.setSpacingAfter(6f);
+
+        PdfPCell accent = new PdfPCell(new Phrase(""));
+        accent.setBorder(Rectangle.NO_BORDER);
+        accent.setBackgroundColor(BLUE);
+        accent.setFixedHeight(18f);
+        sectionHeader.addCell(accent);
+
+        PdfPCell titleCell = new PdfPCell(new Phrase("  " + title, SECTION_FONT));
+        titleCell.setBorder(Rectangle.NO_BORDER);
+        titleCell.setBackgroundColor(LIGHT_BLUE);
+        titleCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        titleCell.setPadding(4f);
+        sectionHeader.addCell(titleCell);
+        document.add(sectionHeader);
         document.add(table);
         document.add(new Paragraph(" ", VALUE_FONT));
     }
@@ -186,13 +245,16 @@ public class EventOfficialPdfRenderer {
 
     private void addRow(PdfPTable table, String label, String value) {
         PdfPCell labelCell = new PdfPCell(new Phrase(label, LABEL_FONT));
-        labelCell.setPadding(5f);
-        labelCell.setBorder(Rectangle.BOX);
+        labelCell.setPadding(7f);
+        labelCell.setBorderColor(BORDER);
+        labelCell.setBackgroundColor(SOFT_GRAY);
+        labelCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
         table.addCell(labelCell);
 
         PdfPCell valueCell = new PdfPCell(new Phrase(value, VALUE_FONT));
-        valueCell.setPadding(5f);
-        valueCell.setBorder(Rectangle.BOX);
+        valueCell.setPadding(7f);
+        valueCell.setBorderColor(BORDER);
+        valueCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
         table.addCell(valueCell);
     }
 
@@ -201,6 +263,7 @@ public class EventOfficialPdfRenderer {
             case DECISION_MANAGER -> "Decision officielle - Validation manager";
             case DECISION_SECURITE -> "Decision officielle - Validation securite";
             case DECISION_DSN -> "Decision officielle - Validation DSN";
+            case DECISION_SALLE -> "Decision officielle - Validation salle";
             default -> "Decision officielle - Evenement";
         };
     }
@@ -217,6 +280,59 @@ public class EventOfficialPdfRenderer {
             return fallback;
         }
         return value.trim();
+    }
+
+    private static Font coloredFont(String family, int size, Color color) {
+        Font font = FontFactory.getFont(family, size);
+        font.setColor(color);
+        return font;
+    }
+
+    private static final class TunisiaFlagCellEvent implements PdfPCellEvent {
+
+        @Override
+        public void cellLayout(PdfPCell cell, Rectangle position, PdfContentByte[] canvases) {
+            PdfContentByte canvas = canvases[PdfPTable.BACKGROUNDCANVAS];
+            canvas.saveState();
+            canvas.setColorFill(TUNISIA_RED);
+            canvas.rectangle(position.getLeft(), position.getBottom(), position.getWidth(), position.getHeight());
+            canvas.fill();
+
+            float centerX = (position.getLeft() + position.getRight()) / 2f;
+            float centerY = (position.getBottom() + position.getTop()) / 2f + 3f;
+            float radius = Math.min(position.getWidth(), position.getHeight()) * 0.28f;
+
+            canvas.setColorFill(WHITE);
+            canvas.circle(centerX, centerY, radius);
+            canvas.fill();
+
+            canvas.setColorFill(TUNISIA_RED);
+            canvas.circle(centerX + radius * 0.16f, centerY, radius * 0.58f);
+            canvas.fill();
+            canvas.setColorFill(WHITE);
+            canvas.circle(centerX + radius * 0.34f, centerY, radius * 0.46f);
+            canvas.fill();
+
+            drawStar(canvas, centerX + radius * 0.28f, centerY, radius * 0.34f);
+            canvas.restoreState();
+        }
+
+        private static void drawStar(PdfContentByte canvas, float cx, float cy, float radius) {
+            canvas.setColorFill(TUNISIA_RED);
+            double start = -Math.PI / 2d;
+            for (int point = 0; point < 10; point++) {
+                double angle = start + point * Math.PI / 5d;
+                float activeRadius = point % 2 == 0 ? radius : radius * 0.42f;
+                float x = cx + (float) Math.cos(angle) * activeRadius;
+                float y = cy + (float) Math.sin(angle) * activeRadius;
+                if (point == 0) {
+                    canvas.moveTo(x, y);
+                } else {
+                    canvas.lineTo(x, y);
+                }
+            }
+            canvas.closePathFillStroke();
+        }
     }
 
     private static final class DocumentFooter extends PdfPageEventHelper {

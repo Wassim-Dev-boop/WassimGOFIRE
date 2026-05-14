@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface EventInvitationRepository extends JpaRepository<EventInvitationEntity, UUID> {
 
+    List<EventInvitationEntity> findAllByOrderByCreatedAtDesc();
+
     List<EventInvitationEntity> findByEventIdOrderByCreatedAtDesc(UUID eventId);
 
     List<EventInvitationEntity> findByInvitedUsernameIgnoreCaseOrderByCreatedAtDesc(String invitedUsername);
@@ -24,4 +26,3 @@ public interface EventInvitationRepository extends JpaRepository<EventInvitation
 
     List<EventInvitationEntity> findByStatusAndExpiresAtBefore(EventInvitationStatus status, Instant threshold);
 }
-

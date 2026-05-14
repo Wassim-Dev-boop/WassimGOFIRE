@@ -14,6 +14,7 @@ import com.cnstn.intervention.exception.ConflictException;
 import com.cnstn.intervention.exception.ResourceNotFoundException;
 import com.cnstn.intervention.mapper.InterventionMapper;
 import com.cnstn.intervention.repository.InterventionRepository;
+import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -102,6 +103,9 @@ public class InterventionService {
         InterventionEntity entity = new InterventionEntity();
         entity.setTitle(request.title().trim());
         entity.setDescription(request.description().trim());
+        entity.setInterventionType(normalizeOrDefault(request.type(), "SUPPORT"));
+        entity.setPriority(normalizeOrDefault(request.priority(), "MEDIUM"));
+        entity.setLocation(normalizeOrNull(request.location()));
         entity.setRequestedBy(username);
         entity.setStatus(InterventionStatus.REQUESTED);
 
@@ -124,6 +128,9 @@ public class InterventionService {
 
         entity.setTitle(request.title().trim());
         entity.setDescription(request.description().trim());
+        entity.setInterventionType(normalizeOrDefault(request.type(), entity.getInterventionType()));
+        entity.setPriority(normalizeOrDefault(request.priority(), entity.getPriority()));
+        entity.setLocation(normalizeOrNull(request.location()));
         InterventionEntity saved = interventionRepository.save(entity);
         return InterventionMapper.toResponse(saved);
     }
@@ -142,6 +149,11 @@ public class InterventionService {
         ensureTransitionAllowed(entity.getStatus(), request.status());
         entity.setStatus(request.status());
         entity.setAssignedTo(request.assignedTo());
+        if (request.status() == InterventionStatus.COMPLETED) {
+            entity.setResolution(normalizeOrNull(request.resolution()));
+            entity.setSatisfactionRating(request.satisfactionRating());
+            entity.setResolvedAt(Instant.now());
+        }
         InterventionEntity saved = interventionRepository.save(entity);
         notifyStatusUpdated(saved, updatedBy);
         return InterventionMapper.toResponse(saved);
@@ -350,6 +362,11 @@ public class InterventionService {
     private String normalizeOrNull(String value) {
         String normalized = normalize(value);
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String normalizeOrDefault(String value, String defaultValue) {
+        String normalized = normalize(value);
+        return normalized.isEmpty() ? defaultValue : normalized;
     }
 
     private Specification<InterventionEntity> buildListSpecification(

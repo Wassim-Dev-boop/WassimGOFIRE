@@ -28,6 +28,15 @@ public class InterventionEntity {
     @Column(name = "description", length = 2000)
     private String description;
 
+    @Column(name = "intervention_type", length = 40)
+    private String interventionType;
+
+    @Column(name = "priority", length = 20)
+    private String priority;
+
+    @Column(name = "location", length = 200)
+    private String location;
+
     @Column(name = "requested_by", nullable = false, length = 120)
     private String requestedBy;
 
@@ -43,6 +52,15 @@ public class InterventionEntity {
 
     @Column(name = "validated_by", length = 120)
     private String validatedBy;
+
+    @Column(name = "resolution", length = 2000)
+    private String resolution;
+
+    @Column(name = "satisfaction_rating")
+    private Integer satisfactionRating;
+
+    @Column(name = "resolved_at")
+    private Instant resolvedAt;
 
     // IT Workflow fields
     @Column(name = "equipment_id")
@@ -124,6 +142,30 @@ public class InterventionEntity {
         this.description = description;
     }
 
+    public String getInterventionType() {
+        return interventionType;
+    }
+
+    public void setInterventionType(String interventionType) {
+        this.interventionType = interventionType;
+    }
+
+    public String getPriority() {
+        return priority;
+    }
+
+    public void setPriority(String priority) {
+        this.priority = priority;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
     public String getRequestedBy() {
         return requestedBy;
     }
@@ -162,6 +204,30 @@ public class InterventionEntity {
 
     public void setValidatedBy(String validatedBy) {
         this.validatedBy = validatedBy;
+    }
+
+    public String getResolution() {
+        return resolution;
+    }
+
+    public void setResolution(String resolution) {
+        this.resolution = resolution;
+    }
+
+    public Integer getSatisfactionRating() {
+        return satisfactionRating;
+    }
+
+    public void setSatisfactionRating(Integer satisfactionRating) {
+        this.satisfactionRating = satisfactionRating;
+    }
+
+    public Instant getResolvedAt() {
+        return resolvedAt;
+    }
+
+    public void setResolvedAt(Instant resolvedAt) {
+        this.resolvedAt = resolvedAt;
     }
 
     public UUID getEquipmentId() {

@@ -1,0 +1,21 @@
+\section{Compléments UML de conception}
+
+Les diagrammes ajoutés complètent la version compilée du rapport en distinguant les vues UML attendues : cas d'utilisation, classes, séquences et composants. Chaque diagramme reste centré sur une responsabilité afin d'éviter la surcharge visuelle et de maintenir la cohérence entre acteurs, classes métier et messages échangés.
+
+\subsection{Diagramme global des cas d'utilisation}
+
+Le diagramme global identifie les acteurs externes de la plateforme intranet CNSTN : employé, chef hiérarchique, responsable sécurité, responsable des salles, responsable qualité, directeur et administrateur système. Les cas d'utilisation principaux sont l'authentification, la gestion du profil, la création et le suivi des événements, la réservation des ressources, la déclaration des interventions, la gestion GED, la validation des demandes et l'administration des utilisateurs, rôles et permissions. Les notifications sont modélisées comme un cas inclus par les processus qui produisent une décision ou un changement d'état.
+
+\subsection{Diagrammes de classes}
+
+Les diagrammes de classes sont séparés par domaine fonctionnel pour conserver une lecture claire. Le domaine authentification et habilitations s'appuie sur les classes Utilisateur, Département, Rôle, Permission, JetonRéinitialisation et Workflow. Le domaine réservation relie Événement, Réservation, Salle, Matériel, Invitation, Document officiel et Compteur de référence. Le domaine intervention met en relation Intervention, Transition de workflow, Notification, Journal d'email et Utilisateur référencé. Le domaine GED repose sur Document, Dossier, Version, ACL, Lien documentaire et Journal d'audit.
+
+Les multiplicités indiquent les contraintes principales du modèle : un utilisateur peut appartenir à un département, posséder plusieurs rôles et permissions ; une réservation peut viser une salle ou un matériel ; un document possède au moins une version ; une intervention peut générer plusieurs transitions et notifications.
+
+\subsection{Diagrammes de séquence}
+
+Les séquences détaillent les scénarios majeurs de la V1. L'authentification commence par la saisie des identifiants dans Angular, passe par l'API Gateway, puis par le service auth-user qui délègue la vérification à Keycloak et charge le profil depuis PostgreSQL. La réservation de salle vérifie la disponibilité, rattache la demande à un événement, enregistre la réservation puis notifie les responsables. La déclaration d'intervention contrôle les droits du demandeur, crée l'intervention à l'état initial et déclenche le circuit de validation chef, DSN et responsable IT.
+
+\subsection{Diagramme de composants}
+
+L'architecture est représentée sous forme de composants : Angular communique avec l'API Gateway, qui route les appels vers les microservices Spring Boot. Keycloak assure l'identité et la validation OAuth2/JWT, Eureka permet la découverte de services, PostgreSQL héberge une base logique par service, et le service notification centralise les notifications applicatives et les emails via SMTP.

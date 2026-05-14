@@ -1,288 +1,274 @@
 <div class="space-y-6">
-  @if (isLoading) {
-  <section class="cnstn-loading-state">
-    <p class="text-sm">Chargement du tableau de bord...</p>
-  </section>
-  } @else if (hasError) {
-  <section class="cnstn-error-state">
-    <p class="font-semibold">Erreur de chargement</p>
-    <p class="mt-1 text-sm">{{ loadErrorMessage }}</p>
-    <button type="button" class="cnstn-btn-secondary mt-4" (click)="reloadDashboard()">Recharger</button>
-  </section>
-  } @else if (isAdminView || isEmployeeView || isManagerResponsibleView) {
-  <section class="cnstn-card p-5">
-    <div class="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h1 class="text-2xl font-semibold text-gray-900 md:text-3xl">{{ dashboardTitle }}</h1>
-        <p class="mt-1 text-sm text-gray-600">
-          Indicateurs reels bases sur vos acces et vos donnees metier.
-        </p>
+  @if (isLoading()) {
+    <section class="cnstn-card p-6 dark:border-gray-800 dark:bg-gray-900">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        @for (item of [1, 2, 3, 4]; track item) {
+          <div class="h-32 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-800"></div>
+        }
       </div>
-      <span class="inline-flex rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
-        {{ currentRoleLabel }}
-      </span>
-    </div>
-  </section>
-
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-    @for (card of kpiCards; track card.label; let index = $index) {
-    <article
-      class="dashboard-motion-panel cnstn-kpi-card"
-      [class.is-active]="dashboardMotionReady"
-      [style.--motion-delay]="(index * 70) + 'ms'"
-    >
-      <div class="mb-3 flex items-start justify-between gap-4">
-        <div class="min-w-0">
-          <p class="text-sm font-medium text-gray-500">{{ card.label }}</p>
-          <h3 class="mt-2 text-4xl font-semibold tabular-nums text-gray-900">
-            {{ getAnimatedKpiValue(index, card.value) }}
-          </h3>
-        </div>
-        <span
-          class="inline-flex size-9 items-center justify-center rounded-lg bg-gray-100"
-          [ngClass]="card.iconColorClass"
-          [innerHTML]="card.icon | safeHtml"
-        ></span>
+      <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div class="h-80 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-800"></div>
+        <div class="h-80 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-800"></div>
       </div>
-      <p
-        class="text-sm font-semibold"
-        [ngClass]="card.deltaTone === 'positive' ? 'text-success-700' : 'text-error-700'"
-      >
-        {{ card.delta }}
-      </p>
-    </article>
-    }
-  </div>
-
-  <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
-    <section
-      class="dashboard-motion-panel xl:col-span-8"
-      [class.is-active]="dashboardMotionReady"
-      style="--motion-delay: 120ms"
-    >
-      <app-activity-chart
-        [title]="monthlyActivityTitle"
-        [seriesName]="monthlyActivitySeriesName"
-        [seriesData]="monthlyActivityData"
-        [categories]="monthlyActivityCategories"
-      ></app-activity-chart>
     </section>
-
-    <section
-      class="dashboard-motion-panel xl:col-span-4"
-      [class.is-active]="dashboardMotionReady"
-      style="--motion-delay: 190ms"
-    >
-      <app-monthly-performance
-        [title]="monthlyTargetTitle"
-        [subtitle]="monthlyTargetSubtitle"
-        [progress]="monthlyTargetProgress"
-        [deltaPercent]="monthlyTargetDeltaPercent"
-        [summaryText]="monthlyTargetSummaryText"
-        [targetLabel]="monthlyTargetLabel"
-        [revenueLabel]="monthlyRevenueLabel"
-        [todayLabel]="monthlyTodayLabel"
-        [valueFormat]="monthlyTargetValueFormat"
-        [targetValue]="monthlyTargetValue"
-        [revenueValue]="monthlyTargetRevenueValue"
-        [todayValue]="monthlyTargetTodayValue"
-        [targetTrend]="monthlyTargetTrend"
-        [revenueTrend]="monthlyRevenueTrend"
-        [todayTrend]="monthlyTodayTrend"
-      ></app-monthly-performance>
+  } @else if (hasError()) {
+    <section class="cnstn-error-state dark:border-red-500/30 dark:bg-red-500/10">
+      <p class="font-semibold">Erreur de chargement</p>
+      <p class="mt-1 text-sm">{{ loadErrorMessage() }}</p>
+      <button type="button" class="cnstn-btn-secondary mt-4" (click)="reloadDashboard()">Recharger</button>
     </section>
-  </div>
-
-  <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
-    <section
-      class="dashboard-motion-panel cnstn-card p-5"
-      [class.is-active]="dashboardMotionReady"
-      style="--motion-delay: 250ms"
-    >
-      <div class="mb-4 flex items-center justify-between gap-2">
-        <h2 class="text-xl font-semibold text-gray-900">Taches et validations</h2>
-      </div>
-
-      <div class="space-y-3">
-        @for (task of roleTasks; track task.title + task.detail) {
-        <article class="rounded-xl border border-gray-200 bg-gray-50 p-3">
-          <div class="flex flex-wrap items-start justify-between gap-2">
-            <p class="text-sm font-semibold text-gray-900">{{ task.title }}</p>
-            <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold" [ngClass]="getTaskToneClass(task)">
-              {{ task.tone === 'high' ? 'Haute' : task.tone === 'medium' ? 'Moyenne' : 'Basse' }}
-            </span>
+  } @else if (vm(); as dashboard) {
+    <section class="cnstn-card overflow-hidden p-0 dark:border-gray-800 dark:bg-gray-900">
+      <div class="border-b border-gray-100 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-[#0C488C] dark:text-blue-300">
+              {{ currentRoleLabel() }}
+            </p>
+            <h1 class="mt-1 text-2xl font-semibold text-gray-900 md:text-3xl dark:text-white">
+              {{ dashboard.title }}
+            </h1>
+            <p class="mt-2 max-w-3xl text-sm text-gray-600 dark:text-gray-300">
+              {{ dashboard.subtitle }}
+            </p>
           </div>
-          <p class="mt-1 text-sm text-gray-600">{{ task.detail }}</p>
-          @if (task.route) {
-          <a [routerLink]="task.route" [queryParams]="task.queryParams" class="mt-2 inline-flex text-sm font-semibold text-brand-600 hover:text-brand-700">
-            Ouvrir
-          </a>
+
+          @if (isAdminUser()) {
+            <div class="flex max-w-full flex-wrap gap-2" aria-label="Basculer la vue de demonstration">
+              @for (role of adminDemoRoles; track role) {
+                <button
+                  type="button"
+                  class="rounded-lg border px-3 py-2 text-xs font-semibold transition hover:border-[#0C488C] hover:text-[#0C488C] dark:hover:text-blue-200"
+                  [ngClass]="selectedRole() === role
+                    ? 'border-[#0C488C] bg-[#0C488C] text-white dark:border-blue-300'
+                    : 'border-gray-200 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'"
+                  (click)="changeDemoRole(role)"
+                >
+                  {{ role }}
+                </button>
+              }
+            </div>
           }
-        </article>
-        }
+        </div>
       </div>
     </section>
 
-    <section
-      class="dashboard-motion-panel cnstn-card p-5"
-      [class.is-active]="dashboardMotionReady"
-      style="--motion-delay: 300ms"
-    >
-      <div class="mb-4 flex items-center justify-between gap-2">
-        <h2 class="text-xl font-semibold text-gray-900">Prochains evenements</h2>
-        @if (canViewEventsForRole) {
-        <a routerLink="/events" class="text-sm font-semibold text-brand-600 hover:text-brand-700">Voir tout</a>
-        }
-      </div>
-
-      @if (upcomingEvents.length === 0) {
-      <div class="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-sm text-gray-500">
-        {{ getUpcomingEmptyMessage() }}
-      </div>
-      } @else {
-      <div class="space-y-3">
-        @for (event of upcomingEvents; track event.id) {
-        <article class="rounded-xl border border-gray-200 bg-gray-50 p-3">
-          <div class="flex flex-wrap items-start justify-between gap-2">
-            <p class="text-sm font-semibold text-gray-900">{{ event.title }}</p>
-            <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold" [ngClass]="event.statusClass">
-              {{ event.statusLabel }}
-            </span>
-          </div>
-          <p class="mt-1 text-sm text-gray-600">{{ event.dateLabel }}</p>
-          <p class="text-sm text-gray-500">{{ event.locationLabel }}</p>
-          <a [routerLink]="event.route" class="mt-2 inline-flex text-sm font-semibold text-brand-600 hover:text-brand-700">
-            Voir l evenement
-          </a>
+    <section class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4" aria-label="Indicateurs cles">
+      @for (card of dashboard.kpis; track card.label) {
+        <article class="dashboard-kpi rounded-lg border p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-lg" [ngClass]="kpiToneClass(card.tone)">
+          <p class="text-sm font-medium opacity-90">{{ card.label }}</p>
+          <p class="mt-3 text-3xl font-semibold tabular-nums">{{ card.value }}</p>
+          <p class="mt-2 text-xs opacity-80">{{ card.hint }}</p>
         </article>
-        }
-      </div>
       }
     </section>
-  </div>
 
-  <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
-    <section
-      class="dashboard-motion-panel cnstn-card p-5 xl:col-span-6"
-      [class.is-active]="dashboardMotionReady"
-      style="--motion-delay: 340ms"
-    >
-      <h2 class="text-xl font-semibold text-gray-900">Activite recente</h2>
+    @if (dashboardData(); as data) {
+      <section class="grid grid-cols-1 gap-6 xl:grid-cols-2" aria-label="Tableau de bord operationnel">
+        <article class="cnstn-card p-5 transition duration-200 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900">
+          <div class="mb-4 flex items-center justify-between gap-2">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Taches et validations</h2>
+          </div>
 
-      @if (recentActivities.length === 0) {
-      <div class="mt-4 rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-sm text-gray-500">
-        Aucune activite recente.
-      </div>
-      } @else {
-      <div class="mt-4 space-y-3">
-        @for (activity of recentActivities; track activity.title + activity.timeAgo; let index = $index) {
-        <article
-          class="dashboard-motion-item rounded-xl border border-gray-200 bg-gray-50 p-3"
-          [class.is-active]="dashboardMotionReady"
-          [style.--motion-delay]="(410 + index * 70) + 'ms'"
-        >
-          <div class="flex items-start gap-3">
-            <span class="mt-2 inline-block size-2.5 rounded-full" [ngClass]="activity.dotClass"></span>
-            <div class="min-w-0">
-              <p class="text-sm font-semibold text-gray-900">
-                {{ activity.title }}
-              </p>
-              <div class="mt-1 flex flex-wrap items-center gap-2">
-                <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold" [ngClass]="activity.tagClass">
-                  {{ activity.tag }}
-                </span>
-                <span class="text-xs text-gray-500">Il y a {{ activity.timeAgo }}</span>
+          <div class="space-y-3">
+            @for (task of legacyTasks(data, dashboard.role); track task.title + task.detail) {
+              <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ task.title }}</p>
+                  <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold" [ngClass]="getTaskToneClass(task)">
+                    {{ task.tone === 'high' ? 'Haute' : task.tone === 'medium' ? 'Moyenne' : 'Basse' }}
+                  </span>
+                </div>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">{{ task.detail }}</p>
+                @if (task.route) {
+                  <a [routerLink]="task.route" [queryParams]="task.queryParams" class="mt-2 inline-flex text-sm font-semibold text-[#0C488C] hover:text-blue-700 dark:text-blue-300">
+                    Ouvrir
+                  </a>
+                }
+              </div>
+            }
+          </div>
+        </article>
+
+        <article class="cnstn-card p-5 transition duration-200 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900">
+          <div class="mb-4 flex items-center justify-between gap-2">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Prochains evenements</h2>
+            <a routerLink="/events" class="text-sm font-semibold text-[#0C488C] hover:text-blue-700 dark:text-blue-300">Voir tout</a>
+          </div>
+
+          @if (legacyUpcomingEvents(data, dashboard.role).length === 0) {
+            <div class="rounded-lg border border-dashed border-gray-300 bg-white px-4 py-6 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
+              Aucun evenement a venir.
+            </div>
+          } @else {
+            <div class="space-y-3">
+              @for (event of legacyUpcomingEvents(data, dashboard.role); track event.id) {
+                <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+                  <div class="flex flex-wrap items-start justify-between gap-2">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ event.title }}</p>
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold" [ngClass]="event.statusClass">
+                      {{ event.statusLabel }}
+                    </span>
+                  </div>
+                  <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">{{ event.dateLabel }}</p>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">{{ event.locationLabel }}</p>
+                  <a [routerLink]="event.route" class="mt-2 inline-flex text-sm font-semibold text-[#0C488C] hover:text-blue-700 dark:text-blue-300">
+                    Voir l evenement
+                  </a>
+                </div>
+              }
+            </div>
+          }
+        </article>
+      </section>
+
+      <section class="grid grid-cols-1 gap-6 xl:grid-cols-12" aria-label="Suivi rapide">
+        <article class="cnstn-card p-5 transition duration-200 hover:shadow-lg xl:col-span-6 dark:border-gray-800 dark:bg-gray-900">
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Activite recente</h2>
+
+          @if (legacyActivities(data, dashboard.role).length === 0) {
+            <div class="mt-4 rounded-lg border border-dashed border-gray-300 bg-white px-4 py-6 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
+              Aucune activite recente.
+            </div>
+          } @else {
+            <div class="mt-4 space-y-3">
+              @for (activity of legacyActivities(data, dashboard.role); track activity.title + activity.timeAgo) {
+                <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+                  <div class="flex items-start gap-3">
+                    <span class="mt-2 inline-block size-2.5 rounded-full" [ngClass]="activity.dotClass"></span>
+                    <div class="min-w-0">
+                      <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ activity.title }}</p>
+                      <div class="mt-1 flex flex-wrap items-center gap-2">
+                        <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold" [ngClass]="activity.tagClass">{{ activity.tag }}</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Il y a {{ activity.timeAgo }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </article>
+
+        <article class="cnstn-card p-5 transition duration-200 hover:shadow-lg xl:col-span-3 dark:border-gray-800 dark:bg-gray-900">
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Mini calendrier</h2>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ legacyMiniCalendarMonthLabel() }}</p>
+
+          <div class="mt-4 grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-400">
+            <span>Lun</span>
+            <span>Mar</span>
+            <span>Mer</span>
+            <span>Jeu</span>
+            <span>Ven</span>
+            <span>Sam</span>
+            <span>Dim</span>
+          </div>
+
+          <div class="mt-2 grid grid-cols-7 gap-1">
+            @for (cell of legacyMiniCalendarCells(data, dashboard.role); track $index) {
+              <div
+                class="relative flex h-9 items-center justify-center rounded-lg text-xs"
+                [ngClass]="{
+                  'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200': cell.isCurrentMonth && !cell.isToday,
+                  'bg-[#0C488C] font-semibold text-white': cell.isToday,
+                  'text-transparent': !cell.isCurrentMonth
+                }"
+              >
+                @if (cell.dayNumber) {
+                  {{ cell.dayNumber }}
+                  @if (cell.eventCount > 0) {
+                    <span class="absolute bottom-0.5 h-1.5 w-1.5 rounded-full" [ngClass]="cell.isToday ? 'bg-white' : 'bg-[#0C488C]'"></span>
+                  }
+                }
+              </div>
+            }
+          </div>
+        </article>
+
+        <article class="cnstn-card p-5 transition duration-200 hover:shadow-lg xl:col-span-3 dark:border-gray-800 dark:bg-gray-900">
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Acces rapides</h2>
+          <div class="mt-4 space-y-2">
+            @for (action of legacyQuickActions(dashboard.role); track action.label) {
+              <a
+                [routerLink]="action.route"
+                [queryParams]="action.queryParams"
+                class="group flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 transition hover:border-[#0C488C]/40 hover:bg-blue-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+              >
+                <span class="inline-flex size-8 items-center justify-center rounded-lg bg-white text-sm font-semibold text-[#0C488C] dark:bg-gray-900 dark:text-blue-300">CN</span>
+                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ action.label }}</span>
+              </a>
+            }
+          </div>
+        </article>
+      </section>
+    }
+
+    <section class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+      @for (chart of dashboard.charts; track chart.id) {
+        <article class="cnstn-card p-5 transition duration-200 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900">
+          <div class="mb-4">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ chart.title }}</h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ chart.description }}</p>
+          </div>
+
+          @if (chart.empty) {
+            <div class="flex min-h-72 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center dark:border-gray-700 dark:bg-gray-800">
+              <div>
+                <div class="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-white text-[#0C488C] dark:bg-gray-900 dark:text-blue-300">
+                  <span aria-hidden="true">CN</span>
+                </div>
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-200">Aucune donnée disponible</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ dashboard.emptyNote }}</p>
               </div>
             </div>
-          </div>
+          } @else {
+            <apx-chart
+              [series]="chartSeries(chart)"
+              [chart]="chartOption(chart, 'chart')"
+              [xaxis]="chartOption(chart, 'xaxis')"
+              [yaxis]="chartOption(chart, 'yaxis')"
+              [labels]="chartOption(chart, 'labels')"
+              [colors]="chartOption(chart, 'colors')"
+              [dataLabels]="chartOption(chart, 'dataLabels')"
+              [stroke]="chartOption(chart, 'stroke')"
+              [fill]="chartOption(chart, 'fill')"
+              [legend]="chartOption(chart, 'legend')"
+              [markers]="chartOption(chart, 'markers')"
+              [plotOptions]="chartOption(chart, 'plotOptions')"
+              [grid]="chartOption(chart, 'grid')"
+              [tooltip]="chartOption(chart, 'tooltip')"
+              [noData]="chartOption(chart, 'noData')"
+              [theme]="chartOption(chart, 'theme')"
+            ></apx-chart>
+          }
         </article>
-        }
-      </div>
       }
     </section>
 
-    <section
-      class="dashboard-motion-panel cnstn-card p-5 xl:col-span-3"
-      [class.is-active]="dashboardMotionReady"
-      style="--motion-delay: 390ms"
-    >
-      <h2 class="text-xl font-semibold text-gray-900">Mini calendrier</h2>
-      <p class="mt-1 text-sm text-gray-500">{{ miniCalendarMonthLabel }}</p>
-
-      <div class="mt-4 grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-400">
-        <span>Lun</span>
-        <span>Mar</span>
-        <span>Mer</span>
-        <span>Jeu</span>
-        <span>Ven</span>
-        <span>Sam</span>
-        <span>Dim</span>
+    <section class="cnstn-card p-5 transition duration-200 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900">
+      <div class="mb-4">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ dashboard.amChart.title }}</h2>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ dashboard.amChart.description }}</p>
       </div>
 
-      <div class="mt-2 grid grid-cols-7 gap-1">
-        @for (cell of miniCalendarCells; track $index) {
-        <div
-          class="relative flex h-9 items-center justify-center rounded-lg text-xs"
-          [ngClass]="{
-            'bg-gray-100 text-gray-800': cell.isCurrentMonth && !cell.isToday,
-            'bg-brand-500 text-white font-semibold': cell.isToday,
-            'text-transparent': !cell.isCurrentMonth
-          }"
-        >
-          @if (cell.dayNumber) {
-          {{ cell.dayNumber }}
-          @if (cell.eventCount > 0) {
-          <span class="absolute bottom-0.5 h-1.5 w-1.5 rounded-full" [ngClass]="cell.isToday ? 'bg-white' : 'bg-brand-500'"></span>
-          }
-          }
-        </div>
-        }
-      </div>
-    </section>
-
-    <section
-      class="dashboard-motion-panel cnstn-card p-5 xl:col-span-3"
-      [class.is-active]="dashboardMotionReady"
-      style="--motion-delay: 430ms"
-    >
-      <h2 class="text-xl font-semibold text-gray-900">Acces rapides</h2>
-      <div class="mt-4 space-y-2">
-        @for (action of quickActionsWithState; track action.label; let index = $index) {
-        @if (!action.disabled) {
-        <a
-          [routerLink]="action.route"
-          [queryParams]="action.queryParams"
-          class="dashboard-motion-item group flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 transition hover:border-brand-300 hover:bg-brand-50"
-          [class.is-active]="dashboardMotionReady"
-          [style.--motion-delay]="(460 + index * 55) + 'ms'"
-        >
-          <span class="inline-flex size-8 items-center justify-center rounded-lg bg-white text-gray-500 group-hover:text-brand-600" [innerHTML]="action.icon | safeHtml"></span>
-          <span class="text-sm font-semibold text-gray-900">{{ action.label }}</span>
-        </a>
-        } @else {
-        <div
-          class="dashboard-motion-item rounded-xl border border-gray-200 bg-gray-100 px-3 py-2.5"
-          [class.is-active]="dashboardMotionReady"
-          [style.--motion-delay]="(460 + index * 55) + 'ms'"
-        >
-          <div class="flex items-center gap-3">
-            <span class="inline-flex size-8 items-center justify-center rounded-lg bg-white text-gray-400" [innerHTML]="action.icon | safeHtml"></span>
-            <span class="text-sm font-semibold text-gray-500">{{ action.label }}</span>
+      @if (dashboard.amChart.empty) {
+        <div class="flex min-h-96 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center dark:border-gray-700 dark:bg-gray-800">
+          <div>
+            <div class="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-white text-[#0C488C] dark:bg-gray-900 dark:text-blue-300">
+              <span aria-hidden="true">CN</span>
+            </div>
+            <p class="text-sm font-medium text-gray-700 dark:text-gray-200">Aucune donnée disponible</p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ dashboard.emptyNote }}</p>
           </div>
-          <p class="mt-1 text-xs text-gray-500">{{ action.disabledReason }}</p>
         </div>
-        }
-        }
-      </div>
+      } @else {
+        <div
+          #amChartHost
+          class="h-[28rem] w-full rounded-lg bg-white dark:bg-gray-900"
+          role="img"
+          [attr.aria-label]="dashboard.amChart.title + ' - ' + dashboard.amChart.description"
+        ></div>
+      }
     </section>
-  </div>
-  } @else {
-  <section class="cnstn-empty-state">
-    <h2 class="text-lg font-semibold text-gray-900">Tableau de bord indisponible</h2>
-    <p class="mt-1 text-sm text-gray-600">
-      Cette vue est reservee aux roles metier autorises.
-    </p>
-    <a routerLink="/profile" class="cnstn-btn-secondary mt-4">Ouvrir le profil</a>
-  </section>
   }
 </div>

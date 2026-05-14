@@ -541,8 +541,12 @@ export class InterventionsComponent implements OnInit, OnDestroy {
     }
 
     const technicianId = technicianName.toLowerCase().replace(/\s+/g, '-');
-    this.interventionService.assignIntervention(intervention.id, technicianId, technicianName.trim()).subscribe(() => {
-      this.loadInterventions();
+    this.interventionService.assignIntervention(intervention.id, technicianId, technicianName.trim()).subscribe({
+      next: () => {
+        this.setSubmissionSuccess('Intervention affectee et enregistree.');
+        this.loadInterventions();
+      },
+      error: (error) => this.setSubmissionError(this.toActionErrorMessage(error, 'Affectation impossible.')),
     });
   }
 
@@ -553,8 +557,12 @@ export class InterventionsComponent implements OnInit, OnDestroy {
 
     this.interventionService.updateAssignment(intervention.id, {
       startedAt: new Date()
-    }).subscribe(() => {
-      this.loadInterventions();
+    }).subscribe({
+      next: () => {
+        this.setSubmissionSuccess('Intervention demarree et enregistree.');
+        this.loadInterventions();
+      },
+      error: (error) => this.setSubmissionError(this.toActionErrorMessage(error, 'Demarrage impossible.')),
     });
   }
 
@@ -568,8 +576,12 @@ export class InterventionsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.interventionService.completeIntervention(intervention.id, resolution.trim()).subscribe(() => {
-      this.loadInterventions();
+    this.interventionService.completeIntervention(intervention.id, resolution.trim()).subscribe({
+      next: () => {
+        this.setSubmissionSuccess('Resolution enregistree.');
+        this.loadInterventions();
+      },
+      error: (error) => this.setSubmissionError(this.toActionErrorMessage(error, 'Resolution impossible.')),
     });
   }
 
@@ -578,8 +590,31 @@ export class InterventionsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.interventionService.closeIntervention(intervention.id).subscribe(() => {
-      this.loadInterventions();
+    this.interventionService.closeIntervention(intervention.id).subscribe({
+      next: () => {
+        this.setSubmissionSuccess('Intervention close et validee.');
+        this.loadInterventions();
+      },
+      error: (error) => this.setSubmissionError(this.toActionErrorMessage(error, 'Cloture impossible.')),
     });
+  }
+
+  private toActionErrorMessage(error: unknown, fallbackMessage: string): string {
+    if (error instanceof HttpErrorResponse) {
+      if (error.status === 401) {
+        return `${fallbackMessage} Session expiree (401).`;
+      }
+      if (error.status === 403) {
+        return `${fallbackMessage} Droits insuffisants (403).`;
+      }
+      if (error.status === 409) {
+        return `${fallbackMessage} Transition non autorisee (409).`;
+      }
+      if (error.status === 0) {
+        return `${fallbackMessage} Backend inaccessible.`;
+      }
+    }
+
+    return fallbackMessage;
   }
 }

@@ -65,6 +65,15 @@ interface VisibleFolderNode extends FlatFolderNode {
 export class GedListComponent implements OnInit, OnDestroy {
   private readonly maxUploadSizeBytes = 10 * 1024 * 1024;
   private readonly allowedUploadExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'txt'];
+  private readonly defaultDocumentServices = [
+    'DSI',
+    'QUALITE',
+    'SECURITE',
+    'DIRECTION',
+    'ADMINISTRATION',
+    'LOGISTIQUE',
+    'RESSOURCES HUMAINES',
+  ];
 
   readonly confidentialityOptions: GedConfidentialityLevel[] = [
     'PUBLIC',
@@ -128,6 +137,7 @@ export class GedListComponent implements OnInit, OnDestroy {
   activeTabFolderId: string | null = null;
   selectedConfidentiality: GedConfidentialityLevel | 'ALL' = 'ALL';
   activeCategoryTab: GedCategoryTabId = 'ALL';
+  showAdvancedFilters = false;
   categoryOptions: string[] = [];
   tabs: GedTabItem[] = [];
   documents: Document[] = [];
@@ -175,6 +185,7 @@ export class GedListComponent implements OnInit, OnDestroy {
   documentConfidentiality: GedConfidentialityLevel = 'INTERNAL';
   documentAllowedRoles = '';
   documentAllowedServices = '';
+  documentServiceOptions: string[] = [];
 
   showVersionModal = false;
   versionTarget: Document | null = null;
@@ -233,15 +244,20 @@ export class GedListComponent implements OnInit, OnDestroy {
         this.currentRole = user.role;
         this.currentUserName = `${user.firstName} ${user.lastName}`.trim();
         this.currentUserService = (user.department || '').trim();
+        if (!this.documentAllowedServices) {
+          this.documentAllowedServices = this.resolveDefaultDocumentService();
+        }
       }),
     );
 
+    this.loadDocumentServiceOptions();
     this.refreshGedData();
   }
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
     this.revokePreviewBlobUrl();
+    this.setGedModalChromeHidden(false);
   }
 
   refreshGedData(): void {
@@ -255,14 +271,17 @@ export class GedListComponent implements OnInit, OnDestroy {
       this.documentService.getFoldersTree().subscribe({
         next: (folders) => {
           this.isLoadingFolders = false;
+          const previousSelectedFolderId = this.selectedFolderId;
           this.folderTree = Array.isArray(folders) ? folders : [];
           this.flatFolders = this.flattenFolders(this.folderTree);
           this.tabs = this.buildTabs(this.folderTree);
           this.ensureActiveTab();
-          this.refreshVisibleFolders();
-
           if (!this.selectedFolderId || !this.flatFolders.some((node) => node.id === this.selectedFolderId)) {
-            this.selectedFolderId = this.activeTabFolderId || this.flatFolders[0]?.id || null;
+            this.selectedFolderId = this.resolvePreferredFolderId();
+          }
+          this.refreshVisibleFolders();
+          if (this.selectedFolderId && this.selectedFolderId !== previousSelectedFolderId) {
+            this.loadDocuments(true);
           }
         },
         error: (error: unknown) => {
@@ -290,6 +309,12 @@ export class GedListComponent implements OnInit, OnDestroy {
         next: (documents) => {
           this.isLoadingDocuments = false;
           this.allDocuments = Array.isArray(documents) ? documents : [];
+          this.documentServiceOptions = this.uniqueSortedValues([
+            ...this.defaultDocumentServices,
+            ...this.documentServiceOptions,
+            ...this.collectGedOwnerServices(),
+            this.currentUserService,
+          ].filter((service) => !!service));
           this.refreshCategoryOptions();
           this.applyDocumentPresentation();
         },
@@ -314,6 +339,10 @@ export class GedListComponent implements OnInit, OnDestroy {
 
   applySearch(): void {
     this.loadDocuments(true);
+  }
+
+  toggleAdvancedFilters(): void {
+    this.showAdvancedFilters = !this.showAdvancedFilters;
   }
 
   clearFilters(): void {
@@ -584,6 +613,16 @@ export class GedListComponent implements OnInit, OnDestroy {
     this.openCreateFolder(this.selectedFolderId);
   }
 
+  openCreateGedSubFolder(): void {
+    const rootFolder = this.gedRootFolder();
+    if (!rootFolder) {
+      this.setFeedback('Le dossier GED principal est introuvable.', 'error');
+      return;
+    }
+    this.selectedFolderId = rootFolder.id;
+    this.openCreateFolder(rootFolder.id);
+  }
+
   selectDocumentAndOpenPreview(): void {
     if (!this.selectedDocument) {
       this.setFeedback('Selectionnez un document pour le consulter.', 'error');
@@ -654,6 +693,18 @@ export class GedListComponent implements OnInit, OnDestroy {
       return;
     }
     this.archiveDocument(this.selectedDocument);
+  }
+
+  selectDocumentAndDelete(): void {
+    if (!this.selectedDocument) {
+      this.setFeedback('Selectionnez un document pour le supprimer.', 'error');
+      return;
+    }
+    if (!this.canManageGed()) {
+      this.setFeedback('Action reservee a l administrateur ou au responsable qualite.', 'error');
+      return;
+    }
+    this.deleteDocumentPermanently(this.selectedDocument);
   }
 
   selectDocumentAndSubmit(): void {
@@ -741,6 +792,7 @@ export class GedListComponent implements OnInit, OnDestroy {
     this.folderName = '';
     this.folderCategory = '';
     this.showFolderModal = true;
+    this.syncGedModalChromeVisibility();
     this.clearFeedback();
   }
 
@@ -750,6 +802,7 @@ export class GedListComponent implements OnInit, OnDestroy {
     this.folderName = node.name;
     this.folderCategory = node.category || '';
     this.showFolderModal = true;
+    this.syncGedModalChromeVisibility();
     this.clearFeedback();
   }
 
@@ -759,17 +812,20 @@ export class GedListComponent implements OnInit, OnDestroy {
     this.folderName = '';
     this.folderCategory = '';
     this.folderParentId = null;
+    this.syncGedModalChromeVisibility();
   }
 
   openFolderDetails(node: FlatFolderNode): void {
     this.folderDetailsTarget = node;
     this.showFolderDetailsModal = true;
+    this.syncGedModalChromeVisibility();
     this.clearFeedback();
   }
 
   closeFolderDetailsModal(): void {
     this.showFolderDetailsModal = false;
     this.folderDetailsTarget = null;
+    this.syncGedModalChromeVisibility();
   }
 
   saveFolder(): void {
@@ -848,8 +904,9 @@ export class GedListComponent implements OnInit, OnDestroy {
     this.documentUploadFile = null;
     this.documentConfidentiality = 'INTERNAL';
     this.documentAllowedRoles = '';
-    this.documentAllowedServices = '';
+    this.documentAllowedServices = this.resolveDefaultDocumentService();
     this.showDocumentModal = true;
+    this.syncGedModalChromeVisibility();
     this.clearFeedback();
   }
 
@@ -863,8 +920,9 @@ export class GedListComponent implements OnInit, OnDestroy {
     this.documentUploadFile = null;
     this.documentConfidentiality = document.confidentialityLevel || 'INTERNAL';
     this.documentAllowedRoles = '';
-    this.documentAllowedServices = '';
+    this.documentAllowedServices = document.ownerService || this.resolveDefaultDocumentService();
     this.showDocumentModal = true;
+    this.syncGedModalChromeVisibility();
     this.clearFeedback();
   }
 
@@ -872,6 +930,7 @@ export class GedListComponent implements OnInit, OnDestroy {
     this.showDocumentModal = false;
     this.editingDocument = null;
     this.documentUploadFile = null;
+    this.syncGedModalChromeVisibility();
   }
 
   onDocumentFileSelected(event: Event): void {
@@ -895,17 +954,63 @@ export class GedListComponent implements OnInit, OnDestroy {
     this.documentUploadFile = null;
   }
 
+  private loadDocumentServiceOptions(): void {
+    this.subscriptions.add(
+      this.authService.getPublicDepartments().subscribe((departments) => {
+        const services = departments
+          .map((department) => this.normalizeText(department.name || department.code))
+          .filter((service) => !!service);
+        this.documentServiceOptions = this.uniqueSortedValues([
+          ...this.defaultDocumentServices,
+          ...services,
+          ...this.collectGedOwnerServices(),
+          this.currentUserService,
+        ].filter((service) => !!service));
+        if (!this.documentAllowedServices) {
+          this.documentAllowedServices = this.resolveDefaultDocumentService();
+        }
+      }),
+    );
+  }
+
+  private collectGedOwnerServices(): string[] {
+    return this.allDocuments
+      .map((document) => this.normalizeText(document.ownerService))
+      .filter((service) => !!service);
+  }
+
+  private resolveDefaultDocumentService(): string {
+    const currentService = this.normalizeText(this.currentUserService);
+    if (currentService) {
+      return currentService;
+    }
+    return this.documentServiceOptions[0] || '';
+  }
+
+  private resolveDocumentCategory(folderId: string | null): string {
+    const folder = this.flatFolders.find((item) => item.id === folderId);
+    return this.normalizeText(folder?.category)
+      || this.normalizeText(folder?.name)
+      || this.normalizeText(this.editingDocument?.category?.name)
+      || 'General';
+  }
+
   saveDocument(): void {
     const folderId = this.documentFolderId;
     const title = this.documentTitle.trim();
-    const category = this.documentCategory.trim();
+    const category = this.resolveDocumentCategory(folderId);
+    const selectedService = this.documentAllowedServices.trim();
 
     if (!folderId) {
       this.setFeedback('Le dossier est obligatoire.', 'error');
       return;
     }
-    if (!title || !category) {
-      this.setFeedback('Titre et categorie sont obligatoires.', 'error');
+    if (!title) {
+      this.setFeedback('Le titre est obligatoire.', 'error');
+      return;
+    }
+    if (!selectedService) {
+      this.setFeedback('Le service est obligatoire.', 'error');
       return;
     }
 
@@ -917,7 +1022,7 @@ export class GedListComponent implements OnInit, OnDestroy {
           folderId,
           title,
           category,
-          subCategory: this.documentSubCategory.trim() || undefined,
+          subCategory: undefined,
           description: this.documentDescription.trim() || undefined,
           confidentialityLevel: this.documentConfidentiality,
         }).subscribe({
@@ -952,11 +1057,11 @@ export class GedListComponent implements OnInit, OnDestroy {
         folderId,
         title,
         category,
-        subCategory: this.documentSubCategory.trim() || undefined,
+        subCategory: undefined,
         description: this.documentDescription.trim() || undefined,
         confidentialityLevel: this.documentConfidentiality,
-        allowedRoles: this.parseCsv(this.documentAllowedRoles),
-        allowedServices: this.parseCsv(this.documentAllowedServices),
+        allowedRoles: [],
+        allowedServices: [selectedService],
       }, this.documentUploadFile).subscribe({
         next: () => {
           this.isSavingDocument = false;
@@ -1035,11 +1140,38 @@ export class GedListComponent implements OnInit, OnDestroy {
     );
   }
 
+  deleteDocumentPermanently(document: Document): void {
+    this.closeActionMenu();
+    const reference = document.referenceCode || document.title;
+    if (!confirm(`Supprimer definitivement le document "${reference}" ? Cette action est irreversible.`)) {
+      return;
+    }
+    this.subscriptions.add(
+      this.documentService.deleteDocumentPermanently(document.id).subscribe({
+        next: () => {
+          if (this.selectedDocument?.id === document.id) {
+            this.selectedDocument = null;
+          }
+          if (this.previewDocument?.id === document.id) {
+            this.closePreview();
+          }
+          this.loadFolders();
+          this.loadDocuments();
+          this.setFeedback('Document supprime definitivement.', 'success');
+        },
+        error: (error: unknown) => {
+          this.setFeedback(this.toErrorMessage(error, 'Suppression definitive impossible.'), 'error');
+        },
+      }),
+    );
+  }
+
   openVersionModal(document: Document): void {
     this.versionTarget = document;
     this.versionUploadFile = null;
     this.versionChangeNote = '';
     this.showVersionModal = true;
+    this.syncGedModalChromeVisibility();
     this.clearFeedback();
   }
 
@@ -1047,6 +1179,7 @@ export class GedListComponent implements OnInit, OnDestroy {
     this.showVersionModal = false;
     this.versionTarget = null;
     this.versionUploadFile = null;
+    this.syncGedModalChromeVisibility();
   }
 
   onVersionFileSelected(event: Event): void {
@@ -1110,6 +1243,7 @@ export class GedListComponent implements OnInit, OnDestroy {
     this.aclServiceOptions = this.buildAclServiceOptions(document, []);
     this.aclServiceSearch = '';
     this.showAclModal = true;
+    this.syncGedModalChromeVisibility();
     this.isLoadingAcl = true;
 
     this.subscriptions.add(
@@ -1137,6 +1271,7 @@ export class GedListComponent implements OnInit, OnDestroy {
     this.aclServiceSearch = '';
     this.aclConfidentiality = 'INTERNAL';
     this.isLoadingAcl = false;
+    this.syncGedModalChromeVisibility();
   }
 
   isAclRoleSelected(role: GedAclRole): boolean {
@@ -1332,6 +1467,7 @@ export class GedListComponent implements OnInit, OnDestroy {
     this.selectedLinkedDocumentId = '';
     this.selectedRelationType = 'RELATED';
     this.showPreviewModal = true;
+    this.syncGedModalChromeVisibility();
     this.revokePreviewBlobUrl();
 
     this.loadPreviewVersions();
@@ -1353,6 +1489,21 @@ export class GedListComponent implements OnInit, OnDestroy {
     this.previewVersionNumber = null;
     this.previewLinks = [];
     this.revokePreviewBlobUrl();
+    this.syncGedModalChromeVisibility();
+  }
+
+  private syncGedModalChromeVisibility(): void {
+    const hasOpenModal = this.showFolderModal
+      || this.showFolderDetailsModal
+      || this.showDocumentModal
+      || this.showVersionModal
+      || this.showAclModal
+      || this.showPreviewModal;
+    this.setGedModalChromeHidden(hasOpenModal);
+  }
+
+  private setGedModalChromeHidden(hidden: boolean): void {
+    document.body.classList.toggle('ged-modal-open', hidden);
   }
 
   private loadPreviewVersions(): void {
@@ -1771,6 +1922,35 @@ export class GedListComponent implements OnInit, OnDestroy {
     return folder ? folder.breadcrumb : 'Tous les dossiers';
   }
 
+  gedRootFolder(): VisibleFolderNode | null {
+    const root = this.visibleFolders.find((folder) => {
+      if (folder.archived) {
+        return false;
+      }
+      return this.normalizeText(folder.name).toUpperCase() === 'GED';
+    });
+    return root || this.visibleFolders.find((folder) => !folder.archived && folder.depth === 0) || null;
+  }
+
+  gedSidebarFolders(): VisibleFolderNode[] {
+    const root = this.gedRootFolder();
+    if (!root) {
+      return this.visibleFolders;
+    }
+    return this.visibleFolders.filter((folder) => this.isDescendantOf(folder.id, root.id));
+  }
+
+  isGedRootFolder(folder: VisibleFolderNode): boolean {
+    return folder.id === this.gedRootFolder()?.id;
+  }
+
+  folderSidebarPadding(folder: VisibleFolderNode): number {
+    if (this.isGedRootFolder(folder)) {
+      return 8;
+    }
+    return 16 + Math.max(0, folder.displayDepth - 1) * 14;
+  }
+
   selectedDocumentFolderLabel(): string {
     if (!this.selectedDocument?.folderId) {
       return 'Non defini';
@@ -1871,10 +2051,7 @@ export class GedListComponent implements OnInit, OnDestroy {
   }
 
   private ensureActiveTab(): void {
-    if (this.activeTabFolderId && this.tabs.some((tab) => tab.folderId === this.activeTabFolderId)) {
-      return;
-    }
-    this.activeTabFolderId = this.tabs[0]?.folderId || null;
+    this.activeTabFolderId = null;
   }
 
   private refreshVisibleFolders(): void {
@@ -1919,6 +2096,36 @@ export class GedListComponent implements OnInit, OnDestroy {
     collector.add(folderId);
     const children = this.flatFolders.filter((folder) => folder.parentId === folderId);
     children.forEach((child) => this.collectDescendantFolderIds(child.id, collector));
+  }
+
+  private resolvePreferredFolderId(): string | null {
+    if (!this.flatFolders.length) {
+      return null;
+    }
+
+    const gedRoot = this.flatFolders.find((folder) => {
+      if (folder.archived) {
+        return false;
+      }
+      return this.normalizeText(folder.name).toUpperCase() === 'GED';
+    });
+    if (gedRoot) {
+      return gedRoot.id;
+    }
+
+    const folderWithDocuments = [...this.flatFolders]
+      .filter((folder) => !folder.archived && (folder.documentCount || 0) > 0)
+      .sort((left, right) => {
+        if ((right.documentCount || 0) !== (left.documentCount || 0)) {
+          return (right.documentCount || 0) - (left.documentCount || 0);
+        }
+        return left.depth - right.depth;
+      })[0];
+    if (folderWithDocuments) {
+      return folderWithDocuments.id;
+    }
+
+    return this.flatFolders.find((folder) => !folder.archived)?.id || this.flatFolders[0]?.id || null;
   }
 
   private refreshCategoryOptions(): void {

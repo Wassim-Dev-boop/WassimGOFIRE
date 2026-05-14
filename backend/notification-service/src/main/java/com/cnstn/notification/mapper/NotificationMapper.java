@@ -18,6 +18,7 @@ public final class NotificationMapper {
                 entity.getEmailDeliveryStatus() == null ? null : entity.getEmailDeliveryStatus().name(),
                 entity.getEmailLastError(),
                 entity.getEmailLastAttemptAt(),
+                entity.getActionUrl(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );

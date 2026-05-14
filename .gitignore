@@ -1,3 +1,5 @@
 .vscode/
 .sixth/
 .tmp-role-check.ps1
+*.log
+frontend/.tmp_*.mjs

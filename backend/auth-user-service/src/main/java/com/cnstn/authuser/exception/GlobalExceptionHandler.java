@@ -56,7 +56,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ProblemDetail handleIntegrity(DataIntegrityViolationException ex, HttpServletRequest request) {
-        return buildProblem(HttpStatus.CONFLICT, "Data integrity violation", requestUri(request));
+        return buildProblem(HttpStatus.CONFLICT, "Violation d integrite des donnees", requestUri(request));
     }
 
     @ExceptionHandler(ExternalServiceException.class)
@@ -66,17 +66,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ProblemDetail handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
-        return buildProblem(HttpStatus.FORBIDDEN, "Access denied", requestUri(request));
+        return buildProblem(HttpStatus.FORBIDDEN, "Acces refuse", requestUri(request));
     }
 
     @ExceptionHandler(AuthenticationException.class)
     public ProblemDetail handleAuth(AuthenticationException ex, HttpServletRequest request) {
-        return buildProblem(HttpStatus.UNAUTHORIZED, "Authentication failed", requestUri(request));
+        return buildProblem(HttpStatus.UNAUTHORIZED, "Authentification echouee", requestUri(request));
     }
 
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleGeneric(Exception ex, HttpServletRequest request) {
-        return buildProblem(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error", requestUri(request));
+        return buildProblem(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur serveur inattendue", requestUri(request));
     }
 
     private String formatFieldError(FieldError fieldError) {

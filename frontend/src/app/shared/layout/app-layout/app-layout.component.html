@@ -1,18 +1,18 @@
 <div class="min-h-screen bg-gray-50 xl:flex">
-  <div>
+  <div *ngIf="!hideNavbar">
     <app-sidebar></app-sidebar>
     <app-backdrop></app-backdrop>
   </div>
   <div
       class="flex-1 transition-all duration-300 ease-in-out"
       [ngClass]="{
-        'xl:ml-[290px]': (isExpanded$ | async) || (isHovered$ | async),
-        'xl:ml-[90px]': !(isExpanded$ | async) && !(isHovered$ | async),
+        'xl:ml-[290px]': !hideNavbar && ((isExpanded$ | async) || (isHovered$ | async)),
+        'xl:ml-[90px]': !hideNavbar && !(isExpanded$ | async) && !(isHovered$ | async),
         'ml-0': (isMobileOpen$ | async)
       }"
   >
     <!-- app header start -->
-    <app-header/>
+    <app-header *ngIf="!hideNavbar"/>
     <!-- app header end -->
     <div class="mx-auto max-w-(--breakpoint-2xl) px-3 pb-6 pt-4 md:px-5 md:pt-5 lg:px-6">
       <router-outlet></router-outlet>

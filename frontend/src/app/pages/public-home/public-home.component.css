@@ -4,10 +4,7 @@
 
 .public-home-shell {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 15% 15%, rgba(70, 95, 255, 0.1), transparent 35%),
-    radial-gradient(circle at 85% 10%, rgba(18, 183, 106, 0.08), transparent 34%),
-    #f8fafc;
+  background: #f6f8fb;
   color: #0f172a;
 }
 
@@ -84,13 +81,47 @@
 }
 
 .hero-zone {
+  min-height: min(680px, calc(100vh - 7.5rem));
   display: grid;
   grid-template-columns: 1.2fr 0.8fr;
-  gap: 1.5rem;
-  border: 1px solid #dbe3ef;
+  align-items: end;
+  gap: 1.25rem;
+  position: relative;
+  overflow: hidden;
   border-radius: 1.3rem;
-  background: rgba(255, 255, 255, 0.86);
-  padding: 1.5rem;
+  background:
+    linear-gradient(90deg, rgba(5, 17, 41, 0.88) 0%, rgba(5, 17, 41, 0.64) 48%, rgba(5, 17, 41, 0.2) 100%),
+    url('/images/acceuil.png') center/cover no-repeat;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  color: #fff;
+}
+
+.hero-zone::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 34%;
+  background: linear-gradient(0deg, rgba(5, 17, 41, 0.72), transparent);
+  pointer-events: none;
+}
+
+.hero-copy,
+.hero-preview {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-kicker {
+  display: inline-flex;
+  margin-bottom: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  padding: 0.35rem 0.75rem;
+  color: #dbeafe;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .hero-zone h1 {
@@ -103,7 +134,7 @@
 .hero-zone p {
   margin-top: 1rem;
   max-width: 58ch;
-  color: #64748b;
+  color: #dbeafe;
 }
 
 .hero-actions {
@@ -128,13 +159,13 @@
 }
 
 .cta-secondary {
-  border: 1px solid #cfd8e7;
-  color: #1e293b;
-  background: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .cta-link {
-  color: #465fff;
+  color: #bfdbfe;
 }
 
 .pill-row {
@@ -145,32 +176,42 @@
 }
 
 .pill-row span {
-  border: 1px solid #dbe3ef;
+  border: 1px solid rgba(255, 255, 255, 0.26);
   border-radius: 999px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.12);
   padding: 0.35rem 0.8rem;
-  color: #334155;
+  color: #eff6ff;
   font-size: 0.85rem;
 }
 
 .hero-preview {
-  border: 1px solid #dbe3ef;
+  justify-self: end;
+  width: min(100%, 360px);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 1rem;
-  background: linear-gradient(160deg, #ffffff, #eef4ff);
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(14px);
   padding: 1.1rem;
 }
 
 .hero-preview h2 {
-  margin: 0;
+  margin: 0.25rem 0 0;
   font-size: 1.05rem;
 }
 
-.hero-preview ul {
-  margin: 0.8rem 0 0;
-  padding-left: 1.1rem;
-  color: #475569;
+.preview-stack {
+  margin-top: 0.9rem;
   display: grid;
-  gap: 0.4rem;
+  gap: 0.55rem;
+}
+
+.preview-stack span {
+  border-left: 3px solid #60a5fa;
+  background: rgba(255, 255, 255, 0.14);
+  padding: 0.65rem 0.75rem;
+  color: #f8fafc;
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .home-section {
@@ -213,7 +254,6 @@
 .module-grid p {
   margin: 0.4rem 0 0;
   color: #64748b;
-  font-size: 0.9rem;
 }
 
 .role-grid {
@@ -236,7 +276,6 @@
   max-width: 1300px;
   padding: 0 1.25rem 1.25rem;
   color: #64748b;
-  font-size: 0.9rem;
 }
 
 @media (max-width: 1024px) {
@@ -246,6 +285,7 @@
 
   .hero-zone {
     grid-template-columns: 1fr;
+    min-height: auto;
   }
 
   .module-grid {
@@ -254,6 +294,15 @@
 }
 
 @media (max-width: 640px) {
+  .hero-actions a {
+    width: 100%;
+    text-align: center;
+  }
+
+  .hero-preview {
+    justify-self: stretch;
+  }
+
   .module-grid {
     grid-template-columns: 1fr;
   }

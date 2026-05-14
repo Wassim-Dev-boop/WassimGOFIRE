@@ -14,7 +14,6 @@ public final class UserPermissionPolicy {
     public static final String VIEW_EVENTS_MODULE = "VIEW_EVENTS_MODULE";
     public static final String VIEW_GED_MODULE = "VIEW_GED_MODULE";
     public static final String VIEW_INTERVENTIONS_MODULE = "VIEW_INTERVENTIONS_MODULE";
-    public static final String VIEW_REPORTS_MODULE = "VIEW_REPORTS_MODULE";
     public static final String CREATE_USER = "CREATE_USER";
     public static final String UPDATE_USER = "UPDATE_USER";
     public static final String CREATE_EVENT = "CREATE_EVENT";
@@ -27,7 +26,6 @@ public final class UserPermissionPolicy {
             VIEW_EVENTS_MODULE,
             VIEW_GED_MODULE,
             VIEW_INTERVENTIONS_MODULE,
-            VIEW_REPORTS_MODULE,
             CREATE_USER,
             UPDATE_USER,
             CREATE_EVENT,
@@ -46,7 +44,6 @@ public final class UserPermissionPolicy {
                 VIEW_EVENTS_MODULE,
                 VIEW_GED_MODULE,
                 VIEW_INTERVENTIONS_MODULE,
-                VIEW_REPORTS_MODULE,
                 CREATE_EVENT
         ));
 
@@ -54,7 +51,6 @@ public final class UserPermissionPolicy {
                 VIEW_EVENTS_MODULE,
                 VIEW_GED_MODULE,
                 VIEW_INTERVENTIONS_MODULE,
-                VIEW_REPORTS_MODULE,
                 CREATE_EVENT,
                 VALIDATE_EVENT
         ));
@@ -62,34 +58,29 @@ public final class UserPermissionPolicy {
         defaults.put(RoleName.RESPONSABLE_SALLE, Set.of(
                 VIEW_GED_MODULE,
                 VIEW_INTERVENTIONS_MODULE,
-                VIEW_REPORTS_MODULE,
                 CHANGE_INTERVENTION_STATUS
         ));
 
         defaults.put(RoleName.RESPONSABLE_SECURITE, Set.of(
-                VIEW_GED_MODULE,
-                VIEW_REPORTS_MODULE
+                VIEW_GED_MODULE
         ));
 
         defaults.put(RoleName.DIRECTEUR_DSN, Set.of(
                 VIEW_EVENTS_MODULE,
                 VIEW_GED_MODULE,
                 VIEW_INTERVENTIONS_MODULE,
-                VIEW_REPORTS_MODULE,
                 VALIDATE_EVENT
         ));
 
         defaults.put(RoleName.RESPONSABLE_QUALITE, Set.of(
                 VIEW_EVENTS_MODULE,
                 VIEW_GED_MODULE,
-                VIEW_REPORTS_MODULE,
                 CREATE_EVENT,
                 PUBLISH_DOCUMENT
         ));
 
         defaults.put(RoleName.RESPONSABLE_IT, Set.of(
-                VIEW_INTERVENTIONS_MODULE,
-                VIEW_REPORTS_MODULE
+                VIEW_INTERVENTIONS_MODULE
         ));
 
         ROLE_DEFAULTS = Collections.unmodifiableMap(defaults);

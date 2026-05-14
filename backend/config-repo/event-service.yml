@@ -10,11 +10,6 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://host.docker.internal:8090/realms/cnstn-intranet}
-zoom:
-  sdk:
-    key: ${ZOOM_SDK_KEY:}
-    secret: ${ZOOM_SDK_SECRET:}
-
 app:
   internal:
     api-key: ${EVENT_INTERNAL_API_KEY:${NOTIFICATION_INTERNAL_API_KEY:change-me}}

@@ -22,7 +22,6 @@ docker compose up --build
 5. `04 - Intervention Service`
 6. `05 - GED Service`
 7. `06 - Notification Service`
-8. `07 - Reporting Service`
 
 Les IDs (`departmentId`, `eventId`, etc.) et tokens sont automatiquement stockés dans l'environnement par les scripts de test Postman.
 

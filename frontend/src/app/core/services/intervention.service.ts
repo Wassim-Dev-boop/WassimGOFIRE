@@ -16,11 +16,17 @@ interface BackendInterventionResponse {
   id: string;
   title: string;
   description?: string;
+  type?: Intervention['type'];
+  priority?: InterventionPriority;
+  location?: string;
   requestedBy: string;
   assignedTo?: string;
   status: BackendInterventionStatus;
   validationNote?: string;
   validatedBy?: string;
+  resolution?: string;
+  satisfactionRating?: number;
+  resolvedAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -28,11 +34,16 @@ interface BackendInterventionResponse {
 interface BackendInterventionCreateRequest {
   title: string;
   description: string;
+  type?: Intervention['type'];
+  priority?: InterventionPriority;
+  location?: string;
 }
 
 interface BackendInterventionStatusRequest {
   status: BackendInterventionStatus;
   assignedTo?: string;
+  resolution?: string;
+  satisfactionRating?: number;
 }
 
 interface BackendInterventionValidationRequest {
@@ -162,6 +173,9 @@ export class InterventionService {
     const payload: BackendInterventionCreateRequest = {
       title: intervention.title,
       description: intervention.description,
+      type: intervention.type,
+      priority: intervention.priority,
+      location: intervention.location,
     };
 
     const request$ = this.http
@@ -185,16 +199,10 @@ export class InterventionService {
   }
 
   updateIntervention(id: string, updates: Partial<Intervention>): Observable<Intervention | null> {
-    const interventions = this.interventionsSubject.value;
-    const index = interventions.findIndex((item) => item.id === id);
-    if (index === -1) {
-      return of(null);
-    }
-
-    const current = interventions[index];
+    const current = this.interventionsSubject.value.find((item) => item.id === id);
     const requestedStatus = updates.status;
 
-    if (requestedStatus && requestedStatus !== current.status) {
+    if (requestedStatus && requestedStatus !== current?.status) {
       if (requestedStatus === InterventionStatus.CLOSED) {
         const payload: BackendInterventionValidationRequest = {
           approved: true,
@@ -208,22 +216,14 @@ export class InterventionService {
             tap((updated) => this.replaceIntervention({ ...updated, ...updates, updatedAt: new Date() })),
           );
 
-        return this.withFallback(request$, () => {
-          const updated: Intervention = {
-            ...current,
-            ...updates,
-            updatedAt: new Date(),
-          };
-          this.replaceIntervention(updated);
-          return of(updated);
-        });
+        return this.withFallback(request$, () => of(null));
       }
 
       const backendStatus = this.toBackendStatus(requestedStatus);
       if (backendStatus) {
         const payload: BackendInterventionStatusRequest = {
           status: backendStatus,
-          assignedTo: updates.assignment?.technicianName ?? current.assignment?.technicianName,
+          assignedTo: updates.assignment?.technicianName ?? current?.assignment?.technicianName,
         };
 
         const request$ = this.http
@@ -233,27 +233,30 @@ export class InterventionService {
             tap((updated) => this.replaceIntervention({ ...updated, ...updates, updatedAt: new Date() })),
           );
 
-        return this.withFallback(request$, () => {
-          const updated: Intervention = {
-            ...current,
-            ...updates,
-            updatedAt: new Date(),
-          };
-          this.replaceIntervention(updated);
-          return of(updated);
-        });
+        return this.withFallback(request$, () => of(null));
       }
     }
 
-    const updated: Intervention = {
-      ...current,
-      ...updates,
-      updatedAt: new Date(),
+    if (!current && (!updates.title || !updates.description)) {
+      return of(null);
+    }
+
+    const payload: BackendInterventionCreateRequest = {
+      title: updates.title ?? current?.title ?? '',
+      description: updates.description ?? current?.description ?? '',
+      type: updates.type ?? current?.type,
+      priority: updates.priority ?? current?.priority,
+      location: updates.location ?? current?.location,
     };
 
-    interventions[index] = updated;
-    this.interventionsSubject.next([...interventions]);
-    return of(updated);
+    const request$ = this.http
+      .put<BackendInterventionResponse>(buildApiUrl(`/api/v1/interventions/${id}`), payload)
+      .pipe(
+        map((response) => this.mapIntervention(response, current ?? updates)),
+        tap((updated) => this.replaceIntervention(updated)),
+      );
+
+    return this.withFallback(request$, () => of(null));
   }
 
   assignIntervention(interventionId: string, technicianId: string, technicianName: string): Observable<Intervention | null> {
@@ -335,6 +338,8 @@ export class InterventionService {
     const payload: BackendInterventionStatusRequest = {
       status: 'COMPLETED',
       assignedTo: intervention.assignment?.technicianName,
+      resolution,
+      satisfactionRating,
     };
 
     const request$ = this.http
@@ -342,9 +347,6 @@ export class InterventionService {
       .pipe(
         map((response) => this.mapIntervention(response)),
         tap((updated) => {
-          updated.resolution = resolution;
-          updated.satisfactionRating = satisfactionRating;
-          updated.resolutionDate = new Date();
           this.replaceIntervention(updated);
         }),
       );
@@ -390,8 +392,10 @@ export class InterventionService {
   }
 
   deleteIntervention(id: string): Observable<boolean> {
-    this.interventionsSubject.next(this.interventionsSubject.value.filter((item) => item.id !== id));
-    return of(true);
+    return this.http.delete<void>(buildApiUrl(`/api/v1/interventions/${id}`)).pipe(
+      tap(() => this.interventionsSubject.next(this.interventionsSubject.value.filter((item) => item.id !== id))),
+      map(() => true),
+    );
   }
 
   getInterventionsByStatus(status: InterventionStatus): Observable<Intervention[]> {
@@ -448,22 +452,24 @@ export class InterventionService {
       id: response.id,
       title: response.title,
       description: response.description || '',
-      type: source?.type ?? 'SUPPORT',
-      priority: source?.priority ?? InterventionPriority.MEDIUM,
+      type: response.type ?? source?.type ?? 'SUPPORT',
+      priority: response.priority ?? source?.priority ?? InterventionPriority.MEDIUM,
       status: this.mapStatus(response.status, !!response.assignedTo),
       requesterId: response.requestedBy,
       requesterName: response.requestedBy,
       requesterEmail: source?.requesterEmail ?? `${response.requestedBy}@company.local`,
-      location: source?.location ?? 'Lieu a preciser',
+      location: response.location ?? source?.location ?? 'Lieu a preciser',
       assignment,
       createdAt: this.toDate(response.createdAt),
       updatedAt: this.toDate(response.updatedAt, fallbackDate),
-      resolution: response.validationNote || source?.resolution,
-      resolutionDate: response.status === 'COMPLETED' || response.status === 'VALIDATED'
+      resolution: response.resolution || response.validationNote || source?.resolution,
+      resolutionDate: response.resolvedAt
+        ? this.toDate(response.resolvedAt, fallbackDate)
+        : response.status === 'COMPLETED' || response.status === 'VALIDATED'
         ? this.toDate(response.updatedAt, fallbackDate)
         : source?.resolutionDate,
       notes: response.validationNote || source?.notes,
-      satisfactionRating: source?.satisfactionRating,
+      satisfactionRating: response.satisfactionRating ?? source?.satisfactionRating,
     };
   }
 

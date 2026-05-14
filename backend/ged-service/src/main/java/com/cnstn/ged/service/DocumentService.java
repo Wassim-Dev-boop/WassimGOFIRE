@@ -597,6 +597,34 @@ public class DocumentService {
         return DocumentMapper.toResponse(saved);
     }
 
+    @Transactional
+    public void deletePermanently(UUID documentId, Authentication authentication) {
+        GedUserContext actor = userContextResolverService.resolve(authentication);
+        DocumentEntity document = fetchDocument(Objects.requireNonNull(documentId));
+        assertCanEdit(document, actor);
+
+        UUID id = document.getId();
+        String referenceCode = document.getReferenceCode();
+        String title = document.getTitle();
+
+        linkRepository.deleteBySourceDocumentIdOrLinkedDocumentId(id, id);
+        aclEntryRepository.deleteByDocumentId(id);
+        versionRepository.deleteByDocumentId(id);
+        documentRepository.delete(document);
+
+        auditLogService.log(
+                "DOCUMENT",
+                id,
+                "DELETE_DOCUMENT_PERMANENTLY",
+                actor,
+                Map.of(
+                        "referenceCode", referenceCode,
+                        "title", title
+                )
+        );
+        notifySafely(actor.username(), "Document supprime", "Le document " + referenceCode + " a ete supprime definitivement.");
+    }
+
     @Transactional(readOnly = true)
     public List<FolderTreeResponse> listFolderTree(Authentication authentication) {
         GedUserContext actor = userContextResolverService.resolve(authentication);

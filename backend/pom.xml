@@ -20,7 +20,6 @@
         <module>intervention-service</module>
         <module>ged-service</module>
         <module>notification-service</module>
-        <module>reporting-service</module>
     </modules>
 
     <properties>

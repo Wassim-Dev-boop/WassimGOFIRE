@@ -15,8 +15,6 @@ public record EventUpdateRequest(
         EventType eventType,
         EventMode eventMode,
         Boolean onlineEvent,
-        @Size(max = 30) String zoomMeetingNumber,
-        @Size(max = 100) String zoomPasscode,
         @Size(max = 60) String onlineMeetingProvider,
         @Size(max = 500) String onlineMeetingLink,
         @Size(max = 80) String onlineMeetingId,

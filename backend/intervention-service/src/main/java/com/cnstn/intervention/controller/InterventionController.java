@@ -111,7 +111,7 @@ public class InterventionController {
     }
 
     @PutMapping("/{id}/status")
-    @PreAuthorize("hasRole('RESPONSABLE_SALLE')")
+    @PreAuthorize("hasAnyRole('ADMIN','RESPONSABLE_SALLE')")
     public InterventionResponse updateStatus(
             @PathVariable UUID id,
             @Valid @RequestBody InterventionStatusUpdateRequest request,
@@ -124,7 +124,7 @@ public class InterventionController {
     }
 
     @PutMapping("/{id}/validate")
-    @PreAuthorize("hasRole('RESPONSABLE_SALLE')")
+    @PreAuthorize("hasAnyRole('ADMIN','RESPONSABLE_SALLE')")
     public InterventionResponse validate(
             @PathVariable UUID id,
             @Valid @RequestBody InterventionValidationRequest request,

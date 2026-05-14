@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, catchError, map, of, switchMap, tap, throwError } from 'rxjs';
 import { ApiPageResponse, buildApiUrl, extractPageContent } from '../config/backend-api.config';
-import { Event, EventMode, EventStatus, EventFilter, EventParticipant, EventPhoto, ZoomMeetingCredentials } from '../models';
+import { Event, EventMeeting, EventMode, EventStatus, EventFilter, EventParticipant, EventPhoto } from '../models';
 
 type BackendEventStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';
 type BackendEventMode = 'PRESENTIEL' | 'EN_LIGNE' | 'HYBRIDE';
@@ -18,12 +18,11 @@ interface BackendEventResponse {
   eventType?: BackendEventType;
   eventMode?: BackendEventMode;
   onlineEvent?: boolean;
-  zoomMeetingNumber?: string;
-  zoomPasscode?: string;
   onlineMeetingProvider?: string;
   onlineMeetingLink?: string;
   onlineMeetingId?: string;
   onlineMeetingPassword?: string;
+  meetingRoomId?: string;
   requestedBy: string;
   status: BackendEventStatus;
   workflowStep?: string;
@@ -44,8 +43,6 @@ interface BackendCreateEventRequest {
   eventType?: BackendEventType;
   eventMode?: BackendEventMode;
   onlineEvent?: boolean;
-  zoomMeetingNumber?: string;
-  zoomPasscode?: string;
   onlineMeetingProvider?: string;
   onlineMeetingLink?: string;
   onlineMeetingId?: string;
@@ -89,7 +86,15 @@ export interface EventPageState {
   totalPages: number;
 }
 
-type BackendZoomSignatureResponse = ZoomMeetingCredentials;
+interface BackendEventMeetingResponse {
+  eventId: string;
+  title: string;
+  startAt: string;
+  endAt: string;
+  eventMode: BackendEventMode;
+  meetingRoomId?: string;
+  onlineAvailable: boolean;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -174,11 +179,9 @@ export class EventService {
 
   createEvent(event: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>): Observable<Event> {
     const eventMode = this.toBackendEventMode(event);
-    const meetingId = event.zoomMeetingNumber?.trim() || undefined;
-    const meetingPassword = event.zoomPasscode?.trim() || undefined;
     const providedMeetingUrl = event.onlineMeetingUrl?.trim();
-    const meetingUrl = providedMeetingUrl || (eventMode === 'PRESENTIEL' || !meetingId ? undefined : `https://zoom.us/j/${meetingId}`);
-    const meetingProvider = event.onlineMeetingProvider?.trim() || (eventMode === 'PRESENTIEL' ? undefined : 'Zoom');
+    const meetingUrl = providedMeetingUrl || undefined;
+    const meetingProvider = event.onlineMeetingProvider?.trim() || (eventMode === 'PRESENTIEL' ? undefined : 'Jitsi');
 
     const payload: BackendCreateEventRequest = {
       title: event.title,
@@ -189,25 +192,16 @@ export class EventService {
       eventType: this.toBackendEventType(event.type),
       eventMode,
       onlineEvent: eventMode !== 'PRESENTIEL',
-      zoomMeetingNumber: meetingId,
-      zoomPasscode: meetingPassword,
       onlineMeetingProvider: meetingProvider,
       onlineMeetingLink: meetingUrl,
-      onlineMeetingId: meetingId,
-      onlineMeetingPassword: meetingPassword,
+      onlineMeetingId: undefined,
+      onlineMeetingPassword: undefined,
     };
 
     const request$ = this.http
       .post<BackendEventResponse>(buildApiUrl('/api/v1/events'), payload)
       .pipe(
-        switchMap((createdDraft) =>
-          this.http
-            .post<BackendEventResponse>(buildApiUrl(`/api/v1/events/${createdDraft.id}/submit`), { comment: null })
-            .pipe(
-              map((submitted) => this.mapEvent(submitted)),
-              catchError(() => of(this.mapEvent(createdDraft))),
-            ),
-        ),
+        map((createdDraft) => this.mapEvent(createdDraft)),
         tap((created) => this.eventsSubject.next([...this.eventsSubject.value, created])),
       );
 
@@ -235,11 +229,9 @@ export class EventService {
       updatedAt: new Date(),
     };
     const eventMode = this.toBackendEventMode(mergedDraft);
-    const meetingId = mergedDraft.zoomMeetingNumber?.trim() || undefined;
-    const meetingPassword = mergedDraft.zoomPasscode?.trim() || undefined;
     const providedMeetingUrl = mergedDraft.onlineMeetingUrl?.trim();
-    const meetingUrl = providedMeetingUrl || (eventMode === 'PRESENTIEL' || !meetingId ? undefined : `https://zoom.us/j/${meetingId}`);
-    const meetingProvider = mergedDraft.onlineMeetingProvider?.trim() || (eventMode === 'PRESENTIEL' ? undefined : 'Zoom');
+    const meetingUrl = providedMeetingUrl || undefined;
+    const meetingProvider = mergedDraft.onlineMeetingProvider?.trim() || (eventMode === 'PRESENTIEL' ? undefined : 'Jitsi');
 
     const payload: BackendUpdateEventRequest = {
       title: mergedDraft.title,
@@ -250,12 +242,10 @@ export class EventService {
       eventType: this.toBackendEventType(mergedDraft.type),
       eventMode,
       onlineEvent: eventMode !== 'PRESENTIEL',
-      zoomMeetingNumber: meetingId,
-      zoomPasscode: meetingPassword,
       onlineMeetingProvider: meetingProvider,
       onlineMeetingLink: meetingUrl,
-      onlineMeetingId: meetingId,
-      onlineMeetingPassword: meetingPassword,
+      onlineMeetingId: undefined,
+      onlineMeetingPassword: undefined,
     };
 
     const request$ = this.http
@@ -334,34 +324,26 @@ export class EventService {
     });
   }
 
-  getZoomMeetingCredentials(eventId: string): Observable<ZoomMeetingCredentials> {
-    return this.http
-      .post<BackendZoomSignatureResponse>(buildApiUrl(`/api/v1/events/${eventId}/zoom-signature`), {})
-      .pipe(
-        map((response) => ({
-          sdkKey: response.sdkKey,
-          signature: response.signature,
-          meetingNumber: response.meetingNumber,
-          passcode: response.passcode,
-          userName: response.userName,
-          role: response.role,
-          fallbackWebUrl: response.fallbackWebUrl || '',
-          sdkConfigured: !!response.sdkConfigured,
-        })),
-        catchError((error) => {
-          const backendMessage =
-            error?.error?.message ||
-            error?.error?.error ||
-            error?.message ||
-            'Impossible de recuperer les identifiants Zoom.';
-          return throwError(() => new Error(backendMessage));
-        }),
-      );
+  deleteEvent(id: string): Observable<boolean> {
+    return this.unsupportedOperation(
+      'Suppression evenement non disponible: utilisez le workflow de refus/correction, aucune suppression locale fictive n est appliquee.',
+    );
   }
 
-  deleteEvent(id: string): Observable<boolean> {
-    this.eventsSubject.next(this.eventsSubject.value.filter((event) => event.id !== id));
-    return of(true);
+  getEventMeeting(eventId: string): Observable<EventMeeting> {
+    return this.http
+      .get<BackendEventMeetingResponse>(buildApiUrl(`/api/v1/events/${eventId}/meeting`))
+      .pipe(
+        map((response) => ({
+          eventId: response.eventId,
+          title: response.title,
+          startAt: this.toDate(response.startAt),
+          endAt: this.toDate(response.endAt),
+          eventMode: this.mapBackendEventMode(response.eventMode, response.onlineAvailable),
+          meetingRoomId: response.meetingRoomId || undefined,
+          onlineAvailable: !!response.onlineAvailable,
+        })),
+      );
   }
 
   listEventPhotos(eventId: string): Observable<EventPhoto[]> {
@@ -411,42 +393,21 @@ export class EventService {
   }
 
   addParticipant(eventId: string, userId: string, userName: string, userEmail: string): Observable<Event | null> {
-    const events = this.eventsSubject.value;
-    const event = events.find((item) => item.id === eventId);
-    if (!event) {
-      return of(null);
-    }
-
-    const participant: EventParticipant = {
-      id: this.generateId(),
-      userId,
-      userName,
-      userEmail,
-      status: 'ATTENDING',
-    };
-
-    event.participants.push(participant);
-    event.updatedAt = new Date();
-    this.eventsSubject.next([...events]);
-    return of(event);
+    return this.unsupportedOperation(
+      'Ajout participant non persiste desactive: utilisez les invitations evenement sauvegardees par le backend.',
+    );
   }
 
   removeParticipant(eventId: string, participantId: string): Observable<Event | null> {
-    const events = this.eventsSubject.value;
-    const event = events.find((item) => item.id === eventId);
-    if (!event) {
-      return of(null);
-    }
-
-    event.participants = event.participants.filter((participant) => participant.id !== participantId);
-    event.updatedAt = new Date();
-    this.eventsSubject.next([...events]);
-    return of(event);
+    return this.unsupportedOperation(
+      'Suppression participant non persistee desactivee: utilisez les invitations evenement sauvegardees par le backend.',
+    );
   }
 
   getEventParticipants(eventId: string): Observable<EventParticipant[]> {
-    const event = this.eventsSubject.value.find((item) => item.id === eventId);
-    return of(event?.participants || []);
+    return this.unsupportedOperation(
+      'Lecture participants non persistee desactivee: consultez les invitations evenement sauvegardees par le backend.',
+    );
   }
 
   updateParticipantStatus(
@@ -454,21 +415,9 @@ export class EventService {
     participantId: string,
     status: 'ATTENDING' | 'NOT_ATTENDING' | 'MAYBE',
   ): Observable<EventParticipant | null> {
-    const event = this.eventsSubject.value.find((item) => item.id === eventId);
-    if (!event) {
-      return of(null);
-    }
-
-    const participant = event.participants.find((item) => item.id === participantId);
-    if (!participant) {
-      return of(null);
-    }
-
-    participant.status = status;
-    participant.joinedAt = status === 'ATTENDING' ? new Date() : undefined;
-    event.updatedAt = new Date();
-    this.eventsSubject.next([...this.eventsSubject.value]);
-    return of(participant);
+    return this.unsupportedOperation(
+      'Statut participant non persiste desactive: utilisez accept/decline sur les invitations backend.',
+    );
   }
 
   private mapEvent(response: BackendEventResponse): Event {
@@ -489,8 +438,7 @@ export class EventService {
       onlineEvent,
       onlineMeetingUrl: response.onlineMeetingLink || undefined,
       onlineMeetingProvider: response.onlineMeetingProvider || undefined,
-      zoomMeetingNumber: response.onlineMeetingId || response.zoomMeetingNumber || undefined,
-      zoomPasscode: response.onlineMeetingPassword || response.zoomPasscode || undefined,
+      meetingRoomId: response.meetingRoomId || undefined,
       organiserId: response.requestedBy,
       organiserName: response.requestedBy,
       status: this.mapStatus(response.status),
@@ -547,6 +495,7 @@ export class EventService {
       || step === 'VALIDATION_MANAGER'
       || step === 'VALIDATION_SECURITE'
       || step === 'VALIDATION_DSN'
+      || step === 'VALIDATION_SALLE'
       || step === 'TERMINE'
       || step === 'REFUSE'
     ) {
@@ -664,6 +613,10 @@ export class EventService {
     return request$.pipe(
       catchError((error) => throwError(() => error)),
     );
+  }
+
+  private unsupportedOperation<T>(message: string): Observable<T> {
+    return throwError(() => new Error(message));
   }
 
   downloadLatestOfficialDocument(eventId: string): Observable<boolean> {

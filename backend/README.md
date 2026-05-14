@@ -30,7 +30,6 @@ Monorepo backend microservices pour la plateforme intranet CNSTN.
 - `intervention-service`
 - `ged-service`
 - `notification-service`
-- `reporting-service`
 
 ## Sécurité
 
@@ -51,7 +50,7 @@ Le microservice `auth-user-service` est implémenté avec:
 - Synchronisation Keycloak Admin REST API (users + roles)
 - Migration Flyway SQL (`snake_case`)
 
-Les autres services métier (`event`, `reservation`, `intervention`, `ged`, `notification`, `reporting`) disposent d'une implémentation backend fonctionnelle alignée backlog (entités, services, endpoints protégés par rôle, et agrégation KPI côté reporting).
+Les autres services métier (`event`, `reservation`, `intervention`, `ged`, `notification`) disposent d'une implémentation backend fonctionnelle alignée backlog (entités, services et endpoints protégés par rôle).
 
 Voir la liste complète des routes:
 
@@ -113,42 +112,6 @@ curl -X POST "http://localhost:8088/api/v1/events/{EVENT_ID}/partners" ^
 ```
 
 Vérifier ensuite dans la boîte Gmail du destinataire.
-
-## Événements en ligne Zoom SDK
-
-- `event-service` supporte maintenant les événements en ligne via Zoom:
-  - champs événement: `onlineEvent`, `zoomMeetingNumber`, `zoomPasscode`
-  - endpoint de session web: `POST /api/v1/events/{id}/zoom-signature`
-- Variables à configurer (backend):
-  - `ZOOM_SDK_KEY`
-  - `ZOOM_SDK_SECRET`
-
-Configuration réelle recommandée:
-
-1. Copier le modèle d'environnement:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-2. Renseigner vos valeurs réelles dans `.env`:
-
-```text
-ZOOM_SDK_KEY=...
-ZOOM_SDK_SECRET=...
-```
-
-3. Redémarrer uniquement `event-service`:
-
-```powershell
-docker compose up -d --build event-service
-```
-
-4. Option automatisée (écrit `.env`, redémarre le service, et valide `/zoom-signature`):
-
-```powershell
-.\scripts\configure-zoom-sdk.ps1
-```
 
 ## Lancement Docker
 

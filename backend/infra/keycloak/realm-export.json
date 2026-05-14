@@ -4,7 +4,7 @@
   "displayName": "CNSTN Intranet",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
-  "registrationEmailAsUsername": true,
+  "registrationEmailAsUsername": false,
   "roles": {
     "realm": [
       { "name": "ADMIN" },

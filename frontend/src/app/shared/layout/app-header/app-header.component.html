@@ -62,24 +62,6 @@
         [ngClass]="isApplicationMenuOpen ? 'flex' : 'hidden lg:flex'"
         class="w-full items-center justify-end gap-2 sm:gap-3 lg:w-auto"
       >
-        <a
-          routerLink="/notifications"
-          class="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition hover:bg-gray-50 hover:text-gray-700"
-          title="Messages et emails"
-          aria-label="Messages et emails"
-        >
-          <span
-            *ngIf="unreadNotificationsCount > 0"
-            class="absolute -right-0.5 -top-0.5 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 text-[11px] font-semibold text-white"
-          >
-            {{ unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount }}
-          </span>
-          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-            <rect x="2" y="4.5" width="16" height="11" rx="2" stroke="currentColor" stroke-width="1.5"></rect>
-            <path d="M2.5 6L10 11L17.5 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-          </svg>
-        </a>
-
         <app-notification-dropdown />
         <app-user-dropdown />
       </div>

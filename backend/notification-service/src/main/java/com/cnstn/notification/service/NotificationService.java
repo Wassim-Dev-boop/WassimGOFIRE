@@ -101,6 +101,7 @@ public class NotificationService {
         notification.setRecipientUsername(request.recipientUsername().trim());
         notification.setTitle(request.title().trim());
         notification.setMessage(request.message().trim());
+        notification.setActionUrl(normalizeOrNull(request.actionUrl()));
 
         NotificationEntity saved = notificationRepository.save(notification);
         NotificationEmailDispatchService.EmailDispatchResult dispatchResult =
@@ -139,6 +140,18 @@ public class NotificationService {
         unreadNotifications.forEach(notification -> notification.setReadFlag(true));
         notificationRepository.saveAll(unreadNotifications);
         return unreadNotifications.size();
+    }
+
+    @Transactional
+    public void delete(UUID id, String username) {
+        NotificationEntity notification = notificationRepository.findById(Objects.requireNonNull(id))
+                .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + id));
+
+        if (!notification.getRecipientUsername().equalsIgnoreCase(username)) {
+            throw new ResourceNotFoundException("Notification not found for current user");
+        }
+
+        notificationRepository.delete(notification);
     }
 
     @Transactional(readOnly = true)

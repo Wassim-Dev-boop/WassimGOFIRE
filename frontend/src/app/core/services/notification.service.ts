@@ -18,6 +18,7 @@ interface BackendNotificationResponse {
   emailDeliveryStatus?: 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED' | null;
   emailDeliveryError?: string | null;
   emailLastAttemptAt?: string | null;
+  actionUrl?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -263,17 +264,23 @@ export class NotificationService implements OnDestroy {
   }
 
   deleteNotification(notificationId: string): Observable<boolean> {
-    this.notificationsSubject.next(this.notificationsSubject.value.filter((item) => item.id !== notificationId));
-    this.refreshUnreadCountFromBackend();
-    return of(true);
+    return this.http.delete<void>(buildApiUrl(`/api/v1/notifications/${notificationId}`)).pipe(
+      tap(() => {
+        this.notificationsSubject.next(this.notificationsSubject.value.filter((item) => item.id !== notificationId));
+        this.refreshUnreadCountFromBackend();
+      }),
+      map(() => true),
+    );
   }
 
   deleteMultiple(notificationIds: string[]): Observable<boolean> {
-    this.notificationsSubject.next(
-      this.notificationsSubject.value.filter((item) => !notificationIds.includes(item.id)),
+    if (notificationIds.length === 0) {
+      return of(true);
+    }
+
+    return forkJoin(notificationIds.map((id) => this.deleteNotification(id))).pipe(
+      map(() => true),
     );
-    this.refreshUnreadCountFromBackend();
-    return of(true);
   }
 
   createNotification(notification: Omit<Notification, 'id' | 'createdAt' | 'isRead' | 'readAt'>): Observable<Notification> {
@@ -355,24 +362,15 @@ export class NotificationService implements OnDestroy {
   }
 
   getNotificationPreferences(userId?: string): Observable<NotificationPreference[]> {
-    const uid = userId || this.currentRecipient;
-    return of(this.notificationPreferencesSubject.value.filter((item) => item.userId === uid));
+    return this.unsupportedOperation(
+      'Preferences notifications non disponibles: aucun endpoint backend ne persiste ces reglages.',
+    );
   }
 
   updateNotificationPreference(preference: NotificationPreference): Observable<NotificationPreference> {
-    const preferences = this.notificationPreferencesSubject.value;
-    const index = preferences.findIndex((item) =>
-      item.userId === preference.userId && item.notificationType === preference.notificationType,
+    return this.unsupportedOperation(
+      'Mise a jour preferences notifications desactivee: aucun endpoint backend ne persiste ces reglages.',
     );
-
-    if (index >= 0) {
-      preferences[index] = preference;
-    } else {
-      preferences.push(preference);
-    }
-
-    this.notificationPreferencesSubject.next([...preferences]);
-    return of(preference);
   }
 
   connectSSE(userId: string): Observable<Notification> {
@@ -420,6 +418,7 @@ export class NotificationService implements OnDestroy {
       emailDeliveryStatus: response.emailDeliveryStatus ?? null,
       emailDeliveryError: response.emailDeliveryError ?? null,
       emailLastAttemptAt: this.toOptionalDate(response.emailLastAttemptAt),
+      data: response.actionUrl ? { actionUrl: response.actionUrl } : undefined,
       createdAt,
       isRead,
       readAt: isRead ? updatedAt : undefined,
@@ -528,6 +527,10 @@ export class NotificationService implements OnDestroy {
     return request$.pipe(
       catchError((error) => throwError(() => error)),
     );
+  }
+
+  private unsupportedOperation<T>(message: string): Observable<T> {
+    return throwError(() => new Error(message));
   }
 
   private generateId(): string {

@@ -244,9 +244,7 @@ INSERT INTO events (
   status,
   title,
   updated_at,
-  online_event,
-  zoom_meeting_number,
-  zoom_passcode
+  online_event
 )
 SELECT
   '22222222-2222-2222-2222-222222221001'::uuid,
@@ -267,9 +265,7 @@ SELECT
   'APPROVED',
   'Revue securite mensuelle',
   NOW(),
-  FALSE,
-  NULL,
-  NULL
+  FALSE
 WHERE NOT EXISTS (
   SELECT 1 FROM events WHERE title = 'Revue securite mensuelle'
 );
@@ -293,9 +289,7 @@ INSERT INTO events (
   status,
   title,
   updated_at,
-  online_event,
-  zoom_meeting_number,
-  zoom_passcode
+  online_event
 )
 SELECT
   '22222222-2222-2222-2222-222222221002'::uuid,
@@ -310,15 +304,13 @@ SELECT
   NULL,
   'Session de sensibilisation cyber pour les equipes',
   NOW() + INTERVAL '8 days 2 hours',
-  'En ligne (Zoom)',
+  'En ligne',
   'employe.cnstn',
   NOW() + INTERVAL '8 days',
   'PENDING',
   'Session cyber interne',
   NOW(),
-  TRUE,
-  '987654321',
-  'CNSTN2026'
+  TRUE
 WHERE NOT EXISTS (
   SELECT 1 FROM events WHERE title = 'Session cyber interne'
 );

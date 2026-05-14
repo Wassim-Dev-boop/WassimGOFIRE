@@ -2,7 +2,6 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, catchError, map, of, switchMap, tap, throwError } from 'rxjs';
 import { buildApiUrl, extractPageContent, ApiPageResponse } from '../config/backend-api.config';
-import { AuthService } from './auth.service';
 import {
   Room,
   RoomReservation,
@@ -18,6 +17,7 @@ interface BackendRoomResponse {
   name: string;
   location: string;
   description?: string;
+  imageUrl?: string | null;
   capacity: number;
   status?: 'DISPONIBLE' | 'OCCUPEE' | 'MAINTENANCE' | 'INACTIVE';
   active: boolean;
@@ -169,7 +169,7 @@ export class ReservationService {
   });
   public equipmentReservationsPageState$ = this.equipmentReservationsPageStateSubject.asObservable();
 
-  constructor(private http: HttpClient, private authService: AuthService) {}
+  constructor(private http: HttpClient) {}
 
   // Room Methods
   getRooms(options: RoomQueryOptions = {}): Observable<Room[]> {
@@ -236,6 +236,7 @@ export class ReservationService {
       name: room.name,
       location: room.location,
       description: room.description,
+      imageUrl: room.imageUrl ?? null,
       capacity: room.capacity,
       status: room.status ?? (room.isActive ? 'DISPONIBLE' : 'INACTIVE'),
       active: room.isActive,
@@ -265,6 +266,7 @@ export class ReservationService {
       name: updates.name ?? existing.name,
       location: updates.location ?? existing.location,
       description: updates.description ?? existing.description,
+      imageUrl: updates.imageUrl ?? existing.imageUrl ?? null,
       capacity: updates.capacity ?? existing.capacity,
       status: updates.status ?? existing.status ?? (existing.isActive ? 'DISPONIBLE' : 'INACTIVE'),
       active: updates.isActive ?? existing.isActive,
@@ -765,43 +767,15 @@ export class ReservationService {
   }
 
   pickupEquipment(id: string): Observable<EquipmentReservation | null> {
-    const reservation = this.equipmentReservationsSubject.value.find((item) => item.id === id) ?? null;
-    if (!reservation) {
-      return of(null);
-    }
-
-    reservation.status = 'IN_USE';
-    reservation.pickedUpAt = new Date();
-    reservation.updatedAt = new Date();
-
-    const equipment = this.equipmentSubject.value.find((item) => item.id === reservation.equipmentId);
-    if (equipment) {
-      equipment.status = 'IN_USE';
-      this.equipmentSubject.next([...this.equipmentSubject.value]);
-    }
-
-    this.equipmentReservationsSubject.next([...this.equipmentReservationsSubject.value]);
-    return of(reservation);
+    return this.unsupportedOperation(
+      'Retrait equipement non persiste desactive: aucun endpoint backend ne sauvegarde cet etat.',
+    );
   }
 
   returnEquipment(id: string): Observable<EquipmentReservation | null> {
-    const reservation = this.equipmentReservationsSubject.value.find((item) => item.id === id) ?? null;
-    if (!reservation) {
-      return of(null);
-    }
-
-    reservation.status = 'RETURNED';
-    reservation.returnedAt = new Date();
-    reservation.updatedAt = new Date();
-
-    const equipment = this.equipmentSubject.value.find((item) => item.id === reservation.equipmentId);
-    if (equipment) {
-      equipment.status = 'AVAILABLE';
-      this.equipmentSubject.next([...this.equipmentSubject.value]);
-    }
-
-    this.equipmentReservationsSubject.next([...this.equipmentReservationsSubject.value]);
-    return of(reservation);
+    return this.unsupportedOperation(
+      'Retour equipement non persiste desactive: aucun endpoint backend ne sauvegarde cet etat.',
+    );
   }
 
   private fetchReservations(options: ReservationQueryOptions = {}): Observable<ApiPageResponse<BackendReservationResponse>> {
@@ -880,6 +854,7 @@ export class ReservationService {
       description: response.description || `Salle ${response.name} - ${response.location}`,
       capacity: response.capacity,
       location: response.location,
+      imageUrl: response.imageUrl || '',
       status,
       amenities: [],
       isActive: response.active,
@@ -1104,43 +1079,24 @@ export class ReservationService {
       .get<BackendConflictCheckResponse>(buildApiUrl('/api/v1/reservations/conflicts'), { params })
       .pipe(
         map((response) => !!response.conflict),
-        catchError(() => of(false)),
+        catchError((error) => throwError(() => error)),
       );
   }
 
   private canReadRoomInventoryFromBackend(): boolean {
-    const role = this.authService.currentRole;
-    return role === 'ADMIN'
-      || role === 'EMPLOYEE'
-      || role === 'MANAGER'
-      || role === 'ROOM_MANAGER'
-      || role === 'SECURITY_MANAGER'
-      || role === 'DSN_DIRECTOR'
-      || role === 'QUALITY_MANAGER';
+    return true;
   }
 
   private canReadEquipmentInventoryFromBackend(): boolean {
-    const role = this.authService.currentRole;
-    return role === 'ADMIN'
-      || role === 'EMPLOYEE'
-      || role === 'MANAGER'
-      || role === 'ROOM_MANAGER'
-      || role === 'SECURITY_MANAGER'
-      || role === 'DSN_DIRECTOR'
-      || role === 'QUALITY_MANAGER';
+    return true;
   }
 
   private canCheckConflictsFromBackend(): boolean {
-    return this.authService.currentRole === 'SECURITY_MANAGER'
-      || this.authService.currentRole === 'ROOM_MANAGER'
-      || this.authService.currentRole === 'EMPLOYEE'
-      || this.authService.currentRole === 'MANAGER'
-      || this.authService.currentRole === 'QUALITY_MANAGER'
-      || this.authService.currentRole === 'ADMIN';
+    return true;
   }
 
   private shouldUseBackendRequests(): boolean {
-    return this.authService.isAuthenticated();
+    return true;
   }
 
   private timeToString(date: Date): string {
@@ -1170,13 +1126,13 @@ export class ReservationService {
   }
 
   private withFallback<T>(request$: Observable<T>, fallbackFactory: () => Observable<T>): Observable<T> {
-    if (this.shouldUseBackendRequests()) {
-      return request$.pipe(
-        catchError((error) => throwError(() => error)),
-      );
-    }
+    return request$.pipe(
+      catchError((error) => throwError(() => error)),
+    );
+  }
 
-    return fallbackFactory();
+  private unsupportedOperation<T>(message: string): Observable<T> {
+    return throwError(() => new Error(message));
   }
 
   private generateId(): string {

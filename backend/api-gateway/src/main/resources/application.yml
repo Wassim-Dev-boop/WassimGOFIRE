@@ -60,11 +60,6 @@ spring:
           uri: lb://notification-service
           predicates:
             - Path=/api/v1/notifications/**
-        - id: reporting-service
-          uri: lb://reporting-service
-          predicates:
-            - Path=/api/v1/reports/**,/api/v1/kpis/**
-
 eureka:
   client:
     service-url:

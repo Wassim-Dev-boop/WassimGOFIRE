@@ -358,6 +358,10 @@ export class DocumentService {
       .pipe(map((response) => this.mapDocument(response)));
   }
 
+  deleteDocumentPermanently(documentId: string): Observable<void> {
+    return this.http.delete<void>(buildApiUrl(`/api/v1/documents/${documentId}`));
+  }
+
   submitWorkflow(documentId: string): Observable<Document> {
     return this.http
       .put<BackendDocumentResponse>(buildApiUrl(`/api/v1/documents/${documentId}/submit`), {})

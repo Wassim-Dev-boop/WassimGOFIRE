@@ -10,6 +10,7 @@ public record NotificationCreateRequest(
         @NotBlank @Size(max = 2000) String message,
         @Email @Size(max = 190) String recipientEmail,
         @Size(max = 120) String notificationType,
+        @Size(max = 500) String actionUrl,
         Boolean inAppOnly
 ) {
 }

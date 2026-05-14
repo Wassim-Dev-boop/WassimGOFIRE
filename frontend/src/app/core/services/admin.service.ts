@@ -367,23 +367,9 @@ export class AdminService {
   }
 
   updateSystemConfig(id: string, updates: Partial<SystemConfig>): Observable<SystemConfig | null> {
-    const configs = this.systemConfigSubject.value;
-    const index = configs.findIndex((config) => config.id === id);
-
-    if (index === -1) {
-      return of(null);
-    }
-
-    const updated = {
-      ...configs[index],
-      ...updates,
-      updatedAt: new Date(),
-    };
-
-    configs[index] = updated;
-    this.systemConfigSubject.next([...configs]);
-
-    return of(updated);
+    return this.unsupportedOperation(
+      'Configuration systeme non modifiee: aucun endpoint backend ne persiste cette ancienne methode.',
+    );
   }
 
   // Role Permissions
@@ -436,17 +422,9 @@ export class AdminService {
   }
 
   updateRolePermissions(role: string, permissions: RolePermission['permissions']): Observable<RolePermission | null> {
-    const rolePerms = this.rolePermissionsSubject.value;
-    const index = rolePerms.findIndex((item) => item.role === role);
-
-    if (index === -1) {
-      return of(null);
-    }
-
-    rolePerms[index].permissions = permissions;
-    this.rolePermissionsSubject.next([...rolePerms]);
-
-    return of(rolePerms[index]);
+    return this.unsupportedOperation(
+      'Mise a jour locale des permissions role desactivee: utilisez updateRolePermissionMatrix avec le backend.',
+    );
   }
 
   getPermissionCatalog(): Observable<PermissionDefinition[]> {
@@ -792,5 +770,9 @@ export class AdminService {
     }
 
     return fallbackMessage;
+  }
+
+  private unsupportedOperation<T>(message: string): Observable<T> {
+    return throwError(() => new Error(message));
   }
 }

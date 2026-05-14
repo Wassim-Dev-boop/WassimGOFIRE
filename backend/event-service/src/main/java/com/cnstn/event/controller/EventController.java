@@ -7,6 +7,7 @@ import com.cnstn.event.dto.EventDocumentResponse;
 import com.cnstn.event.dto.EventInviteRequest;
 import com.cnstn.event.dto.EventInvitationRespondRequest;
 import com.cnstn.event.dto.EventInvitationResponse;
+import com.cnstn.event.dto.EventMeetingResponse;
 import com.cnstn.event.dto.EventPhotoContent;
 import com.cnstn.event.dto.EventPhotoResponse;
 import com.cnstn.event.dto.EventResponse;
@@ -15,7 +16,6 @@ import com.cnstn.event.dto.EventUpdateRequest;
 import com.cnstn.event.dto.PageResponse;
 import com.cnstn.event.dto.PartnerInviteRequest;
 import com.cnstn.event.dto.PartnerInviteResponse;
-import com.cnstn.event.dto.ZoomSignatureResponse;
 import com.cnstn.event.entity.EventMode;
 import com.cnstn.event.entity.EventStatus;
 import com.cnstn.event.entity.EventType;
@@ -89,6 +89,13 @@ public class EventController {
     public EventResponse getById(@PathVariable UUID id, Authentication authentication) {
         permissionGuardService.check(authentication, VIEW_EVENTS_MODULE_PERMISSION);
         return eventService.getById(id);
+    }
+
+    @GetMapping("/{id}/meeting")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','DIRECTEUR_DSN','RESPONSABLE_QUALITE','RESPONSABLE_SECURITE','RESPONSABLE_SALLE')")
+    public EventMeetingResponse getMeeting(@PathVariable UUID id, Authentication authentication) {
+        permissionGuardService.check(authentication, VIEW_EVENTS_MODULE_PERMISSION);
+        return eventService.getMeeting(id);
     }
 
     @GetMapping("/{id}/documents")
@@ -257,6 +264,18 @@ public class EventController {
         return eventService.dsnDecision(id, request, principal.getName());
     }
 
+    @PutMapping("/{id}/workflow/room-decision")
+    @PreAuthorize("hasAnyRole('RESPONSABLE_SALLE','ADMIN')")
+    public EventResponse roomDecision(
+            @PathVariable UUID id,
+            @Valid @RequestBody EventDecisionRequest request,
+            Principal principal,
+            Authentication authentication
+    ) {
+        permissionGuardService.check(authentication, VIEW_EVENTS_MODULE_PERMISSION);
+        return eventService.roomDecision(id, request, principal.getName());
+    }
+
     @PutMapping("/{id}/decision")
     @PreAuthorize("hasAnyRole('CHEF_HIERARCHIQUE','DIRECTEUR_DSN','RESPONSABLE_SECURITE','RESPONSABLE_SALLE','ADMIN')")
     public EventResponse decide(
@@ -323,6 +342,13 @@ public class EventController {
         return eventService.listInvitationsForCurrentUser(principal.getName());
     }
 
+    @GetMapping("/invitations/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<EventInvitationResponse> listAllInvitations(Authentication authentication) {
+        permissionGuardService.check(authentication, VIEW_EVENTS_MODULE_PERMISSION);
+        return eventService.listAllInvitationsForAdmin();
+    }
+
     @PostMapping("/invitations/{invitationId}/accept")
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','DIRECTEUR_DSN','RESPONSABLE_QUALITE','RESPONSABLE_SECURITE','RESPONSABLE_SALLE')")
     public EventInvitationResponse acceptInvitation(
@@ -332,6 +358,16 @@ public class EventController {
     ) {
         permissionGuardService.check(authentication, VIEW_EVENTS_MODULE_PERMISSION);
         return eventService.acceptInvitation(invitationId, principal.getName());
+    }
+
+    @PutMapping("/invitations/{invitationId}/accept")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','DIRECTEUR_DSN','RESPONSABLE_QUALITE','RESPONSABLE_SECURITE','RESPONSABLE_SALLE')")
+    public EventInvitationResponse acceptInvitationPut(
+            @PathVariable UUID invitationId,
+            Principal principal,
+            Authentication authentication
+    ) {
+        return acceptInvitation(invitationId, principal, authentication);
     }
 
     @PostMapping("/invitations/{invitationId}/decline")
@@ -349,11 +385,28 @@ public class EventController {
         return eventService.declineInvitation(invitationId, safeRequest, principal.getName());
     }
 
-    @PostMapping("/{id}/zoom-signature")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','DIRECTEUR_DSN')")
-    public ZoomSignatureResponse zoomSignature(@PathVariable UUID id, Principal principal, Authentication authentication) {
+    @PutMapping("/invitations/{invitationId}/cancel")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','RESPONSABLE_QUALITE')")
+    public EventInvitationResponse cancelInvitation(
+            @PathVariable UUID invitationId,
+            Principal principal,
+            Authentication authentication
+    ) {
         permissionGuardService.check(authentication, VIEW_EVENTS_MODULE_PERMISSION);
-        return eventService.generateZoomSignature(id, principal.getName());
+        boolean adminOverride = authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+        return eventService.cancelInvitation(invitationId, principal.getName(), adminOverride);
+    }
+
+    @PutMapping("/invitations/{invitationId}/refuse")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYE','CHEF_HIERARCHIQUE','DIRECTEUR_DSN','RESPONSABLE_QUALITE','RESPONSABLE_SECURITE','RESPONSABLE_SALLE')")
+    public EventInvitationResponse refuseInvitationPut(
+            @PathVariable UUID invitationId,
+            @Valid @RequestBody(required = false) EventInvitationRespondRequest request,
+            Principal principal,
+            Authentication authentication
+    ) {
+        return declineInvitation(invitationId, request, principal, authentication);
     }
 
     private ResponseEntity<byte[]> toPdfResponse(EventDocumentContent content) {

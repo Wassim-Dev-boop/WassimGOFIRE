@@ -168,6 +168,14 @@ public class DocumentController {
         return documentService.archive(id, authentication);
     }
 
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('ADMIN','RESPONSABLE_QUALITE')")
+    public void deletePermanently(@PathVariable UUID id, Authentication authentication) {
+        permissionGuardService.check(authentication, VIEW_GED_MODULE_PERMISSION);
+        documentService.deletePermanently(id, authentication);
+    }
+
     @PostMapping("/{id}/versions")
     @PreAuthorize("hasAnyRole('ADMIN','RESPONSABLE_QUALITE')")
     public DocumentVersionResponse addVersion(

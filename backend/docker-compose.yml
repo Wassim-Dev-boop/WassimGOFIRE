@@ -17,6 +17,13 @@ services:
       timeout: 5s
       retries: 10
 
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: cnstn-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: cnstn-pgadmin
@@ -136,8 +143,6 @@ services:
       NOTIFICATION_INTERNAL_API_KEY: cnstn-internal-api-key-change-me
       AUTH_USER_SERVICE_URL: http://auth-user-service:8081
       AUTH_USER_INTERNAL_API_KEY: cnstn-internal-api-key-change-me
-      ZOOM_SDK_KEY: ${ZOOM_SDK_KEY:-}
-      ZOOM_SDK_SECRET: ${ZOOM_SDK_SECRET:-}
     ports:
       - "8082:8082"
     depends_on:
@@ -241,14 +246,14 @@ services:
       NOTIFICATION_INTERNAL_API_KEY: cnstn-internal-api-key-change-me
       AUTH_USER_SERVICE_URL: http://auth-user-service:8081
       MAIL_ENABLED: ${MAIL_ENABLED:-true}
-      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
-      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_HOST: ${MAIL_HOST:-mailhog}
+      MAIL_PORT: ${MAIL_PORT:-1025}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-no-reply@cnstn.local}
-      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-true}
-      MAIL_SMTP_STARTTLS_ENABLE: ${MAIL_SMTP_STARTTLS_ENABLE:-true}
-      MAIL_SMTP_STARTTLS_REQUIRED: ${MAIL_SMTP_STARTTLS_REQUIRED:-true}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
+      MAIL_SMTP_STARTTLS_ENABLE: ${MAIL_SMTP_STARTTLS_ENABLE:-false}
+      MAIL_SMTP_STARTTLS_REQUIRED: ${MAIL_SMTP_STARTTLS_REQUIRED:-false}
     ports:
       - "8086:8086"
     depends_on:
@@ -256,31 +261,7 @@ services:
       - discovery-server
       - keycloak
       - postgres
-
-  reporting-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.service
-      args:
-        MODULE: reporting-service
-    container_name: cnstn-reporting-service
-    environment:
-      CONFIG_SERVER_URL: http://config-server:8888
-      EUREKA_URL: http://discovery-server:8761/eureka
-      DB_URL: jdbc:postgresql://postgres:5432/reporting_db
-      DB_USERNAME: postgres
-      DB_PASSWORD: postgres
-      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/cnstn-intranet
-      NOTIFICATION_INTERNAL_API_KEY: cnstn-internal-api-key-change-me
-      AUTH_USER_SERVICE_URL: http://auth-user-service:8081
-      AUTH_USER_INTERNAL_API_KEY: cnstn-internal-api-key-change-me
-    ports:
-      - "8087:8087"
-    depends_on:
-      - config-server
-      - discovery-server
-      - keycloak
-      - postgres
+      - mailhog
 
   api-gateway:
     build:

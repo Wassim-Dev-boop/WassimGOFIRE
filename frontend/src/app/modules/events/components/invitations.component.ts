@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { InvitationService } from '../../../core/services/invitation.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AppRole, Invitation, InvitationStatus } from '../../../core/models';
@@ -12,7 +12,7 @@ type InvitationDirectionFilter = 'ALL' | 'RECEIVED' | 'SENT';
 @Component({
   selector: 'app-invitations',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="mx-auto max-w-7xl space-y-6 px-4 py-6">
       <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
@@ -37,25 +37,57 @@ type InvitationDirectionFilter = 'ALL' | 'RECEIVED' | 'SENT';
         </div>
 
         <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-4">
-          <article class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
-            <p class="text-3xl font-semibold text-gray-900 dark:text-white/90">{{ getTabCount('PENDING') }}</p>
+          <a
+            routerLink="/invitations"
+            [queryParams]="{ tab: 'PENDING' }"
+            (click)="selectTab('PENDING', $event)"
+            class="rounded-xl border p-4 text-left transition"
+            [ngClass]="activeTab === 'PENDING'
+              ? 'border-brand-500 bg-brand-50 dark:border-brand-500/60 dark:bg-brand-500/10'
+              : 'border-gray-200 bg-gray-50 hover:border-brand-300 hover:bg-brand-50/40 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-brand-500/10'"
+          >
+            <p class="text-3xl font-semibold text-gray-900 dark:text-white/90">{{ getFilteredTabCount('PENDING') }}</p>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">En attente</p>
-          </article>
+          </a>
 
-          <article class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
-            <p class="text-3xl font-semibold text-gray-900 dark:text-white/90">{{ getTabCount('ACCEPTED') }}</p>
+          <a
+            routerLink="/invitations"
+            [queryParams]="{ tab: 'ACCEPTED' }"
+            (click)="selectTab('ACCEPTED', $event)"
+            class="rounded-xl border p-4 text-left transition"
+            [ngClass]="activeTab === 'ACCEPTED'
+              ? 'border-brand-500 bg-brand-50 dark:border-brand-500/60 dark:bg-brand-500/10'
+              : 'border-gray-200 bg-gray-50 hover:border-brand-300 hover:bg-brand-50/40 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-brand-500/10'"
+          >
+            <p class="text-3xl font-semibold text-gray-900 dark:text-white/90">{{ getFilteredTabCount('ACCEPTED') }}</p>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Acceptées</p>
-          </article>
+          </a>
 
-          <article class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
-            <p class="text-3xl font-semibold text-gray-900 dark:text-white/90">{{ getTabCount('DECLINED') }}</p>
+          <a
+            routerLink="/invitations"
+            [queryParams]="{ tab: 'DECLINED' }"
+            (click)="selectTab('DECLINED', $event)"
+            class="rounded-xl border p-4 text-left transition"
+            [ngClass]="activeTab === 'DECLINED'
+              ? 'border-brand-500 bg-brand-50 dark:border-brand-500/60 dark:bg-brand-500/10'
+              : 'border-gray-200 bg-gray-50 hover:border-brand-300 hover:bg-brand-50/40 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-brand-500/10'"
+          >
+            <p class="text-3xl font-semibold text-gray-900 dark:text-white/90">{{ getFilteredTabCount('DECLINED') }}</p>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Refusées</p>
-          </article>
+          </a>
 
-          <article class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
-            <p class="text-3xl font-semibold text-gray-900 dark:text-white/90">{{ getTabCount('EXPIRED') }}</p>
+          <a
+            routerLink="/invitations"
+            [queryParams]="{ tab: 'EXPIRED' }"
+            (click)="selectTab('EXPIRED', $event)"
+            class="rounded-xl border p-4 text-left transition"
+            [ngClass]="activeTab === 'EXPIRED'
+              ? 'border-brand-500 bg-brand-50 dark:border-brand-500/60 dark:bg-brand-500/10'
+              : 'border-gray-200 bg-gray-50 hover:border-brand-300 hover:bg-brand-50/40 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-brand-500/10'"
+          >
+            <p class="text-3xl font-semibold text-gray-900 dark:text-white/90">{{ getFilteredTabCount('EXPIRED') }}</p>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Expirées</p>
-          </article>
+          </a>
         </div>
 
         <div class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_240px_auto_auto]">
@@ -95,17 +127,19 @@ type InvitationDirectionFilter = 'ALL' | 'RECEIVED' | 'SENT';
 
       <section class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="mb-5 flex flex-wrap gap-2">
-          <button
+          <a
             *ngFor="let tab of visibleTabs"
-            (click)="activeTab = tab.value"
+            routerLink="/invitations"
+            [queryParams]="{ tab: tab.value }"
+            (click)="selectTab(tab.value, $event)"
             [ngClass]="activeTab === tab.value
               ? 'border-brand-500 bg-brand-500 text-white'
               : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.03]'"
             class="rounded-xl border px-4 py-2 text-sm font-semibold transition"
           >
             {{ tab.label }}
-            <span class="ml-1 text-xs">({{ getTabCount(tab.value) }})</span>
-          </button>
+            <span class="ml-1 text-xs">({{ getFilteredTabCount(tab.value) }})</span>
+          </a>
         </div>
 
         <div
@@ -124,7 +158,15 @@ type InvitationDirectionFilter = 'ALL' | 'RECEIVED' | 'SENT';
           </div>
 
           <div *ngIf="!isLoadingInvitations && filteredInvitations.length === 0" class="rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-            Aucune invitation dans cet onglet.
+            Aucune invitation {{ getActiveTabEmptyLabel() }} avec les filtres actuels.
+            <button
+              *ngIf="searchTerm || directionFilter !== 'ALL'"
+              type="button"
+              (click)="resetSearch()"
+              class="ml-2 font-semibold text-brand-600 hover:text-brand-700"
+            >
+              Réinitialiser les filtres
+            </button>
           </div>
 
           <article
@@ -135,6 +177,7 @@ type InvitationDirectionFilter = 'ALL' | 'RECEIVED' | 'SENT';
               <div class="min-w-0 flex-1">
                 <h3 class="truncate text-base font-semibold text-gray-900 dark:text-white/90">{{ invitation.eventTitle }}</h3>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Organisateur: {{ invitation.senderName }}</p>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Destinataire: {{ invitation.recipientName }} - {{ invitation.recipientEmail }}</p>
 
                 <div class="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-600 sm:grid-cols-2 dark:text-gray-300">
                   <p><span class="font-semibold">Date/heure:</span> {{ invitation.eventDate | date:'short' }}</p>
@@ -197,6 +240,14 @@ type InvitationDirectionFilter = 'ALL' | 'RECEIVED' | 'SENT';
                 >
                   Voir evenement
                 </button>
+                <button
+                  *ngIf="canCancelInvitation(invitation)"
+                  type="button"
+                  (click)="cancelInvitation(invitation.id)"
+                  class="rounded-lg border border-error-300 px-3 py-2 text-xs font-semibold text-error-700 transition hover:bg-error-50 dark:border-error-500/50 dark:text-error-300 dark:hover:bg-error-500/10"
+                >
+                  Annuler invitation
+                </button>
               </div>
             </div>
           </article>
@@ -227,6 +278,9 @@ type InvitationDirectionFilter = 'ALL' | 'RECEIVED' | 'SENT';
           <p><span class="font-semibold">Mode:</span> {{ getEventModeLabel(selectedInvitation) }}</p>
           <p class="sm:col-span-2"><span class="font-semibold">{{ isOnlineInvitation(selectedInvitation) ? 'Lien' : 'Salle' }}:</span> {{ (isOnlineInvitation(selectedInvitation) ? (selectedInvitation.onlineMeetingLink || selectedInvitation.eventLocation) : selectedInvitation.eventLocation) || 'Non précisé' }}</p>
           <p class="sm:col-span-2"><span class="font-semibold">Statut:</span> {{ getInvitationStatusLabel(selectedInvitation) }}</p>
+          <p *ngIf="selectedInvitation.responseReason" class="sm:col-span-2">
+            <span class="font-semibold">Motif:</span> {{ selectedInvitation.responseReason }}
+          </p>
           <p *ngIf="selectedInvitation.message" class="sm:col-span-2">
             <span class="font-semibold">Message:</span> {{ selectedInvitation.message }}
           </p>
@@ -312,6 +366,10 @@ export class InvitationsComponent implements OnInit {
 
   ngOnInit(): void {
     this.route.queryParamMap.subscribe((params) => {
+      const routeTab = this.toInvitationTab(params.get('tab'));
+      if (routeTab) {
+        this.activeTab = routeTab;
+      }
       this.routeInvitationId = params.get('invitationId')?.trim() || '';
       this.tryOpenInvitationFromRoute();
     });
@@ -339,16 +397,13 @@ export class InvitationsComponent implements OnInit {
   }
 
   get filteredInvitations(): Invitation[] {
-    return this.invitations
-      .filter(invitation => this.getInvitationBucket(invitation) === this.activeTab)
-      .filter(invitation => this.matchesDirectionFilter(invitation))
-      .filter(invitation => this.matchesSearch(invitation))
+    return this.getFilteredInvitationsForTab(this.activeTab)
       .sort((left, right) => right.sentAt.getTime() - left.sentAt.getTime());
   }
 
   loadInvitations(): void {
     this.isLoadingInvitations = true;
-    this.invitationService.getInvitations().subscribe({
+    this.invitationService.getInvitations(this.currentRole === 'ADMIN').subscribe({
       next: (invitations) => {
         this.invitations = invitations;
         this.isLoadingInvitations = false;
@@ -371,6 +426,7 @@ export class InvitationsComponent implements OnInit {
           this.actionFeedback = 'Réponse impossible (invitation non autorisée ou expirée).';
           return;
         }
+        this.setActiveTab('ACCEPTED');
         this.actionFeedbackTone = 'success';
         this.actionFeedback = 'Invitation acceptée.';
         this.loadInvitations();
@@ -390,9 +446,10 @@ export class InvitationsComponent implements OnInit {
           this.actionFeedback = 'Réponse impossible (invitation non autorisée ou expirée).';
           return;
         }
+        this.closeDeclineModal();
+        this.setActiveTab('DECLINED');
         this.actionFeedbackTone = 'success';
         this.actionFeedback = 'Invitation refusée.';
-        this.closeDeclineModal();
         this.loadInvitations();
       },
       error: () => {
@@ -421,6 +478,53 @@ export class InvitationsComponent implements OnInit {
 
   getTabCount(tab: InvitationTab): number {
     return this.invitations.filter(invitation => this.getInvitationBucket(invitation) === tab).length;
+  }
+
+  cancelInvitation(id: string): void {
+    this.invitationService.cancelInvitation(id).subscribe({
+      next: () => {
+        this.setActiveTab('DECLINED');
+        this.actionFeedbackTone = 'success';
+        this.actionFeedback = 'Invitation annulée.';
+        this.loadInvitations();
+      },
+      error: () => {
+        this.actionFeedbackTone = 'error';
+        this.actionFeedback = 'Annulation impossible (droits insuffisants ou invitation déjà traitée).';
+      },
+    });
+  }
+
+  getFilteredTabCount(tab: InvitationTab): number {
+    return this.getFilteredInvitationsForTab(tab).length;
+  }
+
+  selectTab(tab: InvitationTab, event?: Event): void {
+    event?.preventDefault();
+    this.setActiveTab(tab);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  private setActiveTab(tab: InvitationTab): void {
+    this.activeTab = tab;
+    this.actionFeedback = '';
+    this.selectedInvitation = null;
+    this.closeDeclineModal();
+  }
+
+  getActiveTabEmptyLabel(): string {
+    const labels: Record<InvitationTab, string> = {
+      PENDING: 'en attente',
+      ACCEPTED: 'acceptée',
+      DECLINED: 'refusée',
+      EXPIRED: 'expirée',
+    };
+    return labels[this.activeTab];
   }
 
   getInvitationStatusLabel(invitation: Invitation): string {
@@ -456,6 +560,7 @@ export class InvitationsComponent implements OnInit {
   resetSearch(): void {
     this.searchTerm = '';
     this.directionFilter = 'ALL';
+    this.actionFeedback = '';
   }
 
   applyFilters(): void {
@@ -498,7 +603,7 @@ export class InvitationsComponent implements OnInit {
     }
     const link = (invitation.onlineMeetingLink || '').toLowerCase();
     const location = (invitation.eventLocation || '').toLowerCase();
-    return link.startsWith('https://') || location.includes('http') || location.includes('zoom') || location.includes('teams') || location.includes('meet');
+    return link.startsWith('https://') || location.includes('http') || location.includes('teams') || location.includes('meet');
   }
 
   openInvitationDetails(invitation: Invitation): void {
@@ -530,6 +635,21 @@ export class InvitationsComponent implements OnInit {
       return 'DECLINED';
     }
     return 'PENDING';
+  }
+
+  private toInvitationTab(value: string | null): InvitationTab | null {
+    const normalized = (value || '').trim().toUpperCase();
+    if (normalized === 'PENDING' || normalized === 'ACCEPTED' || normalized === 'DECLINED' || normalized === 'EXPIRED') {
+      return normalized;
+    }
+    return null;
+  }
+
+  private getFilteredInvitationsForTab(tab: InvitationTab): Invitation[] {
+    return this.invitations
+      .filter(invitation => this.getInvitationBucket(invitation) === tab)
+      .filter(invitation => this.matchesDirectionFilter(invitation))
+      .filter(invitation => this.matchesSearch(invitation));
   }
 
   private matchesDirectionFilter(invitation: Invitation): boolean {
@@ -579,6 +699,22 @@ export class InvitationsComponent implements OnInit {
     return currentCandidates.some((candidate) =>
       candidate === invitationRecipient || candidate === invitationRecipientEmail,
     );
+  }
+
+  canCancelInvitation(invitation: Invitation): boolean {
+    if (invitation.status !== InvitationStatus.PENDING || this.isExpiredInvitation(invitation)) {
+      return false;
+    }
+
+    if (this.currentRole === 'ADMIN') {
+      return true;
+    }
+
+    const invitationSender = (invitation.senderUsername || invitation.senderId || '').trim().toLowerCase();
+    return [this.currentUserId, this.currentUsername, this.currentEmail]
+      .map((value) => (value || '').trim().toLowerCase())
+      .filter((value) => !!value)
+      .some((candidate) => candidate === invitationSender);
   }
 
   getResponseUnavailableReason(invitation: Invitation): string {

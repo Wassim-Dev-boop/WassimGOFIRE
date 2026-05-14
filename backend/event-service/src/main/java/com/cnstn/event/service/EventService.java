@@ -14,6 +14,7 @@ import com.cnstn.event.dto.EventInviteRecipientRequest;
 import com.cnstn.event.dto.EventInviteRequest;
 import com.cnstn.event.dto.EventInvitationRespondRequest;
 import com.cnstn.event.dto.EventInvitationResponse;
+import com.cnstn.event.dto.EventMeetingResponse;
 import com.cnstn.event.dto.EventReservationContextResponse;
 import com.cnstn.event.dto.EventResponse;
 import com.cnstn.event.dto.EventSubmissionRequest;
@@ -21,7 +22,6 @@ import com.cnstn.event.dto.EventUpdateRequest;
 import com.cnstn.event.dto.PageResponse;
 import com.cnstn.event.dto.PartnerInviteRequest;
 import com.cnstn.event.dto.PartnerInviteResponse;
-import com.cnstn.event.dto.ZoomSignatureResponse;
 import com.cnstn.event.entity.EventEntity;
 import com.cnstn.event.entity.EventMode;
 import com.cnstn.event.entity.EventStatus;
@@ -62,11 +62,11 @@ public class EventService {
     private static final String ROLE_MANAGER = "CHEF_HIERARCHIQUE";
     private static final String ROLE_SECURITY = "RESPONSABLE_SECURITE";
     private static final String ROLE_DSN = "DIRECTEUR_DSN";
+    private static final String ROLE_ROOM = "RESPONSABLE_SALLE";
 
     private final EventRepository eventRepository;
     private final PartnerInvitationRepository partnerInvitationRepository;
     private final EventInvitationRepository eventInvitationRepository;
-    private final ZoomSignatureService zoomSignatureService;
     private final NotificationClient notificationClient;
     private final ReservationWorkflowClient reservationWorkflowClient;
     private final ReservationWorkflowClientProperties reservationWorkflowClientProperties;
@@ -78,7 +78,6 @@ public class EventService {
             EventRepository eventRepository,
             PartnerInvitationRepository partnerInvitationRepository,
             EventInvitationRepository eventInvitationRepository,
-            ZoomSignatureService zoomSignatureService,
             NotificationClient notificationClient,
             ReservationWorkflowClient reservationWorkflowClient,
             ReservationWorkflowClientProperties reservationWorkflowClientProperties,
@@ -89,7 +88,6 @@ public class EventService {
         this.eventRepository = eventRepository;
         this.partnerInvitationRepository = partnerInvitationRepository;
         this.eventInvitationRepository = eventInvitationRepository;
-        this.zoomSignatureService = zoomSignatureService;
         this.notificationClient = notificationClient;
         this.reservationWorkflowClient = reservationWorkflowClient;
         this.reservationWorkflowClientProperties = reservationWorkflowClientProperties;
@@ -132,6 +130,21 @@ public class EventService {
     }
 
     @Transactional(readOnly = true)
+    public EventMeetingResponse getMeeting(UUID id) {
+        EventEntity event = fetchEvent(Objects.requireNonNull(id));
+        boolean onlineAvailable = event.getEventMode() == EventMode.EN_LIGNE || event.getEventMode() == EventMode.HYBRIDE;
+        return new EventMeetingResponse(
+                event.getId(),
+                event.getTitle(),
+                event.getStartAt(),
+                event.getEndAt(),
+                event.getEventMode(),
+                event.getMeetingRoomId(),
+                onlineAvailable
+        );
+    }
+
+    @Transactional(readOnly = true)
     public EventReservationContextResponse reservationContext(UUID eventId) {
         EventEntity event = fetchEvent(Objects.requireNonNull(eventId));
         boolean reservationAllowed = event.getWorkflowStep() == EventWorkflowStep.BROUILLON
@@ -160,6 +173,7 @@ public class EventService {
         applyCreatePayload(entity, request);
         validateEventChronology(entity.getStartAt(), entity.getEndAt());
         validateModeCoherence(entity);
+        refreshMeetingRoom(entity);
 
         EventEntity saved = eventRepository.save(entity);
         return EventMapper.toResponse(saved);
@@ -172,6 +186,7 @@ public class EventService {
         applyUpdatePayload(event, request);
         validateEventChronology(event.getStartAt(), event.getEndAt());
         validateModeCoherence(event);
+        refreshMeetingRoom(event);
         return EventMapper.toResponse(eventRepository.save(event));
     }
 
@@ -320,6 +335,11 @@ public class EventService {
             event.setStatus(EventStatus.PENDING);
             event.setDecisionComment(normalizeOrNull(decisionComment));
             event.setDecidedBy(decidedBy);
+        } else if (requiresRoomPreparation(event, summary)) {
+            event.setWorkflowStep(EventWorkflowStep.VALIDATION_SALLE);
+            event.setStatus(EventStatus.PENDING);
+            event.setDecisionComment(normalizeOrNull(decisionComment));
+            event.setDecidedBy(decidedBy);
         } else {
             markApproved(event, decidedBy, decisionComment);
         }
@@ -373,7 +393,15 @@ public class EventService {
             return EventMapper.toResponse(saved);
         }
 
-        markApproved(event, decidedBy, decisionComment);
+        InternalEventReservationSummaryResponse summary = fetchReservationSummary(event.getId());
+        if (requiresRoomPreparation(event, summary)) {
+            event.setWorkflowStep(EventWorkflowStep.VALIDATION_SALLE);
+            event.setStatus(EventStatus.PENDING);
+            event.setDecisionComment(normalizeOrNull(decisionComment));
+            event.setDecidedBy(decidedBy);
+        } else {
+            markApproved(event, decidedBy, decisionComment);
+        }
         EventEntity saved = eventRepository.save(event);
         eventOfficialDocumentService.generateDecisionDocument(
                 saved,
@@ -389,6 +417,48 @@ public class EventService {
         return EventMapper.toResponse(saved);
     }
 
+    @Transactional
+    public EventResponse roomDecision(UUID id, EventDecisionRequest request, String decidedBy) {
+        EventEntity event = fetchEvent(Objects.requireNonNull(id));
+        ensureWorkflowStep(event, EventWorkflowStep.VALIDATION_SALLE);
+
+        boolean approved = Boolean.TRUE.equals(request.approved());
+        String decisionComment = normalize(request.decisionComment());
+        String rejectionReason = resolveRejectionReason(request, decisionComment, approved);
+
+        if (!approved) {
+            markRejected(event, rejectionReason, decidedBy, decisionComment);
+            EventEntity saved = eventRepository.save(event);
+            eventOfficialDocumentService.generateDecisionDocument(
+                    saved,
+                    EventOfficialDocumentType.DECISION_SALLE,
+                    false,
+                    ROLE_ROOM,
+                    decidedBy,
+                    decisionComment,
+                    rejectionReason,
+                    Instant.now()
+            );
+            notifyDecision(saved, false, decidedBy, rejectionReason);
+            return EventMapper.toResponse(saved);
+        }
+
+        markApproved(event, decidedBy, decisionComment);
+        EventEntity saved = eventRepository.save(event);
+        eventOfficialDocumentService.generateDecisionDocument(
+                saved,
+                EventOfficialDocumentType.DECISION_SALLE,
+                true,
+                ROLE_ROOM,
+                decidedBy,
+                decisionComment,
+                null,
+                Instant.now()
+        );
+        notifyDecision(saved, true, decidedBy, decisionComment);
+        return EventMapper.toResponse(saved);
+    }
+
     @Transactional(readOnly = true)
     public List<EventDocumentResponse> listDocuments(UUID eventId) {
         UUID safeEventId = Objects.requireNonNull(eventId);
@@ -399,15 +469,15 @@ public class EventService {
     @Transactional(readOnly = true)
     public EventDocumentContent downloadDocument(UUID eventId, UUID documentId) {
         UUID safeEventId = Objects.requireNonNull(eventId);
-        fetchEvent(safeEventId);
-        return eventOfficialDocumentService.download(safeEventId, Objects.requireNonNull(documentId));
+        EventEntity event = fetchEvent(safeEventId);
+        return eventOfficialDocumentService.download(event, Objects.requireNonNull(documentId));
     }
 
     @Transactional(readOnly = true)
     public EventDocumentContent downloadLatestDocument(UUID eventId) {
         UUID safeEventId = Objects.requireNonNull(eventId);
-        fetchEvent(safeEventId);
-        return eventOfficialDocumentService.downloadLatest(safeEventId);
+        EventEntity event = fetchEvent(safeEventId);
+        return eventOfficialDocumentService.downloadLatest(event);
     }
 
     @Transactional
@@ -434,6 +504,13 @@ public class EventService {
                 throw new AccessDeniedException("Seul le directeur DSN peut valider cette etape");
             }
             return dsnDecision(id, request, decidedBy);
+        }
+
+        if (event.getWorkflowStep() == EventWorkflowStep.VALIDATION_SALLE) {
+            if (!roles.contains(ROLE_ROOM) && !roles.contains("ADMIN")) {
+                throw new AccessDeniedException("Seul le responsable salle peut valider cette etape");
+            }
+            return roomDecision(id, request, decidedBy);
         }
 
         throw new BadRequestException("Aucune validation possible pour l etat courant de cet evenement");
@@ -523,6 +600,15 @@ public class EventService {
     }
 
     @Transactional
+    public List<EventInvitationResponse> listAllInvitationsForAdmin() {
+        expirePastInvitationsIfNeeded();
+        return eventInvitationRepository.findAllByOrderByCreatedAtDesc()
+                .stream()
+                .map(EventMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional
     public List<EventInvitationResponse> listInvitationsForCurrentUser(String currentUsername) {
         String normalizedCurrent = normalize(currentUsername);
         if (normalizedCurrent.isEmpty()) {
@@ -584,62 +670,25 @@ public class EventService {
         return EventMapper.toResponse(invitation);
     }
 
-    @Transactional(readOnly = true)
-    public ZoomSignatureResponse generateZoomSignature(UUID eventId, String userName) {
-        EventEntity event = fetchEvent(Objects.requireNonNull(eventId));
-        if (event.getEventMode() == EventMode.PRESENTIEL) {
-            throw new BadRequestException("Cet evenement n est pas configure avec une reunion en ligne");
+    @Transactional
+    public EventInvitationResponse cancelInvitation(UUID invitationId, String currentUsername, boolean adminOverride) {
+        EventInvitationEntity invitation = fetchInvitation(invitationId);
+        assertInvitationCanBeCancelled(invitation, currentUsername, adminOverride);
+
+        if (invitation.getStatus() != EventInvitationStatus.PENDING) {
+            throw new BadRequestException("Seule une invitation en attente peut etre annulee");
         }
 
-        String meetingNumber = sanitizeMeetingNumber(event.getOnlineMeetingId());
-        if (meetingNumber.isEmpty()) {
-            meetingNumber = sanitizeMeetingNumber(event.getZoomMeetingNumber());
-        }
-        String passcode = normalize(event.getOnlineMeetingPassword());
-        if (passcode.isEmpty()) {
-            passcode = normalize(event.getZoomPasscode());
-        }
-
-        if (meetingNumber.isEmpty()) {
-            throw new BadRequestException("L identifiant de reunion en ligne est obligatoire");
-        }
-        if (!isValidMeetingNumber(meetingNumber)) {
-            throw new BadRequestException("L identifiant Zoom doit contenir entre 9 et 11 chiffres");
-        }
-
-        int role = 0;
-        String safeUserName = normalize(userName);
-        if (safeUserName.isEmpty()) {
-            safeUserName = "Participant CNSTN";
-        }
-
-        boolean sdkConfigured = zoomSignatureService.isSdkConfigured();
-        String signature = null;
-        String sdkKey = null;
-
-        if (sdkConfigured) {
-            try {
-                signature = zoomSignatureService.generateSignature(meetingNumber, role);
-                sdkKey = zoomSignatureService.getSdkKey();
-            } catch (Exception e) {
-                // Fallback if signature generation fails
-                sdkConfigured = false;
-            }
-        }
-
-        // Generate fallback web client URL
-        String fallbackWebUrl = zoomSignatureService.generateWebClientUrl(meetingNumber, passcode);
-
-        return new ZoomSignatureResponse(
-                sdkKey != null ? sdkKey : "",
-                signature != null ? signature : "",
-                meetingNumber,
-                passcode,
-                safeUserName,
-                role,
-                fallbackWebUrl,
-                sdkConfigured
+        invitation.setStatus(EventInvitationStatus.CANCELLED);
+        invitation.setResponseReason(null);
+        invitation.setRespondedAt(Instant.now());
+        eventInvitationRepository.save(invitation);
+        sendNotificationSafely(
+                invitation.getInvitedUsername(),
+                "Invitation annulee",
+                "L invitation a l evenement \"" + normalize(invitation.getEvent().getTitle()) + "\" a ete annulee."
         );
+        return EventMapper.toResponse(invitation);
     }
 
     private EventEntity fetchEvent(UUID id) {
@@ -661,8 +710,6 @@ public class EventService {
 
         applyOnlineMeetingFields(
                 event,
-                request.zoomMeetingNumber(),
-                request.zoomPasscode(),
                 request.onlineMeetingProvider(),
                 request.onlineMeetingLink(),
                 request.onlineMeetingId(),
@@ -696,8 +743,6 @@ public class EventService {
 
         applyOnlineMeetingFields(
                 event,
-                request.zoomMeetingNumber(),
-                request.zoomPasscode(),
                 request.onlineMeetingProvider(),
                 request.onlineMeetingLink(),
                 request.onlineMeetingId(),
@@ -707,49 +752,49 @@ public class EventService {
 
     private void applyOnlineMeetingFields(
             EventEntity event,
-            String legacyMeetingNumber,
-            String legacyPasscode,
             String provider,
             String meetingLink,
             String meetingId,
             String meetingPassword
     ) {
         String normalizedMeetingId = normalize(meetingId);
-        if (normalizedMeetingId.isEmpty()) {
-            normalizedMeetingId = sanitizeMeetingNumber(legacyMeetingNumber);
-        }
-
         String normalizedPassword = normalize(meetingPassword);
-        if (normalizedPassword.isEmpty()) {
-            normalizedPassword = normalize(legacyPasscode);
-        }
 
         String normalizedProvider = normalize(provider);
         if (normalizedProvider.isEmpty() && event.getEventMode() != EventMode.PRESENTIEL) {
-            normalizedProvider = "Zoom";
+            normalizedProvider = "Jitsi";
         }
 
         String normalizedLink = normalize(meetingLink);
-        if (normalizedLink.isEmpty() && !normalizedMeetingId.isEmpty()) {
-            normalizedLink = "https://zoom.us/j/" + normalizedMeetingId;
-        }
 
         if (event.getEventMode() == EventMode.PRESENTIEL) {
             event.setOnlineMeetingProvider(null);
             event.setOnlineMeetingLink(null);
             event.setOnlineMeetingId(null);
             event.setOnlineMeetingPassword(null);
-            event.setZoomMeetingNumber(null);
-            event.setZoomPasscode(null);
             return;
+        }
+
+        if (!normalizedLink.isEmpty() && !isSafeHttpsUrl(normalizedLink)) {
+            throw new BadRequestException("Le lien de reunion en ligne doit etre une URL HTTPS valide.");
         }
 
         event.setOnlineMeetingProvider(normalizeOrNull(normalizedProvider));
         event.setOnlineMeetingLink(normalizeOrNull(normalizedLink));
         event.setOnlineMeetingId(normalizeOrNull(normalizedMeetingId));
         event.setOnlineMeetingPassword(normalizeOrNull(normalizedPassword));
-        event.setZoomMeetingNumber(normalizeOrNull(normalizedMeetingId));
-        event.setZoomPasscode(normalizeOrNull(normalizedPassword));
+    }
+
+    private void refreshMeetingRoom(EventEntity event) {
+        if (event.getEventMode() == EventMode.PRESENTIEL) {
+            event.setMeetingRoomId(null);
+            return;
+        }
+        if (!normalize(event.getMeetingRoomId()).isEmpty()) {
+            return;
+        }
+        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+        event.setMeetingRoomId("EVT-" + suffix);
     }
 
     private void validateEventChronology(Instant startAt, Instant endAt) {
@@ -764,28 +809,12 @@ public class EventService {
     private void validateModeCoherence(EventEntity event) {
         EventMode mode = event.getEventMode();
         String location = normalize(event.getLocation());
-        String provider = normalize(event.getOnlineMeetingProvider());
-        String meetingLink = normalize(event.getOnlineMeetingLink());
-        String meetingId = normalize(event.getOnlineMeetingId());
 
         if (mode == EventMode.PRESENTIEL) {
             if (location.isEmpty()) {
                 throw new BadRequestException("Une salle est obligatoire pour un evenement presentiel");
             }
             return;
-        }
-
-        if (meetingId.isEmpty()) {
-            throw new BadRequestException("L identifiant de reunion en ligne est obligatoire");
-        }
-        if (provider.isEmpty()) {
-            throw new BadRequestException("Le provider de reunion en ligne est obligatoire");
-        }
-        if (meetingLink.isEmpty()) {
-            throw new BadRequestException("Le lien de reunion en ligne est obligatoire");
-        }
-        if (!isSafeHttpsUrl(meetingLink)) {
-            throw new BadRequestException("Le lien de reunion en ligne doit etre une URL HTTPS valide");
         }
 
         if (mode == EventMode.HYBRIDE && location.isEmpty()) {
@@ -802,6 +831,11 @@ public class EventService {
                 && !summary.hasRoomReservation()) {
             throw new BadRequestException("Une reservation de salle est obligatoire pour cet evenement");
         }
+    }
+
+    private boolean requiresRoomPreparation(EventEntity event, InternalEventReservationSummaryResponse summary) {
+        return (event.getEventMode() == EventMode.PRESENTIEL || event.getEventMode() == EventMode.HYBRIDE)
+                && summary.hasRoomReservation();
     }
 
     private InternalEventReservationSummaryResponse fetchReservationSummary(UUID eventId) {
@@ -966,7 +1000,8 @@ public class EventService {
         sendNotificationSafely(
                 requester,
                 "Evenement soumis",
-                "Votre evenement \"" + normalize(event.getTitle()) + "\" est soumis au workflow de validation."
+                "Votre evenement \"" + normalize(event.getTitle()) + "\" est soumis au workflow de validation.",
+                "/events?eventId=" + event.getId()
         );
     }
 
@@ -986,17 +1021,21 @@ public class EventService {
             message += " Detail: " + normalizedDetail;
         }
 
-        sendNotificationSafely(requester, title, message);
+        sendNotificationSafely(requester, title, message, "/events?eventId=" + event.getId());
     }
 
     private void sendNotificationSafely(String recipientUsername, String title, String message) {
+        sendNotificationSafely(recipientUsername, title, message, null);
+    }
+
+    private void sendNotificationSafely(String recipientUsername, String title, String message, String actionUrl) {
         String recipient = normalize(recipientUsername);
         if (recipient.isEmpty()) {
             return;
         }
 
         try {
-            notificationClient.sendInternalNotification(recipient, title, message);
+            notificationClient.sendInternalNotification(recipient, title, message, actionUrl);
         } catch (Exception ex) {
             log.warn("Notification non envoyee pour {}", recipient, ex);
         }
@@ -1087,6 +1126,18 @@ public class EventService {
         }
     }
 
+    private void assertInvitationCanBeCancelled(EventInvitationEntity invitation, String currentUsername, boolean adminOverride) {
+        if (adminOverride) {
+            return;
+        }
+
+        String actor = normalize(currentUsername).toLowerCase();
+        String sender = normalize(invitation.getInvitedByUsername()).toLowerCase();
+        if (actor.isEmpty() || !actor.equals(sender)) {
+            throw new AccessDeniedException("Seul l inviteur ou l administrateur peut annuler cette invitation");
+        }
+    }
+
     private void updateInvitationStatus(
             EventInvitationEntity invitation,
             EventInvitationStatus targetStatus,
@@ -1126,7 +1177,8 @@ public class EventService {
         sendNotificationSafely(
                 invitation.getInvitedUsername(),
                 "Invitation evenement",
-                "Vous avez recu une invitation pour \"" + safeTitle + "\". Consultez /invitations."
+                "Vous avez recu une invitation pour \"" + safeTitle + "\". Consultez /invitations.",
+                "/invitations?eventId=" + event.getId() + "&invitationId=" + invitation.getId()
         );
 
         try {
@@ -1208,14 +1260,6 @@ public class EventService {
     private String normalizeOrNull(String value) {
         String normalized = normalize(value);
         return normalized.isEmpty() ? null : normalized;
-    }
-
-    private String sanitizeMeetingNumber(String value) {
-        return normalize(value).replaceAll("\\D", "");
-    }
-
-    private boolean isValidMeetingNumber(String value) {
-        return value.matches("\\d{9,11}");
     }
 
     private boolean isSafeHttpsUrl(String value) {

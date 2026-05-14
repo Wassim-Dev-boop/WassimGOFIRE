@@ -25,10 +25,15 @@ public class NotificationClient {
     }
 
     public void sendInternalNotification(String recipientUsername, String title, String message) {
+        sendInternalNotification(recipientUsername, title, message, null);
+    }
+
+    public void sendInternalNotification(String recipientUsername, String title, String message, String actionUrl) {
         InternalNotificationRequest request = new InternalNotificationRequest(
                 recipientUsername,
                 title,
-                message
+                message,
+                actionUrl
         );
 
         HttpHeaders headers = new HttpHeaders();

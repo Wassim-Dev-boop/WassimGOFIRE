@@ -3,8 +3,9 @@ import { SidebarService } from '../../services/sidebar.service';
 import { CommonModule } from '@angular/common';
 import { AppSidebarComponent } from '../app-sidebar/app-sidebar.component';
 import { BackdropComponent } from '../backdrop/backdrop.component';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/router';
 import { AppHeaderComponent } from '../app-header/app-header.component';
+import { filter } from 'rxjs';
 
 @Component({
   selector: 'app-layout',
@@ -22,11 +23,27 @@ export class AppLayoutComponent {
   readonly isExpanded$;
   readonly isHovered$;
   readonly isMobileOpen$;
+  hideNavbar = false;
 
-  constructor(public sidebarService: SidebarService) {
+  constructor(
+    public sidebarService: SidebarService,
+    private router: Router,
+    private route: ActivatedRoute,
+  ) {
     this.isExpanded$ = this.sidebarService.isExpanded$;
     this.isHovered$ = this.sidebarService.isHovered$;
     this.isMobileOpen$ = this.sidebarService.isMobileOpen$;
+    this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe(() => {
+      this.hideNavbar = this.readHideNavbarFlag();
+    });
+  }
+
+  private readHideNavbarFlag(): boolean {
+    let current = this.route.firstChild;
+    while (current?.firstChild) {
+      current = current.firstChild;
+    }
+    return !!current?.snapshot.data?.['hideNavbar'];
   }
 
   get containerClasses() {

@@ -60,7 +60,11 @@ public class PasswordRecoveryService {
         }
 
         UserEntity user = userOpt.get();
-        if (!user.isEnabled() || user.getKeycloakId() == null) {
+        if (!user.isEnabled()) {
+            return successForgotPasswordResponse();
+        }
+
+        if (resolveAndPersistKeycloakId(user).isEmpty()) {
             return successForgotPasswordResponse();
         }
 
@@ -90,24 +94,24 @@ public class PasswordRecoveryService {
     @Transactional
     public PasswordResetResponse resetPassword(ResetPasswordRequest request) {
         if (!Objects.equals(request.newPassword(), request.confirmPassword())) {
-            throw new BadRequestException("Passwords do not match");
+            throw new BadRequestException("La confirmation du mot de passe est invalide");
         }
 
         String rawToken = request.token().trim();
         String tokenHash = hashToken(rawToken);
         PasswordResetTokenEntity tokenEntity = passwordResetTokenRepository
                 .findByTokenHashAndUsedAtIsNull(tokenHash)
-                .orElseThrow(() -> new BadRequestException("Invalid or expired reset token"));
+                .orElseThrow(() -> new BadRequestException("Le lien de reinitialisation est invalide ou expire"));
 
         Instant now = Instant.now();
         if (tokenEntity.getExpiresAt().isBefore(now)) {
-            throw new BadRequestException("Invalid or expired reset token");
+            throw new BadRequestException("Le lien de reinitialisation est invalide ou expire");
         }
 
         UserEntity user = tokenEntity.getUser();
-        UUID keycloakId = user.getKeycloakId();
+        UUID keycloakId = resolveAndPersistKeycloakId(user).orElse(null);
         if (keycloakId == null) {
-            throw new BadRequestException("User account is not linked to identity provider");
+            throw new BadRequestException("Le compte utilisateur n est pas lie au fournisseur d identite");
         }
 
         keycloakAdminClient.resetUserPassword(keycloakId, request.newPassword());
@@ -116,11 +120,11 @@ public class PasswordRecoveryService {
         passwordResetTokenRepository.save(tokenEntity);
         expireActiveTokens(user.getId(), now);
 
-        return new PasswordResetResponse("Password has been reset successfully");
+        return new PasswordResetResponse("Le mot de passe a ete reinitialise avec succes");
     }
 
     private PasswordResetResponse successForgotPasswordResponse() {
-        return new PasswordResetResponse("If this email exists, a password reset link has been sent");
+        return new PasswordResetResponse("Si cet email existe, un lien de reinitialisation a ete envoye");
     }
 
     private String buildResetLink(String token) {
@@ -139,6 +143,22 @@ public class PasswordRecoveryService {
         }
         activeTokens.forEach(token -> token.setUsedAt(now));
         passwordResetTokenRepository.saveAll(activeTokens);
+    }
+
+    private Optional<UUID> resolveAndPersistKeycloakId(UserEntity user) {
+        UUID existingKeycloakId = user.getKeycloakId();
+        if (existingKeycloakId != null) {
+            return Optional.of(existingKeycloakId);
+        }
+
+        Optional<UUID> resolved = keycloakAdminClient.findUserIdByUsernameOrEmail(user.getUsername(), user.getEmail());
+        if (resolved.isEmpty()) {
+            return Optional.empty();
+        }
+
+        user.setKeycloakId(resolved.get());
+        userRepository.save(user);
+        return resolved;
     }
 
     private String generateToken() {

@@ -42,6 +42,9 @@ public class NotificationEntity {
     @Column(name = "email_last_error", length = 1200)
     private String emailLastError;
 
+    @Column(name = "action_url", length = 500)
+    private String actionUrl;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -112,6 +115,14 @@ public class NotificationEntity {
 
     public void setEmailLastError(String emailLastError) {
         this.emailLastError = emailLastError;
+    }
+
+    public String getActionUrl() {
+        return actionUrl;
+    }
+
+    public void setActionUrl(String actionUrl) {
+        this.actionUrl = actionUrl;
     }
 
     public Instant getCreatedAt() {

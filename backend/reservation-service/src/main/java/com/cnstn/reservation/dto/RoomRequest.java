@@ -10,6 +10,7 @@ public record RoomRequest(
         @NotBlank @Size(max = 100) String name,
         @NotBlank @Size(max = 120) String location,
         @Size(max = 400) String description,
+        String imageUrl,
         @NotNull @Min(1) Integer capacity,
         RoomOperationalStatus status,
         Boolean active

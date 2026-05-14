@@ -23,7 +23,6 @@ export class PublicHomeComponent {
     { title: 'Interventions', description: 'Demandes techniques et workflow de traitement.' },
     { title: 'Notifications', description: 'Alertes metier et journal des actions importantes.' },
     { title: 'Administration', description: 'Gestion utilisateurs, roles, permissions et workflows.' },
-    { title: 'Reporting', description: 'Indicateurs reels adaptes au role connecte.' },
   ];
 
   readonly roleUseCases = [

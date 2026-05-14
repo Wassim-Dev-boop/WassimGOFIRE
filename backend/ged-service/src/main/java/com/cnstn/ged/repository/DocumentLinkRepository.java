@@ -8,4 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface DocumentLinkRepository extends JpaRepository<DocumentLinkEntity, UUID> {
 
     List<DocumentLinkEntity> findBySourceDocumentIdOrderByCreatedAtDesc(UUID sourceDocumentId);
+
+    void deleteBySourceDocumentIdOrLinkedDocumentId(UUID sourceDocumentId, UUID linkedDocumentId);
 }

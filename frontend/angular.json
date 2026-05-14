@@ -21,9 +21,7 @@
             ],
             "allowedCommonJsDependencies": [
                "prismjs",
-               "polylabel",
-               "@zoom/meetingsdk",
-               "react"
+               "polylabel"
             ],
             "tsConfig": "tsconfig.app.json",
             "assets": [

@@ -675,21 +675,6 @@
           }
         }
       ]
-    },
-    {
-      "name": "07 - Reporting Service",
-      "item": [
-        {
-          "name": "Dashboard KPI (DIRECTEUR_DSN)",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{directorToken}}" }
-            ],
-            "url": "{{gatewayUrl}}/api/v1/kpis/dashboard"
-          }
-        }
-      ]
     }
   ],
   "variable": [

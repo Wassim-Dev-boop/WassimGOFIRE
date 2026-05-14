@@ -1,6 +1,7 @@
 package com.cnstn.reservation.service;
 
 import com.cnstn.reservation.entity.ReservationReferenceCounterEntity;
+import com.cnstn.reservation.repository.ReservationRepository;
 import com.cnstn.reservation.repository.ReservationReferenceCounterRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -15,15 +16,24 @@ public class ReservationReferenceGeneratorService {
     private static final String RESERVATION_PREFIX = "RES";
 
     private final ReservationReferenceCounterRepository counterRepository;
+    private final ReservationRepository reservationRepository;
     private final Clock clock;
 
     @Autowired
-    public ReservationReferenceGeneratorService(ReservationReferenceCounterRepository counterRepository) {
-        this(counterRepository, Clock.systemUTC());
+    public ReservationReferenceGeneratorService(
+            ReservationReferenceCounterRepository counterRepository,
+            ReservationRepository reservationRepository
+    ) {
+        this(counterRepository, reservationRepository, Clock.systemUTC());
     }
 
-    ReservationReferenceGeneratorService(ReservationReferenceCounterRepository counterRepository, Clock clock) {
+    ReservationReferenceGeneratorService(
+            ReservationReferenceCounterRepository counterRepository,
+            ReservationRepository reservationRepository,
+            Clock clock
+    ) {
         this.counterRepository = counterRepository;
+        this.reservationRepository = reservationRepository;
         this.clock = clock;
     }
 
@@ -38,7 +48,9 @@ public class ReservationReferenceGeneratorService {
         ReservationReferenceCounterEntity counter = counterRepository.findForUpdate(RESERVATION_PREFIX, year)
                 .orElseGet(() -> createCounter(year));
 
-        int nextValue = counter.getLastValue() + 1;
+        int maxFromReservations = reservationRepository.findMaxReferenceSequenceForYear(RESERVATION_PREFIX, year);
+        int currentValue = Math.max(counter.getLastValue(), maxFromReservations);
+        int nextValue = currentValue + 1;
         counter.setLastValue(nextValue);
         counterRepository.save(counter);
 

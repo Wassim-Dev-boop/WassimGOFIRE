@@ -125,7 +125,6 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
       admin: 'Administration',
       workflows: 'Workflows',
       profile: 'Profil',
-      reporting: 'Reporting',
     };
 
     const breadcrumbs: BreadcrumbItem[] = [{ label: 'Accueil', route: '/dashboard' }];
@@ -186,9 +185,6 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
         return '/admin';
       }
       return '/dashboard';
-    }
-    if (term.includes('report') || term.includes('kpi') || term.includes('stat')) {
-      return '/reporting';
     }
 
     return '/dashboard';

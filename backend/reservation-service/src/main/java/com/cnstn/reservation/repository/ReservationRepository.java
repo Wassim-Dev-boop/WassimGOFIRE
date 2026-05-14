@@ -50,4 +50,17 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
     List<ReservationEntity> findByEventId(UUID eventId);
 
     List<ReservationEntity> findByEventIdAndStatus(UUID eventId, ReservationStatus status);
+
+    @Query(
+            value = """
+                    SELECT COALESCE(MAX(CAST(split_part(reference_code, '-', 3) AS INTEGER)), 0)
+                    FROM reservations
+                    WHERE reference_code LIKE CONCAT(:prefix, '-', :yearValue, '-%')
+                    """,
+            nativeQuery = true
+    )
+    int findMaxReferenceSequenceForYear(
+            @Param("prefix") String prefix,
+            @Param("yearValue") int yearValue
+    );
 }

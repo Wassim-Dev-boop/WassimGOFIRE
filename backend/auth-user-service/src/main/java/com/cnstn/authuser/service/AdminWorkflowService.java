@@ -1107,6 +1107,17 @@ public class AdminWorkflowService {
                         false,
                         false,
                         false
+                ),
+                new WorkflowStepTemplate(
+                        WorkflowStepCode.EVENT_SOUTENANCE_CHECKPOINT,
+                        "Contrôle soutenance",
+                        "Étape optionnelle de vérification finale avant soutenance.",
+                        RoleName.RESPONSABLE_QUALITE,
+                        WorkflowConditionType.TOUJOURS,
+                        Set.of(WorkflowActionType.REQUEST_CHANGES, WorkflowActionType.CLOSE),
+                        false,
+                        false,
+                        false
                 )
         ));
 

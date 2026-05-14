@@ -29,7 +29,7 @@
 - `PUT /api/v1/events/{id}/decision`
 - `POST /api/v1/events/{id}/partners`
 - `GET /api/v1/events/{id}/partners`
-- `POST /api/v1/events/{id}/zoom-signature`
+- `GET /api/v1/events/{id}/meeting`
 
 ## Reservation Service (`reservation-service`)
 
@@ -71,9 +71,3 @@
 - `PUT /api/v1/notifications/{id}/read`
 - `GET /api/v1/notifications/stream` (SSE)
 - `POST /internal/v1/emails/send` (interne, API key)
-
-## Reporting Service (`reporting-service`)
-
-- `GET /api/v1/kpis/dashboard`
-
-This endpoint aggregates metrics from `event-service`, `reservation-service`, `intervention-service`, and `ged-service` via OpenFeign + Resilience4j circuit breaker.

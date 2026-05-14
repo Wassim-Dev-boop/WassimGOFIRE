@@ -7,13 +7,13 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import frLocale from '@fullcalendar/core/locales/fr';
-import { Subscription, catchError, firstValueFrom, forkJoin, map, of } from 'rxjs';
+import { Subscription, catchError, forkJoin, map, of, switchMap, throwError } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EventService } from '../../../core/services/event.service';
 import { InvitationService } from '../../../core/services/invitation.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ReservationService } from '../../../core/services/reservation.service';
-import { AppRole, Event, EventMode, EventStatus, InvitationStatus, Room } from '../../../core/models';
+import { AppRole, Equipment, Event, EventMode, EventStatus, InvitationStatus, Room } from '../../../core/models';
 import { Option, SelectComponent } from '../../../shared/components/form/select/select.component';
 
 type CalendarVisualLevel = 'Danger' | 'Success' | 'Primary' | 'Warning';
@@ -24,14 +24,6 @@ interface CalendarPartnerInviteDispatchResult {
   sentCount: number;
   failedCount: number;
   failedEmails: string[];
-}
-
-declare global {
-  interface Window {
-    ZoomMtgEmbedded?: {
-      createClient: () => any;
-    };
-  }
 }
 
 @Component({
@@ -248,7 +240,7 @@ declare global {
             <p class="mb-4 line-clamp-2 text-sm text-gray-600 dark:text-gray-400">{{ event.description || 'Aucune description.' }}</p>
 
             <div class="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-              <p><span class="font-semibold">{{ isEventOnlineOnly(event) ? 'Acces' : 'Lieu' }}:</span> {{ isEventOnlineOnly(event) ? 'Reunion Zoom integree' : event.location }}</p>
+              <p><span class="font-semibold">{{ isEventOnlineOnly(event) ? 'Acces' : 'Lieu' }}:</span> {{ isEventOnlineOnly(event) ? 'Salle virtuelle integree' : event.location }}</p>
               <p><span class="font-semibold">Date:</span> {{ getEventDateRangeLabel(event) }}</p>
               <p><span class="font-semibold">Organisateur:</span> {{ event.organiserName }}</p>
             </div>
@@ -446,15 +438,11 @@ declare global {
               <div *ngIf="isOnlineMode(getResolvedEventMode(selectedEvent))" class="mt-4 space-y-2">
                 <button
                   type="button"
-                  (click)="openOnlineMeeting(selectedEvent)"
-                  [disabled]="!canOpenOnlineMeeting(selectedEvent)"
-                  class="w-full rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  (click)="openInternalMeeting(selectedEvent)"
+                  class="w-full rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-600"
                 >
                   Rejoindre en ligne
                 </button>
-                <p *ngIf="!canOpenOnlineMeeting(selectedEvent)" class="text-xs text-gray-500 dark:text-gray-400">
-                  {{ getOnlineJoinUnavailableReason(selectedEvent) }}
-                </p>
                 <p *ngIf="onlineJoinFeedback" class="text-xs" [ngClass]="onlineJoinFeedbackTone === 'success' ? 'text-success-600 dark:text-success-300' : 'text-error-600 dark:text-error-300'">
                   {{ onlineJoinFeedback }}
                 </p>
@@ -570,6 +558,7 @@ declare global {
               <ng-container *ngIf="isPhysicalMode(calendarEventMode); else onlineLocationField">
                 <app-select
                   [(ngModel)]="calendarEventLocation"
+                  (ngModelChange)="updateSelectedCalendarRoomImage()"
                   [options]="roomLocationSelectOptions"
                   placeholder="Selectionner une salle"
                 ></app-select>
@@ -578,7 +567,7 @@ declare global {
                 <input
                   type="text"
                   [(ngModel)]="calendarEventLocation"
-                  placeholder="Ex: Salle Zoom CNSTN (optionnel)"
+                  placeholder="Ex: Salle virtuelle CNSTN (optionnel)"
                   class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
                 />
               </ng-template>
@@ -664,28 +653,38 @@ declare global {
                 (ngModelChange)="onCalendarEventModeChange()"
               ></app-select>
               <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Presentiel: salle obligatoire. En ligne: informations reunion obligatoires. Hybride: salle + informations reunion.
+                Presentiel: salle obligatoire. En ligne: salle virtuelle automatique. Hybride: salle + salle virtuelle.
               </p>
             </div>
 
-            <div *ngIf="isOnlineMode(calendarEventMode)">
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">ID reunion Zoom <span class="text-error-500">*</span></label>
-              <input
-                type="text"
-                [(ngModel)]="calendarEventZoomMeetingNumber"
-                placeholder="Ex: 98765432101"
-                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            <div *ngIf="isPhysicalMode(calendarEventMode) && selectedCalendarRoomImageUrl" class="sm:col-span-2">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Image 3D de la salle</label>
+              <img
+                [src]="selectedCalendarRoomImageUrl"
+                alt="Image de la salle selectionnee"
+                class="max-h-64 w-full rounded-xl border border-gray-200 object-cover dark:border-gray-700"
               />
             </div>
 
-            <div *ngIf="isOnlineMode(calendarEventMode)">
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Code secret Zoom <span class="text-error-500">*</span></label>
-              <input
-                type="text"
-                [(ngModel)]="calendarEventZoomPasscode"
-                placeholder="Ex: CNSTN2026"
-                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-              />
+            <div *ngIf="isPhysicalMode(calendarEventMode)" class="sm:col-span-2">
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-400">Equipements</label>
+              <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <label
+                  *ngFor="let equipment of availableEventEquipment"
+                  class="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                >
+                  <input
+                    type="checkbox"
+                    [checked]="isCalendarEquipmentSelected(equipment.id)"
+                    (change)="toggleCalendarEquipment(equipment.id, $any($event.target).checked)"
+                    class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                  />
+                  <span>{{ equipment.name }}</span>
+                </label>
+              </div>
+              <p *ngIf="availableEventEquipment.length === 0" class="text-sm text-gray-500 dark:text-gray-400">
+                Aucun equipement disponible.
+              </p>
             </div>
 
             <div
@@ -891,22 +890,17 @@ declare global {
                 <div>
                   <h4 class="text-sm font-semibold text-gray-900 dark:text-white/90">Reunion en ligne</h4>
                   <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                    Ouvrir le lien de reunion dans un nouvel onglet securise.
+                    Ouvrir la salle virtuelle directement dans la plateforme.
                   </p>
                 </div>
 
                 <button
-                  (click)="openOnlineMeeting(selectedEvent)"
-                  [disabled]="!canOpenOnlineMeeting(selectedEvent)"
+                  (click)="openInternalMeeting(selectedEvent)"
                   class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Rejoindre en ligne
                 </button>
               </div>
-
-              <p *ngIf="!canOpenOnlineMeeting(selectedEvent)" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                {{ getOnlineJoinUnavailableReason(selectedEvent) }}
-              </p>
 
               <p *ngIf="onlineJoinFeedback" class="mt-3 text-xs" [ngClass]="onlineJoinFeedbackTone === 'success' ? 'text-success-600 dark:text-success-300' : 'text-error-600 dark:text-error-300'">
                 {{ onlineJoinFeedback }}
@@ -1189,6 +1183,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
 
   events: Event[] = [];
   rooms: Room[] = [];
+  equipment: Equipment[] = [];
   selectedEvent: Event | null = null;
   viewMode: 'list' | 'calendar' = 'list';
   currentRole: AppRole = 'EMPLOYEE';
@@ -1227,8 +1222,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
   calendarEventDescription = '';
   calendarEventLocation = '';
   calendarEventMode: EventMode = 'PRESENTIEL';
-  calendarEventZoomMeetingNumber = '';
-  calendarEventZoomPasscode = '';
   calendarEventType: Event['type'] = 'MEETING';
   calendarEventStatus: EventStatus = EventStatus.DRAFT;
   calendarEventMaxParticipants = 50;
@@ -1238,6 +1231,8 @@ export class EventsListComponent implements OnInit, OnDestroy {
   calendarEventStartTime = '09:00';
   calendarEventEndTime = '18:00';
   calendarFormError = '';
+  selectedCalendarRoomImageUrl = '';
+  selectedCalendarEquipmentIds: string[] = [];
   calendarPartnerInviteEmail = '';
   calendarPartnerInvites: string[] = [];
   calendarPartnerInviteMessage = '';
@@ -1245,12 +1240,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
   calendarInviteFeedbackTone: CalendarInviteFeedbackTone = 'success';
   calendarSubmissionFeedback = '';
   calendarSubmissionFeedbackTone: CalendarInviteFeedbackTone = 'success';
-  readonly zoomContainerId = 'zoom-meeting-embedded-root';
-  zoomJoinState: 'idle' | 'loading' | 'joined' | 'opened_web_client' | 'error' = 'idle';
-  zoomJoinError = '';
-  zoomSessionActive = false;
-  private zoomClient: any = null;
-  private zoomSdkLoadPromise: Promise<void> | null = null;
   onlineJoinFeedback = '';
   onlineJoinFeedbackTone: 'success' | 'error' = 'success';
 
@@ -1420,6 +1409,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
 
     this.loadEvents();
     this.loadRooms();
+    this.loadEquipment();
   }
 
   ngOnDestroy(): void {
@@ -1472,6 +1462,25 @@ export class EventsListComponent implements OnInit, OnDestroy {
     });
   }
 
+  loadEquipment(): void {
+    this.reservationService.getEquipment({ active: true, size: 200 }).subscribe({
+      next: (equipment) => {
+        this.equipment = Array.isArray(equipment) ? equipment : [];
+      },
+      error: () => {
+        this.equipment = [];
+      },
+    });
+  }
+
+  get availableEventEquipment(): Equipment[] {
+    return this.equipment.filter((item) =>
+      item.isActive !== false
+      && item.status !== 'MAINTENANCE'
+      && item.status !== 'RETIRED'
+    );
+  }
+
   updateCalendarEvents(): void {
     const calendarEvents = this.convertEventsToCalendarFormat(this.events);
     if (this.calendarOptions.events) {
@@ -1504,8 +1513,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
           visualColor: event.visualColor,
           participants: event.participants,
           maxParticipants: event.maxParticipants,
-          onlineEvent: event.onlineEvent,
-          zoomMeetingNumber: event.zoomMeetingNumber
+          onlineEvent: event.onlineEvent
         }
       };
     });
@@ -1833,8 +1841,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
     this.calendarEventDescription = '';
     this.calendarEventLocation = '';
     this.calendarEventMode = 'PRESENTIEL';
-    this.calendarEventZoomMeetingNumber = '';
-    this.calendarEventZoomPasscode = '';
     this.calendarEventType = 'MEETING';
     this.calendarEventStatus = EventStatus.DRAFT;
     this.calendarEventMaxParticipants = 50;
@@ -1844,6 +1850,8 @@ export class EventsListComponent implements OnInit, OnDestroy {
     this.calendarEventStartTime = this.formatTimeForInput(baseStartDate, '09:00');
     this.calendarEventEndTime = this.formatTimeForInput(baseEndDate, '18:00');
     this.calendarFormError = '';
+    this.selectedCalendarRoomImageUrl = '';
+    this.selectedCalendarEquipmentIds = [];
     this.resetCalendarPartnerInviteState();
     this.calendarSubmissionFeedback = '';
   }
@@ -1855,8 +1863,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
     this.calendarEventDescription = '';
     this.calendarEventLocation = '';
     this.calendarEventMode = 'PRESENTIEL';
-    this.calendarEventZoomMeetingNumber = '';
-    this.calendarEventZoomPasscode = '';
     this.calendarEventType = 'MEETING';
     this.calendarEventStatus = EventStatus.DRAFT;
     this.calendarEventMaxParticipants = 50;
@@ -1866,19 +1872,25 @@ export class EventsListComponent implements OnInit, OnDestroy {
     this.calendarEventStartTime = '09:00';
     this.calendarEventEndTime = '18:00';
     this.calendarFormError = '';
+    this.selectedCalendarRoomImageUrl = '';
+    this.selectedCalendarEquipmentIds = [];
     this.resetCalendarPartnerInviteState();
   }
 
   onCalendarEventModeChange(): void {
     this.clearCalendarInviteFeedback();
 
-    if (this.isOnlineMode(this.calendarEventMode)) {
-      return;
+    if (!this.isPhysicalMode(this.calendarEventMode)) {
+      this.calendarEventLocation = '';
+      this.selectedCalendarRoomImageUrl = '';
+      this.selectedCalendarEquipmentIds = [];
+    } else {
+      this.updateSelectedCalendarRoomImage();
     }
 
-    this.calendarEventZoomMeetingNumber = '';
-    this.calendarEventZoomPasscode = '';
-    this.resetCalendarPartnerInviteState();
+    if (!this.isOnlineMode(this.calendarEventMode)) {
+      this.resetCalendarPartnerInviteState();
+    }
   }
 
   addCalendarPartnerEmail(): void {
@@ -1953,8 +1965,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
     const eventMode = this.calendarEventMode;
     const onlineEvent = this.isOnlineMode(eventMode);
     const requiresPhysicalLocation = this.isPhysicalMode(eventMode);
-    const zoomMeetingNumber = this.normalizeZoomMeetingNumber(this.calendarEventZoomMeetingNumber);
-    const zoomPasscode = this.calendarEventZoomPasscode.trim();
     const startDate = this.toEventDate(this.calendarEventStartDate, this.calendarEventStartTime);
     const endDate = this.toEventDate(this.calendarEventEndDate, this.calendarEventEndTime);
     const maxParticipants = Number(this.calendarEventMaxParticipants);
@@ -1966,21 +1976,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
 
     if (requiresPhysicalLocation && !location) {
       this.calendarFormError = 'Le lieu est obligatoire.';
-      return;
-    }
-
-    if (onlineEvent && !zoomMeetingNumber) {
-      this.calendarFormError = 'L ID de reunion Zoom est obligatoire pour un evenement en ligne.';
-      return;
-    }
-
-    if (onlineEvent && !this.isValidZoomMeetingNumber(zoomMeetingNumber)) {
-      this.calendarFormError = 'L ID de reunion Zoom doit contenir entre 9 et 11 chiffres.';
-      return;
-    }
-
-    if (onlineEvent && !zoomPasscode) {
-      this.calendarFormError = 'Le code secret Zoom est obligatoire pour un evenement en ligne.';
       return;
     }
 
@@ -2011,10 +2006,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
     }
 
     this.calendarFormError = '';
-    if (onlineEvent) {
-      this.calendarEventZoomMeetingNumber = zoomMeetingNumber;
-    }
-    const resolvedLocation = eventMode === 'EN_LIGNE' ? (location || 'En ligne (Zoom)') : location;
+    const resolvedLocation = eventMode === 'EN_LIGNE' ? 'En ligne' : location;
 
     const eventToSave: Omit<Event, 'id' | 'createdAt' | 'updatedAt'> = {
       title,
@@ -2022,10 +2014,8 @@ export class EventsListComponent implements OnInit, OnDestroy {
       location: resolvedLocation,
       eventMode,
       onlineEvent,
-      onlineMeetingProvider: onlineEvent ? 'Zoom' : undefined,
-      onlineMeetingUrl: onlineEvent ? `https://zoom.us/j/${zoomMeetingNumber}` : undefined,
-      zoomMeetingNumber: onlineEvent ? zoomMeetingNumber : undefined,
-      zoomPasscode: onlineEvent ? zoomPasscode : undefined,
+      onlineMeetingProvider: onlineEvent ? 'Jitsi' : undefined,
+      onlineMeetingUrl: undefined,
       type: this.calendarEventType,
       visualColor: this.calendarEventLevel,
       status: this.canApproveEvents() ? this.calendarEventStatus : EventStatus.DRAFT,
@@ -2041,7 +2031,32 @@ export class EventsListComponent implements OnInit, OnDestroy {
       ? this.eventService.updateEvent(this.selectedEventForModal.id, eventToSave)
       : this.eventService.createEvent(eventToSave);
 
-    saveRequest$.subscribe({
+    saveRequest$.pipe(
+      switchMap((savedEvent) => {
+        if (!savedEvent) {
+          return of(null);
+        }
+
+        return this.ensureRoomReservationBeforeSubmit(savedEvent).pipe(
+          switchMap((roomPreparedEvent) => this.ensureEquipmentReservationsBeforeSubmit(roomPreparedEvent)),
+          switchMap((preparedEvent) => {
+            const shouldSubmitAfterCreate =
+              !isUpdateMode
+              && preparedEvent.status === EventStatus.DRAFT
+              && this.canSubmitEvent(preparedEvent);
+
+            if (!shouldSubmitAfterCreate) {
+              return of(preparedEvent);
+            }
+
+            return this.eventService.submitEvent(
+              preparedEvent.id,
+              'Soumission depuis l interface utilisateur'
+            );
+          })
+        );
+      })
+    ).subscribe({
       next: (savedEvent) => {
         if (!savedEvent) {
           this.calendarFormError = 'Evenement introuvable, veuillez rafraichir puis reessayer.';
@@ -2125,6 +2140,10 @@ export class EventsListComponent implements OnInit, OnDestroy {
   }
 
   private extractBackendError(error: unknown, fallbackMessage: string): string {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+
     const candidate = error as { error?: { detail?: string; message?: string } } | null;
     return candidate?.error?.detail || candidate?.error?.message || fallbackMessage;
   }
@@ -2415,7 +2434,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
 
   viewEvent(event: Event): void {
     this.selectedEvent = event;
-    this.resetZoomJoinState();
     this.clearOnlineJoinFeedback();
     this.resetInternalInviteState();
     this.inviteFeedback = '';
@@ -2432,8 +2450,9 @@ export class EventsListComponent implements OnInit, OnDestroy {
     this.calendarEventDescription = event.description || '';
     this.calendarEventLocation = event.location || '';
     this.calendarEventMode = this.getResolvedEventMode(event);
-    this.calendarEventZoomMeetingNumber = event.zoomMeetingNumber || '';
-    this.calendarEventZoomPasscode = event.zoomPasscode || '';
+    if (!this.isPhysicalMode(this.calendarEventMode)) {
+      this.calendarEventLocation = '';
+    }
     this.calendarEventType = event.type || 'MEETING';
     this.calendarEventStatus = event.status || EventStatus.DRAFT;
     this.calendarEventMaxParticipants = event.maxParticipants || 50;
@@ -2442,12 +2461,13 @@ export class EventsListComponent implements OnInit, OnDestroy {
     this.calendarEventStartTime = this.formatTimeForInput(new Date(event.startDate), '09:00');
     this.calendarEventEndTime = this.formatTimeForInput(new Date(event.endDate), '18:00');
     this.calendarEventLevel = this.getEventVisualLevel(event);
+    this.updateSelectedCalendarRoomImage();
+    this.selectedCalendarEquipmentIds = [];
     this.calendarFormError = '';
     this.resetCalendarPartnerInviteState();
     this.calendarSubmissionFeedback = '';
     this.isCalendarModalOpen = true;
     this.selectedEvent = null;
-    this.resetZoomJoinState();
     this.clearOnlineJoinFeedback();
     this.resetInternalInviteState();
     this.inviteFeedback = '';
@@ -2508,15 +2528,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
   }
 
   canOpenOnlineMeeting(event: Event | null | undefined): boolean {
-    if (!event) {
-      return false;
-    }
-
-    if (!this.isOnlineMode(this.getResolvedEventMode(event))) {
-      return false;
-    }
-
-    return !!this.resolveSafeOnlineMeetingUrl(event);
+    return !!event && this.isOnlineMode(this.getResolvedEventMode(event));
   }
 
   getOnlineJoinUnavailableReason(event: Event | null | undefined): string {
@@ -2528,7 +2540,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
       return 'Evenement presentiel: aucun lien en ligne.';
     }
 
-    return 'Lien de reunion indisponible.';
+    return 'Salle virtuelle indisponible.';
   }
 
   canCreateEvents(): boolean {
@@ -2540,7 +2552,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
   }
 
   canReviewWorkflowEvents(): boolean {
-    return this.canApproveEvents() || this.currentRole === 'SECURITY_MANAGER';
+    return this.canApproveEvents() || this.currentRole === 'SECURITY_MANAGER' || this.currentRole === 'ROOM_MANAGER';
   }
 
   canDecideEvent(event: Event | null | undefined): boolean {
@@ -2549,7 +2561,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
     }
 
     if (this.currentRole === 'ADMIN') {
-      return ['VALIDATION_MANAGER', 'VALIDATION_SECURITE', 'VALIDATION_DSN'].includes(event.workflowStep);
+      return ['VALIDATION_MANAGER', 'VALIDATION_SECURITE', 'VALIDATION_DSN', 'VALIDATION_SALLE'].includes(event.workflowStep);
     }
 
     if (this.currentRole === 'MANAGER') {
@@ -2562,6 +2574,10 @@ export class EventsListComponent implements OnInit, OnDestroy {
 
     if (this.currentRole === 'DSN_DIRECTOR') {
       return event.workflowStep === 'VALIDATION_DSN';
+    }
+
+    if (this.currentRole === 'ROOM_MANAGER') {
+      return event.workflowStep === 'VALIDATION_SALLE';
     }
 
     return false;
@@ -2645,7 +2661,11 @@ export class EventsListComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.eventService.submitEvent(event.id, 'Soumission depuis l interface utilisateur').subscribe({
+    this.ensureRoomReservationBeforeSubmit(event).pipe(
+      switchMap((preparedEvent) =>
+        this.eventService.submitEvent(preparedEvent.id, 'Soumission depuis l interface utilisateur')
+      )
+    ).subscribe({
       next: (updated) => {
         if (!updated) {
           return;
@@ -2660,6 +2680,168 @@ export class EventsListComponent implements OnInit, OnDestroy {
         this.calendarSubmissionFeedback = this.extractBackendError(err, 'Soumission impossible pour le moment.');
       }
     });
+  }
+
+  private ensureRoomReservationBeforeSubmit(event: Event) {
+    if (!this.isPhysicalMode(this.getResolvedEventMode(event))) {
+      return of(event);
+    }
+
+    const roomLookup$ = this.rooms.length > 0
+      ? of(this.findRoomForEvent(event))
+      : this.reservationService.getRooms().pipe(
+          map((rooms) => {
+            this.rooms = Array.isArray(rooms) ? rooms : [];
+            return this.findRoomForEvent(event);
+          })
+        );
+
+    return roomLookup$.pipe(
+      switchMap((room) => {
+        if (!room) {
+          return throwError(() => new Error('Selectionnez une salle existante du referentiel avant de soumettre cet evenement.'));
+        }
+
+        return this.reservationService.getRoomReservations({ eventId: event.id, size: 100 }).pipe(
+          switchMap((reservations) => {
+            const hasRoomReservation = reservations.some((reservation) =>
+              reservation.roomId === room.id
+              && (reservation.status === 'PENDING' || reservation.status === 'APPROVED')
+            );
+
+            if (hasRoomReservation) {
+              return of(event);
+            }
+
+            return this.reservationService.bookRoom({
+              eventId: event.id,
+              roomId: room.id,
+              roomName: room.name,
+              userId: this.currentUsername || this.currentUserId,
+              userName: this.currentUserName || this.currentUsername || this.currentUserId,
+              title: event.title,
+              purpose: `Reservation salle pour evenement ${event.referenceCode || event.title}`,
+              startDate: event.startDate,
+              endDate: event.endDate,
+              attendeeCount: event.maxParticipants || 1,
+            }).pipe(
+              switchMap((reservation) => {
+                if (!reservation) {
+                  return throwError(() => new Error('La salle selectionnee est deja reservee sur ce creneau.'));
+                }
+
+                return of(event);
+              })
+            );
+          })
+        );
+      })
+    );
+  }
+
+  private findRoomForEvent(event: Event): Room | undefined {
+    const normalizedLocation = this.normalizeRoomLookup(event.location);
+
+    return this.rooms.find((room) => {
+      const candidates = [
+        room.id,
+        room.name,
+        `${room.name} (${room.location})`,
+        room.location,
+      ].map((value) => this.normalizeRoomLookup(value));
+
+      return candidates.includes(normalizedLocation);
+    });
+  }
+
+  private ensureEquipmentReservationsBeforeSubmit(event: Event) {
+    if (!this.isPhysicalMode(this.getResolvedEventMode(event)) || this.selectedCalendarEquipmentIds.length === 0) {
+      return of(event);
+    }
+
+    return this.reservationService.getEquipmentReservations({ eventId: event.id, size: 100 }).pipe(
+      switchMap((reservations) => {
+        const activeReservations = reservations.filter((reservation) =>
+          reservation.status === 'PENDING' || reservation.status === 'APPROVED' || reservation.status === 'IN_USE'
+        );
+
+        const missingEquipmentIds = this.selectedCalendarEquipmentIds.filter((equipmentId) =>
+          !activeReservations.some((reservation) => reservation.equipmentId === equipmentId)
+        );
+
+        if (missingEquipmentIds.length === 0) {
+          return of(event);
+        }
+
+        const requests = missingEquipmentIds.map((equipmentId) => {
+          const equipment = this.equipment.find((item) => item.id === equipmentId);
+          return this.reservationService.reserveEquipment({
+            eventId: event.id,
+            equipmentId,
+            equipmentName: equipment?.name || 'Equipement',
+            quantityRequested: 1,
+            userId: this.currentUsername || this.currentUserId,
+            userName: this.currentUserName || this.currentUsername || this.currentUserId,
+            purpose: `Equipement pour evenement ${event.referenceCode || event.title}`,
+            startDate: event.startDate,
+            endDate: event.endDate,
+          });
+        });
+
+        return forkJoin(requests).pipe(
+          switchMap((createdReservations) => {
+            if (createdReservations.some((reservation) => !reservation)) {
+              return throwError(() => new Error('Un equipement selectionne est indisponible sur ce creneau.'));
+            }
+            return of(event);
+          })
+        );
+      })
+    );
+  }
+
+  private normalizeRoomLookup(value: string | undefined): string {
+    return (value || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  updateSelectedCalendarRoomImage(): void {
+    if (!this.isPhysicalMode(this.calendarEventMode)) {
+      this.selectedCalendarRoomImageUrl = '';
+      return;
+    }
+
+    const normalizedLocation = this.normalizeRoomLookup(this.calendarEventLocation);
+    const room = this.rooms.find((candidate) => {
+      const candidates = [
+        candidate.id,
+        candidate.name,
+        `${candidate.name} (${candidate.location})`,
+        candidate.location,
+      ].map((value) => this.normalizeRoomLookup(value));
+
+      return candidates.includes(normalizedLocation);
+    });
+
+    this.selectedCalendarRoomImageUrl = room?.imageUrl || '';
+  }
+
+  isCalendarEquipmentSelected(equipmentId: string): boolean {
+    return this.selectedCalendarEquipmentIds.includes(equipmentId);
+  }
+
+  toggleCalendarEquipment(equipmentId: string, selected: boolean): void {
+    if (selected) {
+      if (!this.selectedCalendarEquipmentIds.includes(equipmentId)) {
+        this.selectedCalendarEquipmentIds = [...this.selectedCalendarEquipmentIds, equipmentId];
+      }
+      return;
+    }
+
+    this.selectedCalendarEquipmentIds = this.selectedCalendarEquipmentIds.filter((id) => id !== equipmentId);
   }
 
   downloadEventPdf(event: Event | null | undefined): void {
@@ -2688,43 +2870,21 @@ export class EventsListComponent implements OnInit, OnDestroy {
     void this.router.navigate(['/events', event.id, 'album']);
   }
 
-  closeEventDetails(): void {
-    if (this.zoomSessionActive) {
-      void this.leaveZoomMeeting();
-    } else {
-      this.resetZoomJoinState();
+  openInternalMeeting(event: Event | null | undefined): void {
+    if (!event || !this.isOnlineMode(this.getResolvedEventMode(event))) {
+      this.onlineJoinFeedbackTone = 'error';
+      this.onlineJoinFeedback = 'Cet evenement est presentiel. Aucune salle virtuelle disponible.';
+      return;
     }
+    void this.router.navigate(['/events', event.id, 'meeting']);
+  }
+
+  closeEventDetails(): void {
     this.clearOnlineJoinFeedback();
     this.resetInternalInviteState();
     this.selectedEvent = null;
     this.inviteFeedback = '';
     this.inviteFeedbackTone = 'success';
-  }
-
-  openOnlineMeeting(event: Event): void {
-    this.clearOnlineJoinFeedback();
-    if (!this.isOnlineMode(this.getResolvedEventMode(event))) {
-      this.onlineJoinFeedbackTone = 'error';
-      this.onlineJoinFeedback = 'Cet evenement est presentiel. Aucun lien en ligne a ouvrir.';
-      return;
-    }
-
-    const safeUrl = this.resolveSafeOnlineMeetingUrl(event);
-    if (!safeUrl) {
-      this.onlineJoinFeedbackTone = 'error';
-      this.onlineJoinFeedback = 'Lien de reunion non disponible.';
-      return;
-    }
-
-    const opened = window.open(safeUrl, '_blank', 'noopener,noreferrer');
-    if (!opened) {
-      this.onlineJoinFeedbackTone = 'error';
-      this.onlineJoinFeedback = 'Le navigateur a bloque l ouverture. Autorisez les popups puis reessayez.';
-      return;
-    }
-
-    this.onlineJoinFeedbackTone = 'success';
-    this.onlineJoinFeedback = 'Lien de reunion ouvert dans un nouvel onglet.';
   }
 
   addInternalRecipient(): void {
@@ -2802,210 +2962,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
         this.internalInviteFeedback = this.extractBackendError(error, 'Envoi des invitations impossible.');
       },
     });
-  }
-
-  async joinZoomMeeting(event: Event): Promise<void> {
-    if (!this.isOnlineMode(this.getResolvedEventMode(event))) {
-      this.zoomJoinState = 'error';
-      this.zoomJoinError = 'Cet evenement n est pas configure en mode Zoom.';
-      return;
-    }
-
-    this.zoomJoinState = 'loading';
-    this.zoomJoinError = '';
-
-    try {
-      const credentials = await firstValueFrom(this.eventService.getZoomMeetingCredentials(event.id));
-      const meetingNumber = this.normalizeZoomMeetingNumber(credentials.meetingNumber);
-      if (!this.isValidZoomMeetingNumber(meetingNumber)) {
-        throw new Error('ID de reunion Zoom invalide (9 a 11 chiffres requis).');
-      }
-
-      // Check if SDK is configured; if not, use web client fallback
-      if (!credentials.sdkConfigured) {
-        if (!credentials.fallbackWebUrl) {
-          throw new Error('Impossible de rejoindre la reunion: parametres manquants.');
-        }
-        window.open(credentials.fallbackWebUrl, '_blank', 'noopener,noreferrer');
-        this.zoomJoinState = 'opened_web_client';
-        return;
-      }
-
-      await this.ensureZoomSdkLoaded();
-
-      const zoomRoot = document.getElementById(this.zoomContainerId);
-      if (!zoomRoot) {
-        throw new Error('Zone Zoom introuvable dans la page.');
-      }
-
-      zoomRoot.innerHTML = '';
-
-      const embeddedSdk = window.ZoomMtgEmbedded;
-      if (!embeddedSdk) {
-        throw new Error('Zoom SDK non charge.');
-      }
-
-      this.zoomClient = embeddedSdk.createClient();
-      await this.zoomClient.init({
-        zoomAppRoot: zoomRoot,
-        language: 'fr-FR',
-        patchJsMedia: true,
-        leaveOnPageUnload: true
-      });
-
-      await this.zoomClient.join({
-        signature: credentials.signature,
-        meetingNumber,
-        password: credentials.passcode,
-        userName: this.currentUserName || credentials.userName || 'Participant CNSTN'
-      });
-
-      this.zoomSessionActive = true;
-      this.zoomJoinState = 'joined';
-      this.zoomJoinError = '';
-    } catch (error) {
-      this.zoomJoinState = 'error';
-      this.zoomSessionActive = false;
-      this.zoomJoinError = this.toUserFriendlyZoomError(error);
-    }
-  }
-
-  async leaveZoomMeeting(): Promise<void> {
-    if (this.zoomClient && typeof this.zoomClient.leaveMeeting === 'function') {
-      try {
-        await this.zoomClient.leaveMeeting({});
-      } catch {
-        // Ignore leave errors and clean local state anyway.
-      }
-    }
-
-    const zoomRoot = document.getElementById(this.zoomContainerId);
-    if (zoomRoot) {
-      zoomRoot.innerHTML = '';
-    }
-
-    this.zoomClient = null;
-    this.resetZoomJoinState();
-  }
-
-  private ensureZoomSdkLoaded(): Promise<void> {
-    if (window.ZoomMtgEmbedded && typeof window.ZoomMtgEmbedded.createClient === 'function') {
-      return Promise.resolve();
-    }
-
-    if (this.zoomSdkLoadPromise) {
-      return this.zoomSdkLoadPromise;
-    }
-
-    this.zoomSdkLoadPromise = (async () => {
-      const loadedModules: any[] = [];
-
-      try {
-        loadedModules.push(await import('@zoom/meetingsdk/embedded'));
-      } catch {
-        // Fallback below for older package entrypoints.
-      }
-
-      if (!loadedModules.length) {
-        loadedModules.push(await import('@zoom/meetingsdk'));
-      }
-
-      for (const module of loadedModules) {
-        const embeddedSdk =
-          module?.ZoomMtgEmbedded ||
-          module?.default?.ZoomMtgEmbedded ||
-          module?.default ||
-          module;
-
-        if (embeddedSdk && typeof embeddedSdk.createClient === 'function') {
-          window.ZoomMtgEmbedded = embeddedSdk;
-          return;
-        }
-      }
-
-      throw new Error('Module Zoom SDK indisponible.');
-    })().catch((error) => {
-      this.zoomSdkLoadPromise = null;
-      throw error;
-    });
-
-    return this.zoomSdkLoadPromise;
-  }
-
-  private toUserFriendlyZoomError(error: unknown): string {
-    const candidate = error as { reason?: string; type?: string; message?: string } | null;
-    if (candidate?.reason) {
-      const typePrefix = candidate.type ? `[${candidate.type}] ` : '';
-      return `Connexion Zoom echouee: ${typePrefix}${candidate.reason}`;
-    }
-
-    if (error instanceof Error && error.message) {
-      return `Connexion Zoom echouee: ${error.message}`;
-    }
-    return 'Connexion Zoom echouee. Verifiez les parametres SDK et la reunion.';
-  }
-
-  private openZoomWebClientFallback(event: Event): boolean {
-    const meetingNumber = this.normalizeZoomMeetingNumber(event.zoomMeetingNumber || '');
-    const passcode = event.zoomPasscode?.trim();
-
-    if (!meetingNumber || !passcode) {
-      return false;
-    }
-
-    const webJoinUrl = `https://app.zoom.us/wc/join/${encodeURIComponent(meetingNumber)}?pwd=${encodeURIComponent(passcode)}`;
-    const popup = window.open(webJoinUrl, '_blank', 'noopener,noreferrer');
-    if (!popup) {
-      window.location.assign(webJoinUrl);
-    }
-
-    return true;
-  }
-
-  private resetZoomJoinState(): void {
-    this.zoomSessionActive = false;
-    this.zoomJoinState = 'idle';
-    this.zoomJoinError = '';
-  }
-
-  private normalizeZoomMeetingNumber(value: string): string {
-    return value.replace(/\D/g, '');
-  }
-
-  private isValidZoomMeetingNumber(value: string): boolean {
-    return /^\d{9,11}$/.test(value);
-  }
-
-  private resolveSafeOnlineMeetingUrl(event: Event): string | null {
-    const directUrl = (event.onlineMeetingUrl || '').trim();
-    if (this.isSafeHttpsUrl(directUrl)) {
-      return directUrl;
-    }
-
-    const meetingNumber = this.normalizeZoomMeetingNumber(event.zoomMeetingNumber || '');
-    if (!meetingNumber) {
-      return null;
-    }
-
-    const passcode = (event.zoomPasscode || '').trim();
-    const generatedUrl = passcode
-      ? `https://app.zoom.us/wc/join/${encodeURIComponent(meetingNumber)}?pwd=${encodeURIComponent(passcode)}`
-      : `https://zoom.us/j/${encodeURIComponent(meetingNumber)}`;
-
-    return this.isSafeHttpsUrl(generatedUrl) ? generatedUrl : null;
-  }
-
-  private isSafeHttpsUrl(value: string): boolean {
-    if (!value || !value.toLowerCase().startsWith('https://')) {
-      return false;
-    }
-
-    try {
-      const parsed = new URL(value);
-      return parsed.protocol === 'https:';
-    } catch {
-      return false;
-    }
   }
 
   private clearOnlineJoinFeedback(): void {

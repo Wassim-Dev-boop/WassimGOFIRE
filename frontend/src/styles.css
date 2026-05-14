@@ -900,6 +900,10 @@ pre[class*="language-"].line-numbers {
   padding-left: 2.8em !important;
 }
 
+body.ged-modal-open app-header {
+  display: none !important;
+}
+
 @layer components {
   .cnstn-page-shell {
     @apply min-h-screen bg-gray-50 text-gray-900;

@@ -28,7 +28,6 @@
     "@popperjs/core": "^2.11.8",
     "@tailwindcss/postcss": "^4.1.11",
     "@types/prismjs": "^1.26.5",
-    "@zoom/meetingsdk": "^6.0.0",
     "apexcharts": "^5.3.2",
     "flatpickr": "^4.6.13",
     "ng-apexcharts": "^2.0.4",

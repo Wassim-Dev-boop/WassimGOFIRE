@@ -1,9 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, forkJoin, map, of, switchMap, tap } from 'rxjs';
 import { ApiPageResponse, buildApiUrl, extractPageContent } from '../config/backend-api.config';
 import { Invitation, InvitationResponse, InvitationStatus } from '../models';
-import { AuthService } from './auth.service';
 
 interface BackendEventSummary {
   id: string;
@@ -66,10 +65,10 @@ export class InvitationService {
   private invitationsSubject = new BehaviorSubject<Invitation[]>([]);
   public invitations$ = this.invitationsSubject.asObservable();
 
-  constructor(private http: HttpClient, private authService: AuthService) {}
+  constructor(private http: HttpClient) {}
 
-  getInvitations(): Observable<Invitation[]> {
-    return this.refreshInternalInvitations().pipe(
+  getInvitations(includeAdminScope = false): Observable<Invitation[]> {
+    return this.refreshInternalInvitations(includeAdminScope).pipe(
       map((invitations) => invitations.filter((invitation) => !invitation.isExternalPartner)),
     );
   }
@@ -170,7 +169,6 @@ export class InvitationService {
       .pipe(
         map((updated) => this.mapInternalInvitation(updated)),
         tap((updated) => this.upsertInvitation(updated)),
-        catchError(() => of(null)),
       );
   }
 
@@ -182,7 +180,6 @@ export class InvitationService {
       .pipe(
         map((updated) => this.mapInternalInvitation(updated)),
         tap((updated) => this.upsertInvitation(updated)),
-        catchError(() => of(null)),
       );
   }
 
@@ -193,15 +190,13 @@ export class InvitationService {
   }
 
   cancelInvitation(id: string): Observable<boolean> {
-    const invitations = this.invitationsSubject.value;
-    const invitation = invitations.find((item) => item.id === id);
-    if (!invitation) {
-      return of(false);
-    }
-
-    invitation.status = InvitationStatus.CANCELLED;
-    this.invitationsSubject.next([...invitations]);
-    return of(true);
+    return this.http
+      .put<BackendEventInvitationResponse>(buildApiUrl(`/api/v1/events/invitations/${id}/cancel`), {})
+      .pipe(
+        map((updated) => this.mapInternalInvitation(updated)),
+        tap((updated) => this.upsertInvitation(updated)),
+        map(() => true),
+      );
   }
 
   getPartnerInvitations(): Observable<Invitation[]> {
@@ -214,9 +209,10 @@ export class InvitationService {
     );
   }
 
-  refreshInternalInvitations(): Observable<Invitation[]> {
+  refreshInternalInvitations(includeAdminScope = false): Observable<Invitation[]> {
+    const endpoint = includeAdminScope ? '/api/v1/events/invitations/admin' : '/api/v1/events/invitations/mine';
     return this.http
-      .get<BackendEventInvitationResponse[]>(buildApiUrl('/api/v1/events/invitations/mine'))
+      .get<BackendEventInvitationResponse[]>(buildApiUrl(endpoint))
       .pipe(
         map((items) => (Array.isArray(items) ? items.map((item) => this.mapInternalInvitation(item)) : [])),
         tap((internalInvitations) => {
@@ -276,7 +272,6 @@ export class InvitationService {
                   verifiedAt: undefined,
                   partnerOrganization: undefined,
                 }))),
-                catchError(() => of([] as Invitation[])),
               ),
           );
 
@@ -401,7 +396,6 @@ export class InvitationService {
   }
 
   private canReadPartnerInvitationsFromBackend(): boolean {
-    const role = this.authService.currentRole;
-    return role === 'ADMIN' || role === 'MANAGER' || role === 'DSN_DIRECTOR';
+    return true;
   }
 }

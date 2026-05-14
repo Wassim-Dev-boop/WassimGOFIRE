@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -73,10 +74,12 @@ public class KeycloakAdminClient {
         try {
             KeycloakUserRepresentation payload = new KeycloakUserRepresentation();
             payload.setId(keycloakId.toString());
+            payload.setUsername(request.username());
             payload.setEmail(request.email());
             payload.setEnabled(request.enabled());
             payload.setFirstName(request.firstName());
             payload.setLastName(request.lastName());
+            payload.setEmailVerified(true);
             payload.setAttributes(Map.of("phone", List.of(safeString(request.phone()))));
 
             restTemplate.exchange(
@@ -249,6 +252,30 @@ public class KeycloakAdminClient {
         }
     }
 
+    public Optional<UUID> findUserIdByUsernameOrEmail(String username, String email) {
+        String token = getAdminToken();
+        try {
+            String safeUsername = normalize(username);
+            if (!safeUsername.isBlank()) {
+                Optional<UUID> byUsername = findUserIdByField("username", safeUsername, token);
+                if (byUsername.isPresent()) {
+                    return byUsername;
+                }
+            }
+
+            String safeEmail = normalize(email);
+            if (!safeEmail.isBlank()) {
+                return findUserIdByField("email", safeEmail, token);
+            }
+
+            return Optional.empty();
+        } catch (RestClientResponseException ex) {
+            throw mapException("Failed to search user in Keycloak", ex);
+        } catch (RestClientException ex) {
+            throw new ExternalServiceException("Failed to search user in Keycloak", ex);
+        }
+    }
+
     private List<KeycloakRoleRepresentation> getUserRealmRoles(UUID keycloakId, String token) {
         ResponseEntity<KeycloakRoleRepresentation[]> response = restTemplate.exchange(
                 "/admin/realms/{realm}/users/{userId}/role-mappings/realm",
@@ -377,5 +404,47 @@ public class KeycloakAdminClient {
 
     private @NonNull String safeString(String value) {
         return Objects.requireNonNullElse(value, "");
+    }
+
+    private Optional<UUID> findUserIdByField(String fieldName, String value, String token) {
+        ResponseEntity<KeycloakUserRepresentation[]> response = restTemplate.exchange(
+                "/admin/realms/{realm}/users?{fieldName}={value}&exact=true",
+                method(HttpMethod.GET),
+                new HttpEntity<>(headerMap(jsonHeaders(token))),
+                KeycloakUserRepresentation[].class,
+                Map.of(
+                        "realm", properties.getRealm(),
+                        "fieldName", fieldName,
+                        "value", value
+                )
+        );
+
+        KeycloakUserRepresentation[] users = response.getBody();
+        if (users == null || users.length == 0) {
+            return Optional.empty();
+        }
+
+        return Arrays.stream(users)
+                .map(KeycloakUserRepresentation::getId)
+                .map(this::parseUuidSafely)
+                .flatMap(Optional::stream)
+                .findFirst();
+    }
+
+    private Optional<UUID> parseUuidSafely(String rawId) {
+        String safeId = normalize(rawId);
+        if (safeId.isBlank()) {
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.of(UUID.fromString(safeId));
+        } catch (IllegalArgumentException ex) {
+            return Optional.empty();
+        }
+    }
+
+    private String normalize(String value) {
+        return value == null ? "" : value.trim();
     }
 }

@@ -90,6 +90,7 @@ public class NotificationEmailDispatchService {
                 notification.getMessage(),
                 null,
                 inferNotificationType(notification.getTitle(), notification.getMessage()),
+                null,
                 false
         );
         return dispatchForNotification(notification, request);

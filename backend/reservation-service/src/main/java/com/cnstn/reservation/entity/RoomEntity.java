@@ -29,6 +29,9 @@ public class RoomEntity {
     @Column(name = "description", length = 400)
     private String description;
 
+    @Column(name = "image_url", columnDefinition = "TEXT")
+    private String imageUrl;
+
     @Column(name = "capacity", nullable = false)
     private int capacity;
 
@@ -85,6 +88,14 @@ public class RoomEntity {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public RoomOperationalStatus getStatus() {

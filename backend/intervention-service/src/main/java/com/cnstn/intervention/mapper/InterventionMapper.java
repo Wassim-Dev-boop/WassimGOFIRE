@@ -13,11 +13,17 @@ public final class InterventionMapper {
                 entity.getId(),
                 entity.getTitle(),
                 entity.getDescription(),
+                entity.getInterventionType(),
+                entity.getPriority(),
+                entity.getLocation(),
                 entity.getRequestedBy(),
                 entity.getAssignedTo(),
                 entity.getStatus(),
                 entity.getValidationNote(),
                 entity.getValidatedBy(),
+                entity.getResolution(),
+                entity.getSatisfactionRating(),
+                entity.getResolvedAt(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );

@@ -12,6 +12,7 @@ public record NotificationResponse(
         String emailDeliveryStatus,
         String emailDeliveryError,
         Instant emailLastAttemptAt,
+        String actionUrl,
         Instant createdAt,
         Instant updatedAt
 ) {
